@@ -1,0 +1,12 @@
+/* =========================================================================
+   Auditor Design System — global entry point
+   Link THIS file to consume the system:
+     <link rel="stylesheet" href="styles.css" />
+   It ships, in order:
+     • app.css          → component + shell CSS layer
+       └ tokens.css     → token barrel
+         └ tokens/*.css → foundations (fonts, colors, themes, type, spacing, motion)
+   So this one file reaches every design token, the webfonts, and every
+   component class (.btn, .tag, .sev, .stat, .panel, .card, .avatar, forms…).
+   ========================================================================= */
+@import url("app.css");

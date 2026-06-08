@@ -1,0 +1,80 @@
+<!-- @dsCard group="Auditor App" viewport="1280x720" name="Auditor — full app" subtitle="Interactive SOC-style audit management shell (boot → dashboard → screens)" -->
+<!-- @startingPoint section="Auditor App" subtitle="Full audit-management app shell — sidebar, topbar, dashboard, screens" viewport="1280x800" -->
+<!doctype html>
+<html lang="uz" data-theme="dark" data-density="comfortable">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Auditor — IS audit boshqaruvi</title>
+<!-- Design System global entry (tokens + fonts + component CSS) -->
+<link rel="stylesheet" href="../../styles.css" />
+<!-- Cinematic / WOW layer (kit-local) -->
+<link rel="stylesheet" href="wow.css" />
+<!-- v6 additions (approval flow, topology, organizations) -->
+<link rel="stylesheet" href="kit-extra.css" />
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#0a1120">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0a1120"/>
+    <rect x="470" y="300" width="120" height="120" rx="32" fill="#1e40af"/>
+    <path d="M530 360 q0 50 30 70 q30 -20 30 -70 v-22 l-30 -11 -30 11 Z" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M545 375 l12 12 l20 -22" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <text x="620" y="395" font-family="Plus Jakarta Sans, sans-serif" font-size="74" font-weight="800" fill="#fff">Audit<tspan fill="#3b65f6">or</tspan></text>
+    <text x="600" y="470" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="22" letter-spacing="6" fill="#94a3b8">AXBOROT XAVFSIZLIGI AUDITI</text>
+  </svg>
+</template>
+<div id="root"></div>
+
+<!-- Suppress React dev key warnings (cosmetic only) -->
+<script>
+(function(){
+  const origError = console.error;
+  console.error = function(...args) {
+    const s = String(args[0] || "");
+    if (s.indexOf("unique \"key\" prop") !== -1 || s.indexOf("Each child in a list") !== -1) return;
+    origError.apply(console, args);
+  };
+})();
+</script>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Data + icons -->
+<script src="data.js"></script>
+<script type="text/babel" src="icons.jsx"></script>
+
+<!-- Tweaks panel starter -->
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<!-- Shared chrome + UI primitives -->
+<script type="text/babel" src="chrome.jsx"></script>
+
+<!-- Shared 3-stage approval flow (used by audit + finding) -->
+<script type="text/babel" src="components-approval.jsx"></script>
+
+<!-- Command palette (⌘K) -->
+<script type="text/babel" src="components-search.jsx"></script>
+
+<!-- WOW / cinematic components -->
+<script type="text/babel" src="wow.jsx"></script>
+
+<!-- Screens -->
+<script type="text/babel" src="screens-overview.jsx"></script>
+<script type="text/babel" src="screens-audit.jsx"></script>
+<script type="text/babel" src="screens-tools.jsx"></script>
+<script type="text/babel" src="screens-topology.jsx"></script>
+<script type="text/babel" src="screens-orgs.jsx"></script>
+<script type="text/babel" src="screens-tasks.jsx"></script>
+<script type="text/babel" src="screens-settings.jsx"></script>
+<script type="text/babel" src="screens-admin.jsx"></script>
+<script type="text/babel" src="screens-agent.jsx"></script>
+<script type="text/babel" src="screens-profile.jsx"></script>
+
+<!-- Main app -->
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

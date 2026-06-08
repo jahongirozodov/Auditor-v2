@@ -1,0 +1,12 @@
+/* =========================================================================
+   Auditor DS — Token barrel
+   Kept for backward-compat with the app shell (index.html links this file).
+   The real token definitions now live in tokens/*.css, split by concern.
+   Design-system consumers should link the root styles.css instead.
+   ========================================================================= */
+@import url("tokens/fonts.css");
+@import url("tokens/colors.css");
+@import url("tokens/themes.css");
+@import url("tokens/typography.css");
+@import url("tokens/spacing.css");
+@import url("tokens/motion.css");

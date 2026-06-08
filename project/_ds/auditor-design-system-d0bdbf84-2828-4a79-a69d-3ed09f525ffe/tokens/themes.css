@@ -1,0 +1,121 @@
+/* =========================================================================
+   Auditor DS — Themes (semantic aliases)
+   Light is the default (:root). Dark activates via [data-theme="dark"] on
+   the <html> element. Components consume ONLY these aliases.
+   ========================================================================= */
+
+/* ---------------------- LIGHT (default) ---------------------- */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg-page:       var(--slate-50);
+  --bg-surface:    var(--slate-0);
+  --bg-surface-2:  var(--slate-100);
+  --bg-surface-3:  var(--slate-200);
+  --bg-overlay:    rgba(15, 23, 42, 0.55);
+  --bg-elevated:   #ffffff;
+  --bg-input:      #ffffff;
+  --bg-hover:      rgba(15, 23, 42, 0.04);
+
+  /* borders */
+  --border-color:  var(--slate-200);
+  --border-strong: var(--slate-300);
+  --border-subtle: rgba(15, 23, 42, 0.06);
+
+  /* text */
+  --text-primary:   var(--slate-900);
+  --text-secondary: var(--slate-600);
+  --text-tertiary:  var(--slate-500);
+  --text-muted:     var(--slate-400);
+  --text-inverse:   var(--slate-0);
+  --text-link:      var(--blue-800);
+
+  /* brand */
+  --brand:           var(--blue-800);
+  --brand-hover:     var(--blue-700);
+  --brand-pressed:   var(--blue-900);
+  --brand-soft:      var(--blue-50);
+  --brand-soft-hover:#e3edff;
+  --brand-foreground:#ffffff;
+  --brand-ring:      rgba(30, 64, 175, 0.28);
+
+  /* status (bg = soft fill, fg = text/icon) */
+  --status-success-bg: var(--green-50);
+  --status-success-fg: var(--green-700);
+  --status-warning-bg: var(--amber-50);
+  --status-warning-fg: var(--amber-700);
+  --status-danger-bg:  var(--red-50);
+  --status-danger-fg:  var(--red-700);
+  --status-info-bg:    var(--sky-50);
+  --status-info-fg:    var(--sky-700);
+  --status-neutral-bg: var(--slate-100);
+  --status-neutral-fg: var(--slate-700);
+
+  /* shadows — PrimeNG-style soft, low-spread */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 8px 16px rgba(15, 23, 42, 0.08), 0 4px 6px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 24px 48px -12px rgba(15, 23, 42, 0.18);
+
+  /* hero / atmosphere tint */
+  --hero-grad-from: #f5f8ff;
+  --hero-grad-to:   #ffffff;
+  --hero-pattern:   rgba(30, 64, 175, 0.06);
+}
+
+/* ---------------------- DARK ---------------------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-page:       #0a1120;
+  --bg-surface:    #0f172a;
+  --bg-surface-2:  #142036;
+  --bg-surface-3:  #1c2942;
+  --bg-overlay:    rgba(2, 6, 23, 0.7);
+  --bg-elevated:   #142036;
+  --bg-input:      #0f172a;
+  --bg-hover:      rgba(148, 163, 184, 0.08);
+
+  --border-color:  #1e2c47;
+  --border-strong: #2a3a5c;
+  --border-subtle: rgba(148, 163, 184, 0.08);
+
+  --text-primary:   #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary:  #94a3b8;
+  --text-muted:     #64748b;
+  --text-inverse:   #0f172a;
+  --text-link:      #93b4fd;
+
+  --brand:           #3b65f6;
+  --brand-hover:     #608bfa;
+  --brand-pressed:   #2549eb;
+  --brand-soft:      rgba(59, 101, 246, 0.14);
+  --brand-soft-hover:rgba(59, 101, 246, 0.22);
+  --brand-foreground:#ffffff;
+  --brand-ring:      rgba(96, 139, 250, 0.45);
+
+  --status-success-bg: rgba(16, 185, 129, 0.14);
+  --status-success-fg: #34d399;
+  --status-warning-bg: rgba(245, 158, 11, 0.14);
+  --status-warning-fg: #fbbf24;
+  --status-danger-bg:  rgba(239, 68, 68, 0.14);
+  --status-danger-fg:  #f87171;
+  --status-info-bg:    rgba(14, 165, 233, 0.14);
+  --status-info-fg:    #38bdf8;
+  --status-neutral-bg: rgba(148, 163, 184, 0.12);
+  --status-neutral-fg: #cbd5e1;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.45), 0 4px 6px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+
+  --hero-grad-from: #0f1c36;
+  --hero-grad-to:   #0a1120;
+  --hero-pattern:   rgba(96, 139, 250, 0.08);
+}
