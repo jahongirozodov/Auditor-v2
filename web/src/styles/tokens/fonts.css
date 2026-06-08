@@ -1,0 +1,19 @@
+/* =========================================================================
+   Auditor DS — Fonts (closed-network / self-hosted)
+   The original design source loaded webfonts from the Google Fonts CDN. In
+   production we self-host via next/font (src/app/fonts.ts), which exposes each
+   family as a CSS variable on <html>:
+     --font-jakarta   → Plus Jakarta Sans  (display)
+     --font-manrope   → Manrope            (sans / UI)
+     --font-jetbrains → JetBrains Mono      (mono / data)
+   This file only maps the semantic aliases the design system consumes.
+   For a fully air-gapped build, switch fonts.ts to next/font/local.
+   ========================================================================= */
+:root {
+  /* Display — headings, KPI numbers, brand */
+  --font-display: var(--font-jakarta), "Plus Jakarta Sans", "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Sans — body, UI, controls */
+  --font-sans: var(--font-manrope), "Manrope", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Mono — codes, IDs, log lines, tabular data */
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}

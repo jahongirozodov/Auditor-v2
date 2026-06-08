@@ -1,0 +1,75 @@
+/* =========================================================================
+   Auditor DS — Typography tokens
+   Scale: 1.125 minor-third on body, ~1.25 on display.
+   ========================================================================= */
+:root {
+  /* ---------- Size scale (rem @ 16px base) ---------- */
+  --fs-12: 0.75rem;     /* meta, caption */
+  --fs-13: 0.8125rem;   /* dense table */
+  --fs-14: 0.875rem;    /* small body, buttons */
+  --fs-15: 0.9375rem;   /* body */
+  --fs-16: 1rem;        /* large body */
+  --fs-18: 1.125rem;    /* lead */
+  --fs-20: 1.25rem;     /* h5 */
+  --fs-24: 1.5rem;      /* h4 */
+  --fs-30: 1.875rem;    /* h3 */
+  --fs-36: 2.25rem;     /* h2 */
+  --fs-48: 3rem;        /* h1 / hero */
+  --fs-60: 3.75rem;     /* display */
+
+  /* ---------- Line height ---------- */
+  --lh-tight:   1.15;  /* @kind font */
+  --lh-snug:    1.3;   /* @kind font */
+  --lh-normal:  1.55;  /* @kind font */
+  --lh-relaxed: 1.7;   /* @kind font */
+
+  /* ---------- Letter spacing ---------- */
+  --tracking-tight:  -0.02em;
+  --tracking-snug:   -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.02em;
+  --tracking-caps:   0.08em;
+
+  /* ---------- Weights ---------- */
+  --fw-regular:   400;  /* @kind font */
+  --fw-medium:    500;  /* @kind font */
+  --fw-semibold:  600;  /* @kind font */
+  --fw-bold:      700;  /* @kind font */
+  --fw-extrabold: 800;  /* @kind font */
+
+  /* ---------- Semantic type roles ---------- */
+  --type-display-size:  var(--fs-60);
+  --type-display-lh:    var(--lh-tight);
+  --type-display-track: var(--tracking-tight);
+  --type-display-weight:var(--fw-extrabold);
+
+  --type-h1-size:  var(--fs-48);
+  --type-h1-lh:    var(--lh-tight);
+  --type-h1-weight:var(--fw-extrabold);
+  --type-h1-track: var(--tracking-tight);
+
+  --type-h2-size:  var(--fs-36);
+  --type-h2-lh:    var(--lh-tight);
+  --type-h2-weight:var(--fw-bold);
+  --type-h2-track: var(--tracking-tight);
+
+  --type-h3-size:  var(--fs-24);
+  --type-h3-lh:    var(--lh-snug);
+  --type-h3-weight:var(--fw-bold);
+  --type-h3-track: var(--tracking-snug);
+
+  --type-h4-size:  var(--fs-20);
+  --type-h4-lh:    var(--lh-snug);
+  --type-h4-weight:var(--fw-semibold);
+
+  --type-body-size:  var(--fs-15);
+  --type-body-lh:    var(--lh-normal);
+  --type-body-weight:var(--fw-regular);
+
+  --type-label-size:  var(--fs-14);
+  --type-label-weight:var(--fw-semibold);
+
+  --type-caption-size:  var(--fs-12);
+  --type-caption-weight:var(--fw-medium);
+  --type-caption-track: var(--tracking-caps);
+}

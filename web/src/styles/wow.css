@@ -1,0 +1,406 @@
+/* =========================================================================
+   WOW / CINEMATIC LAYER  — SOC command-center treatment
+   Always-on (tasteful); amplified under :root[data-demo="on"].
+   All motion gated behind prefers-reduced-motion.
+   ========================================================================= */
+
+@property --wow-ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+/* ---- Animated gradient mesh (drifting atmosphere) ----------------------- */
+body::before { inset: -28%; }
+@media (prefers-reduced-motion: no-preference) {
+  body::before { animation: meshDrift 34s var(--ease-in-out) infinite alternate; will-change: transform; }
+}
+@keyframes meshDrift {
+  0%   { transform: translate(0, 0)        scale(1);    }
+  50%  { transform: translate(2.5%, 1.8%)  scale(1.07); }
+  100% { transform: translate(-2%, 2.6%)   scale(1.04); }
+}
+
+/* Second moving blob layer (richer in demo mode) */
+.app::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    radial-gradient(420px 420px at 30% 75%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 60%),
+    radial-gradient(360px 360px at 70% 30%, color-mix(in srgb, #38bdf8 12%, transparent), transparent 60%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app::before { animation: meshDrift2 28s var(--ease-in-out) infinite alternate; will-change: transform; }
+}
+@keyframes meshDrift2 {
+  0%   { transform: translate(0,0) rotate(0deg); }
+  100% { transform: translate(4%, -3%) rotate(8deg); }
+}
+
+/* ---- Scan-line + grain overlay (demo mode) ------------------------------ */
+:root[data-demo="on"] .canvas::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 2px,
+    color-mix(in srgb, var(--text-primary) 3%, transparent) 2px 3px
+  );
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+:root[data-demo="on"] .canvas::before {
+  content: "";
+  position: fixed;
+  left: 0; right: 0; top: 0;
+  height: 140px;
+  z-index: 56;
+  pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 14%, transparent), transparent);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-demo="on"] .canvas::before { animation: scanBeam 7s linear infinite; }
+}
+@keyframes scanBeam {
+  0%   { transform: translateY(-160px); opacity: 0; }
+  8%   { opacity: 0.7; }
+  60%  { opacity: 0.5; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+/* Demo-mode amplification of existing glows */
+:root[data-demo="on"] body::before { opacity: 1.15; }
+:root[data-demo="on"] .app::before  { opacity: 0.85; }
+:root[data-demo="on"] .stat,
+:root[data-demo="on"] .panel { box-shadow: 0 1px 0 color-mix(in srgb,#fff 7%,transparent) inset, var(--shadow-lg); }
+
+/* ---- Cursor spotlight on cards ------------------------------------------ */
+.stat, .panel, .hero-band, .podium { --mx: 50%; --my: 0%; }
+.panel::after, .hero-band .hero-glow {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+  background: radial-gradient(360px 360px at var(--mx) var(--my),
+    color-mix(in srgb, var(--brand) 16%, transparent), transparent 60%);
+  z-index: 0;
+}
+.panel { position: relative; }
+.panel:hover::after { opacity: 1; }
+.panel > * { position: relative; z-index: 1; }
+.stat:hover::after {
+  /* reset the corner-glow geometry (app.css) so the cursor spotlight fills
+     the whole tile and clips to its radius — otherwise the 220px gradient is
+     crammed into the 130px off-card corner box and shows a hard diagonal edge. */
+  inset: 0;
+  right: auto; top: auto;
+  width: auto; height: auto;
+  border-radius: inherit;
+  background: radial-gradient(220px 220px at var(--mx) var(--my),
+    color-mix(in srgb, var(--brand) 20%, transparent), transparent 65%);
+  opacity: 1;
+}
+/* keep tile content above the spotlight/glow pseudo-elements */
+.stat > * { position: relative; z-index: 1; }
+
+/* ---- Animated gradient (glow) border ------------------------------------ */
+.glow-border { position: relative; }
+.glow-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--wow-ang),
+    transparent 0deg,
+    color-mix(in srgb, var(--brand) 85%, white 10%) 70deg,
+    #38bdf8 120deg,
+    transparent 200deg,
+    transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.75;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .glow-border::before { animation: wowAngSpin 6s linear infinite; }
+}
+:root[data-demo="on"] .glow-border::before { opacity: 1; animation-duration: 4s; }
+@keyframes wowAngSpin { to { --wow-ang: 360deg; } }
+
+/* ---- Live pulse dot ----------------------------------------------------- */
+.live-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #34d399; position: relative;
+}
+.live-dot::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; background: #34d399;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot::after { animation: livePulse 1.8s var(--ease-out) infinite; }
+}
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, #34d399 70%, transparent); opacity: 1; }
+  100% { box-shadow: 0 0 0 9px transparent; opacity: 0; }
+}
+
+/* =========================================================================
+   HERO COMMAND BAND
+   ========================================================================= */
+.hero-band {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) auto;
+  gap: 28px;
+  align-items: center;
+  padding: 24px 28px;
+  margin-bottom: 18px;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background:
+    radial-gradient(700px 300px at 8% -40%, color-mix(in srgb, var(--brand) 26%, transparent), transparent 70%),
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--brand) 22%, var(--bg-surface)),
+      var(--bg-surface) 52%,
+      color-mix(in srgb, #0b1220 60%, var(--bg-surface)));
+  box-shadow: var(--shadow-lg);
+}
+.hero-band__main { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-primary) 78%, var(--brand));
+}
+.hero-band__headline {
+  display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap;
+}
+.hero-score {
+  font-family: var(--font-display);
+  font-size: 72px; font-weight: 800; line-height: 0.92;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  text-shadow: 0 0 28px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+.hero-score sup { font-size: 26px; font-weight: 700; color: var(--text-tertiary); margin-left: 2px; }
+.hero-band__caption { max-width: 460px; }
+.hero-band__caption h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 3px; }
+.hero-band__caption p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+
+.hero-metrics { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.hero-metric {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 55%, transparent);
+  border: 1px solid var(--border-subtle);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  min-width: 96px;
+}
+.hero-metric__v { font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
+.hero-metric__l { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+.hero-metric--danger .hero-metric__v { color: #f87171; }
+.hero-metric--good   .hero-metric__v { color: #34d399; }
+
+.hero-band__side { position: relative; z-index: 1; display: flex; align-items: center; gap: 22px; }
+
+/* ---- Radial gauge ------------------------------------------------------- */
+.gauge { position: relative; display: grid; place-items: center; }
+.gauge svg { display: block; overflow: visible; }
+.gauge__track { stroke: color-mix(in srgb, var(--text-primary) 12%, transparent); }
+.gauge__fill {
+  stroke: url(#gaugeGrad);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--brand) 70%, transparent));
+  transition: stroke-dashoffset 1.3s var(--ease-out);
+}
+.gauge__label { position: absolute; display: flex; flex-direction: column; align-items: center; }
+.gauge__num { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: -0.02em; color: var(--text-primary); }
+.gauge__cap { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+
+/* =========================================================================
+   THREAT RADAR
+   ========================================================================= */
+.radar { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
+.radar__grid { position: absolute; inset: 0; border-radius: 50%; }
+.radar__ring {
+  position: absolute; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--brand) 26%, transparent);
+  inset: 0;
+}
+.radar__ring.r2 { inset: 25px; } .radar__ring.r3 { inset: 50px; } .radar__ring.r4 { inset: 75px; opacity: .6; }
+.radar__cross { position: absolute; background: color-mix(in srgb, var(--brand) 18%, transparent); }
+.radar__cross.h { left: 0; right: 0; top: 50%; height: 1px; }
+.radar__cross.v { top: 0; bottom: 0; left: 50%; width: 1px; }
+.radar__sweep {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    transparent 0deg 296deg,
+    color-mix(in srgb, var(--brand) 10%, transparent) 320deg,
+    color-mix(in srgb, var(--brand) 55%, transparent) 356deg,
+    transparent 360deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .radar__sweep { animation: wowSpin 3.6s linear infinite; }
+}
+@keyframes wowSpin { to { transform: rotate(360deg); } }
+.radar__blip {
+  position: absolute; width: 7px; height: 7px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.radar__blip.crit { background: #f87171; }
+.radar__blip.high { background: #fbbf24; }
+.radar__blip.med  { background: #38bdf8; }
+@media (prefers-reduced-motion: no-preference) {
+  .radar__blip { animation: blipPulse 2.4s var(--ease-out) infinite; }
+}
+@keyframes blipPulse {
+  0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  70%  { opacity: 0.9; }
+  100% { box-shadow: 0 0 0 12px transparent; opacity: 0.35; }
+}
+
+/* =========================================================================
+   LIVE EVENT TICKER
+   ========================================================================= */
+.ticker {
+  position: relative; z-index: 1;
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  display: flex; align-items: center; gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px; color: var(--text-secondary);
+  overflow: hidden;
+}
+.ticker__tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: #34d399; flex-shrink: 0;
+}
+.ticker__win { flex: 1; min-width: 0; overflow: hidden; height: 18px; position: relative; }
+.ticker__track { display: flex; gap: 40px; white-space: nowrap; position: absolute; will-change: transform; }
+@media (prefers-reduced-motion: no-preference) {
+  .ticker__track { animation: tickerScroll 26s linear infinite; }
+}
+@keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker__item { display: inline-flex; align-items: center; gap: 7px; }
+.ticker__item b { color: var(--text-primary); font-weight: 600; }
+.ticker__dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* =========================================================================
+   LEADERBOARD PODIUM
+   ========================================================================= */
+.podium {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: 12px;
+  padding: 18px 16px 16px;
+}
+.podium__col {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px 10px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-surface-2) 80%, transparent);
+  border: 1px solid var(--border-color);
+  position: relative;
+  text-align: center;
+}
+.podium__col--1 { background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 20%, var(--bg-surface-2)), var(--bg-surface-2)); border-color: color-mix(in srgb, var(--brand) 45%, var(--border-color)); }
+.podium__medal {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 13px;
+  color: #1a1206;
+}
+.podium__medal--1 { background: linear-gradient(135deg, #fde68a, #f59e0b); box-shadow: 0 0 16px color-mix(in srgb, #f59e0b 60%, transparent); }
+.podium__medal--2 { background: linear-gradient(135deg, #e5e7eb, #9ca3af); }
+.podium__medal--3 { background: linear-gradient(135deg, #fcd9b6, #c2823f); }
+.podium__name { font-size: 12.5px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+.podium__sub { font-size: 11px; color: var(--text-tertiary); }
+.podium__score { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -0.02em; color: var(--text-primary); }
+.podium__bar { width: 100%; border-radius: var(--radius-sm) var(--radius-sm) 0 0; background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 55%, transparent), color-mix(in srgb, var(--brand) 18%, transparent)); }
+.podium__col--1 .podium__bar { background: linear-gradient(180deg, var(--brand), color-mix(in srgb, var(--brand) 30%, transparent)); }
+
+/* =========================================================================
+   CINEMATIC BOOT SEQUENCE
+   ========================================================================= */
+.boot2 {
+  position: fixed; inset: 0; z-index: 200;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(900px 600px at 50% 30%, color-mix(in srgb, var(--brand) 22%, transparent), transparent 60%),
+    var(--bg-page);
+  overflow: hidden;
+}
+.boot2::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, color-mix(in srgb, var(--text-primary) 3%, transparent) 3px 4px);
+  opacity: 0.4;
+}
+.boot2.is-out { animation: bootOut 600ms var(--ease-in-out) forwards; }
+@keyframes bootOut { to { opacity: 0; visibility: hidden; transform: scale(1.04); } }
+.boot2__inner { position: relative; z-index: 1; width: min(520px, 86vw); display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
+
+.boot2__mark {
+  width: 96px; height: 96px; border-radius: 26px;
+  display: grid; place-items: center;
+  background: linear-gradient(140deg, var(--brand), color-mix(in srgb, var(--brand) 50%, #0b1220));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 50%, transparent), 0 18px 50px color-mix(in srgb, var(--brand) 45%, transparent);
+  color: #fff;
+}
+.boot2__mark svg { width: 46px; height: 46px; }
+.boot2__mark svg path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .boot2__mark { animation: bootMark 900ms var(--ease-out) both; }
+  .boot2__mark svg path { animation: bootDraw 1100ms var(--ease-out) 300ms forwards; }
+}
+@keyframes bootMark { from { opacity: 0; transform: scale(0.6) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes bootDraw { to { stroke-dashoffset: 0; } }
+
+.boot2__title { font-family: var(--font-display); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); }
+.boot2__title .accent { color: var(--brand); }
+.boot2__sub { font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); margin-top: -12px; }
+
+.boot2__log {
+  width: 100%;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.7;
+  color: var(--text-tertiary);
+  text-align: left;
+  background: color-mix(in srgb, var(--bg-surface) 55%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  min-height: 96px;
+}
+.boot2__line { display: flex; align-items: center; gap: 8px; opacity: 0; }
+.boot2__line.show { opacity: 1; }
+.boot2__line .ok { color: #34d399; }
+.boot2__line .val { color: var(--text-secondary); margin-left: auto; }
+
+.boot2__bar { width: 100%; height: 4px; border-radius: 999px; background: color-mix(in srgb, var(--text-primary) 12%, transparent); overflow: hidden; }
+.boot2__bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--brand), #38bdf8); box-shadow: 0 0 12px color-mix(in srgb, var(--brand) 70%, transparent); transition: width 0.2s linear; }
+
+/* =========================================================================
+   PREMIUM CHART touches
+   ========================================================================= */
+.spark path.spark-line { filter: drop-shadow(0 1px 4px color-mix(in srgb, currentColor 35%, transparent)); }
+.donut circle.donut-seg { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--text-primary) 12%, transparent)); }
+:root[data-demo="on"] .donut circle.donut-seg { filter: drop-shadow(0 0 7px currentColor); }
+
+/* Responsive: stack hero on narrow canvases */
+@media (max-width: 1100px) {
+  .hero-band { grid-template-columns: 1fr; }
+  .hero-band__side { justify-content: flex-start; }
+}

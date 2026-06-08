@@ -1,0 +1,11 @@
+.next/
+node_modules/
+out/
+build/
+coverage/
+# Design-source CSS is vendored verbatim from the handoff — don't reformat it.
+src/styles/
+# Fixtures are tabular seed data ported from the prototype — keep the compact form.
+src/lib/fixtures/
+messages/
+*.md

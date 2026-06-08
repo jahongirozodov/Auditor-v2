@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Auditor",
+    "tagline": "Kiberxavfsizlik auditi avtomatlashtirilgan tizimi"
+  },
+  "home": {
+    "title": "Auditor — ishlab chiqish muhiti tayyor",
+    "subtitle": "Next.js, TypeScript va dizayn tokenlari asosida qurilmoqda.",
+    "tokensOk": "Dizayn tokenlari ulandi",
+    "fontsOk": "Shriftlar (Plus Jakarta Sans, Manrope, JetBrains Mono) yuklandi",
+    "i18nOk": "Tarjima (i18n) tizimi faol",
+    "themeToggle": "Mavzuni almashtirish"
+  },
+  "common": {
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "add": "Qoʻshish",
+    "delete": "Oʻchirish",
+    "edit": "Tahrir",
+    "close": "Yopish",
+    "confirm": "Tasdiqlash",
+    "return": "Qaytarish",
+    "resubmit": "Qayta yuborish",
+    "submit": "Yuborish",
+    "export": "Eksport",
+    "upload": "Yuklash",
+    "empty": "Hech narsa topilmadi.",
+    "irreversible": "Bu amalni qaytarib boʻlmaydi."
+  },
+  "status": {
+    "active": "Faol",
+    "inactive": "Nofaol",
+    "inProgress": "Jarayonda",
+    "review": "Tekshiruvda",
+    "done": "Bajarilgan",
+    "approved": "Tasdiqlangan",
+    "returned": "Qaytarilgan",
+    "planned": "Rejalashtirilgan"
+  },
+  "nav": {
+    "groupMain": "ASOSIY",
+    "groupAnalysis": "TAHLIL",
+    "groupSystem": "TIZIM",
+    "dashboard": "Boshqaruv paneli",
+    "organizations": "Tashkilotlar",
+    "audits": "Auditlar",
+    "tasks": "Vazifalar",
+    "findings": "Findinglar",
+    "reports": "Hisobotlar",
+    "settings": "Sozlamalar",
+    "profile": "Profil"
+  }
+}

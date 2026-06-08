@@ -1,22 +1,32 @@
-# CODING AGENTS: READ THIS FIRST
+# Auditor
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+Closed-network (air-gapped) cybersecurity-audit management platform, UI in **Uzbek (Latin)**. This repo
+turns a Claude-designed prototype into a production **Next.js + TypeScript** application.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+## Start here
 
-## What you should do — IMPORTANT
+- **[AGENTS.md](AGENTS.md)** — how to work in this repo (golden rules, settled facts, commands).
+  Claude Code: see [CLAUDE.md](CLAUDE.md).
+- **[DEVELOPMENT-PLAN.md](DEVELOPMENT-PLAN.md)** — stack decision, current status, phased build plan.
+- **[docs/](docs/)** — curated English specification (requirements by domain + decision records).
 
-**Read `auditor-v6/project/app/ui_kits/auditor/index.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+## Layout
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+- **[web/](web/)** — the production Next.js app. **All new code goes here.** ([web/AGENTS.md](web/AGENTS.md))
+- **[docs/](docs/)** — build-facing spec derived from the sources below.
+- **[project/](project/)** — the original Claude Design handoff bundle, **READ-ONLY** (the prototype in
+  `project/app/ui_kits/auditor/`, the design tokens, and the formal spec
+  `project/uploads/TZ_extracted.txt`). Design source of truth — recreate it faithfully; don't edit it.
 
-## About the design files
+## Run
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+```bash
+cd web
+npm run dev        # dev server (http://localhost:3000)
+npm run build      # production build
+npm run lint       # ESLint + design-token adherence
+npm run typecheck  # tsc --noEmit
+```
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
-
-## Bundle contents
-
-- `auditor-v6/README.md` — this file
-- `auditor-v6/project/` — the `Auditor v6` project files (HTML prototypes, assets, components)
+> Origin: a hi-fi HTML/CSS/JS design exported from Claude Design (claude.ai/design). The prototype is a
+> visual reference, not production code — match its output, not its internal structure.

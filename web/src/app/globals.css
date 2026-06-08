@@ -1,0 +1,23 @@
+/* =========================================================================
+   Global stylesheet entry — imported once from the root layout.
+
+   Order matters:
+     1. app.css       → resets + design tokens (it @imports tokens.css) + the
+                        full component/shell layer (.btn, .panel, .stat, .tbl …)
+     2. kit-extra.css → v6 additions (approval flow, topology, command palette,
+                        task flow, AI chat, settings, login effects)
+     3. wow.css       → cinematic / SOC command-center treatment (gated behind
+                        prefers-reduced-motion)
+
+   Do NOT add raw colors / px here — use design-system tokens (var(--…)).
+   ========================================================================= */
+@import "../styles/app.css";
+@import "../styles/kit-extra.css";
+@import "../styles/wow.css";
+
+/* Prevent theme-switch color transitions from flashing on first paint. The
+   ThemeProvider adds .ds-no-transition to <html> momentarily while swapping. */
+.ds-no-transition,
+.ds-no-transition * {
+  transition: none !important;
+}

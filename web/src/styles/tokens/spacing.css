@@ -1,0 +1,33 @@
+/* =========================================================================
+   Auditor DS — Spacing, radii, layout
+   4px base grid.
+   ========================================================================= */
+:root {
+  /* ---------- Spacing (4px base) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ---------- Radii ---------- */
+  --radius-xs:   4px;
+  --radius-sm:   6px;   /* buttons, inputs, chips */
+  --radius-md:   8px;
+  --radius-lg:   12px;  /* cards, stats */
+  --radius-xl:   16px;
+  --radius-2xl:  20px;  /* hero, large panels */
+  --radius-full: 999px; /* pills, avatars, tags */
+
+  /* ---------- Layout ---------- */
+  --container: 1240px;
+  --topbar-h: 68px;
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.35);
+}
