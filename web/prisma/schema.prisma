@@ -93,7 +93,8 @@ model User {
   kpiEvents        KpiEvent[]
   loginAttempts    LoginAttempt[]
   auditLogs        AuditLog[]
-  configUploads    ConfigUpload[] @relation("ConfigUploader")
+  configUploads    ConfigUpload[]  @relation("ConfigUploader")
+  scannerUploads   ScannerUpload[] @relation("ScannerUploader")
 
   @@index([email])
 }
@@ -174,12 +175,13 @@ model Audit {
   findings Json // { critical, high, medium, low }
   tasksAgg Json // { total, done, in_progress, blocked, new }
 
-  members       AuditMember[]
-  taskList      Task[]
-  findingList   Finding[]
-  tokens        AuditToken[]
-  reports       Report[]
-  configUploads ConfigUpload[]
+  members        AuditMember[]
+  taskList       Task[]
+  findingList    Finding[]
+  tokens         AuditToken[]
+  reports        Report[]
+  configUploads  ConfigUpload[]
+  scannerUploads ScannerUpload[]
 
   @@index([orgId])
   @@index([leaderId])
@@ -211,8 +213,9 @@ model Task {
   files      Int
   kpi        Int
 
-  findingList   Finding[]
-  configUploads ConfigUpload[]
+  findingList    Finding[]
+  configUploads  ConfigUpload[]
+  scannerUploads ScannerUpload[]
 
   @@index([auditId])
   @@index([assigneeId])
@@ -435,4 +438,27 @@ model AiAnalysisResult {
 
   @@index([uploadId])
   @@index([scope])
+}
+
+// ---------- Scanner import ----------
+model ScannerUpload {
+  id           String   @id @default(cuid())
+  filename     String
+  scanner      String   // ScannerType: nessus | openvas | nmap | zap | burp | universal
+  content      String   @db.Text
+  sizeBytes    Int
+  findingCount Int      @default(0)
+  severityAgg  Json     // { critical, high, medium, low, info }
+  status       String   @default("analyzed") // analyzed | imported
+  audit        Audit    @relation(fields: [auditId], references: [id])
+  auditId      String
+  task         Task     @relation(fields: [taskId], references: [id])
+  taskId       String
+  uploadedBy   User     @relation("ScannerUploader", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  @@index([auditId])
+  @@index([taskId])
+  @@index([uploadedById])
 }

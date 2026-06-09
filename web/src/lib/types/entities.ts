@@ -207,6 +207,29 @@ export interface ConfigUploadView {
   createdAt: string;
 }
 
+// ---------- Scanner import ----------
+export interface ScannerUploadView {
+  id: string;
+  filename: string;
+  scanner: string;
+  content: string;
+  auditId: string;
+  taskId: string;
+  status: string;
+  findingCount: number;
+  createdAt: string;
+}
+
+export interface ScanImportRowView {
+  id: string;
+  filename: string;
+  scanner: string;
+  auditCode: string;
+  severityAgg: { critical: number; high: number; medium: number; low: number; info: number };
+  status: string;
+  createdAt: string;
+}
+
 // ---------- KPI ----------
 export interface KpiRule {
   code: string;
