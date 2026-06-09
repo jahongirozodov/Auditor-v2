@@ -105,6 +105,11 @@ export interface Audit {
   tasks: TaskCounts;
   lastSync: string;
   pinned?: boolean;
+  /** Editable project content (Project tab). */
+  goal?: string;
+  methodology?: string;
+  scope: string[];
+  tools: string[];
 }
 
 export interface WorkflowStep {
@@ -117,7 +122,14 @@ export interface WorkflowStep {
 }
 
 // ---------- Tasks ----------
-export type TaskStatus = "new" | "in_progress" | "review" | "returned" | "done" | "blocked";
+export type TaskStatus =
+  | "new"
+  | "assigned"
+  | "in_progress"
+  | "review"
+  | "returned"
+  | "done"
+  | "blocked";
 /** Prototype priority labels (Uzbek). Backend canonical: critical/high/medium/low. */
 export type TaskPriority = "Yuqori" | "Oʻrta" | "Past";
 
@@ -171,9 +183,34 @@ export interface Finding {
   ai: boolean;
 }
 
+// ---------- Configuration analysis ----------
+/** A device whose config was parsed (drives the "analyzed devices" panel). */
+export interface AnalyzedDeviceView {
+  id: string;
+  uploadId: string;
+  hostname: string;
+  vendor: string;
+  model: string | null;
+  firmware: string | null;
+  /** Severity counts shown as sev pills. */
+  findings: { critical: number; high: number; medium: number };
+}
+
+/** A stored config upload — raw text is re-parsed for the preview + gaps. */
+export interface ConfigUploadView {
+  id: string;
+  filename: string;
+  vendor: string;
+  content: string;
+  auditId: string;
+  taskId: string;
+  createdAt: string;
+}
+
 // ---------- KPI ----------
 export interface KpiRule {
-  event: string;
+  code: string;
+  label: string;
   points: number;
 }
 
@@ -290,7 +327,7 @@ export interface Topology {
 
 // ---------- Approvals (3-stage) ----------
 export type ApprovalStageKey = "group_lead" | "head" | "dept";
-export type ApprovalState = "done" | "current" | "pending";
+export type ApprovalState = "done" | "current" | "pending" | "returned";
 
 export interface ApprovalStage {
   key: ApprovalStageKey;

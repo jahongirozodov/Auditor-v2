@@ -23,6 +23,8 @@ const ACCESS: Record<ModuleId, Record<RoleCode, AccessLevel>> = {
   assign: { super: "read", head: "read", chief: "own", lead: "own", t1: "own" },
   mytasks: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
   finding: { super: "full", head: "read", chief: "own", lead: "own", t1: "own" },
+  // Configuration analysis (upload + parse). Analyst capability, like `ai`.
+  config: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
   agent: { super: "no", head: "read", chief: "full", lead: "full", t1: "full" },
   token: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
   ai: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },

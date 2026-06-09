@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: auditor-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auditor
+      POSTGRES_PASSWORD: auditor
+      POSTGRES_DB: auditor
+    ports:
+      # Host 5432 is taken by a local Postgres here — map to 5544.
+      - "5544:5432"
+    volumes:
+      - auditor-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auditor -d auditor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Isolated DB for e2e / CI (separate port + database). Start with:
+  #   docker compose --profile test up -d db-test
+  db-test:
+    image: postgres:16-alpine
+    container_name: auditor-db-test
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: auditor
+      POSTGRES_PASSWORD: auditor
+      POSTGRES_DB: auditor_test
+    ports:
+      - "5433:5432"
+
+volumes:
+  auditor-db-data:

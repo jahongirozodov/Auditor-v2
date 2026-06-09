@@ -1,0 +1,438 @@
+// Auditor — Phase 1A schema. Mirrors the typed fixtures (src/lib/fixtures) so the
+// read DAL returns identical shapes to the screens. String ids (fixture codes),
+// String dates, denormalized counts as Json. See plan + docs/03-domain-model.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Enums (fixture values already canonical) ----------
+enum RoleCode {
+  super
+  head
+  chief
+  lead
+  t1
+}
+
+enum AuditStatus {
+  planning
+  group_forming
+  project_draft
+  project_pending
+  assigning
+  in_progress
+  review
+  returned
+  approved
+  completed
+  cancelled
+}
+
+enum FindingStatus {
+  new
+  review
+  returned
+  approved
+  fixing
+  fixed
+  retest
+  closed
+}
+
+enum Severity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum TokenStatus {
+  active
+  expired
+  revoked
+}
+
+enum RiskLevel {
+  high
+  medium
+  low
+}
+
+// ---------- Users + Auth ----------
+model User {
+  id     String   @id
+  name   String
+  role   RoleCode
+  title  String
+  avatar String
+  dept   String
+
+  // Auth (DB-backed; LDAP/AD + TOTP deferred — columns reserved)
+  email        String    @unique
+  passwordHash String
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  totpSecret   String?
+  disabled     Boolean   @default(false)
+
+  ledAudits        Audit[]        @relation("AuditLeader")
+  memberships      AuditMember[]
+  assignedTasks    Task[]         @relation("TaskAssignee")
+  reportedFindings Finding[]      @relation("FindingReporter")
+  authoredReports  Report[]       @relation("ReportAuthor")
+  tokens           AuditToken[]
+  kpi              KpiUser?
+  kpiEvents        KpiEvent[]
+  loginAttempts    LoginAttempt[]
+  auditLogs        AuditLog[]
+  configUploads    ConfigUpload[] @relation("ConfigUploader")
+
+  @@index([email])
+}
+
+// ---------- Organizations ----------
+model Organization {
+  id      String @id
+  name    String
+  stir    String
+  sector  String
+  audits  Int
+  contact String
+
+  // OrgDetail folded in
+  region  String
+  address String
+  risk    RiskLevel
+  head    String
+  since   String
+
+  contacts   OrgContact[]
+  devices    OrgDevice[]
+  auditsList Audit[]      @relation("AuditOrg")
+}
+
+model OrgContact {
+  id    String       @id @default(cuid())
+  org   Organization @relation(fields: [orgId], references: [id])
+  orgId String
+  name  String
+  role  String
+  email String
+  phone String
+
+  @@index([orgId])
+}
+
+model OrgDevice {
+  id     String       @id @default(cuid())
+  org    Organization @relation(fields: [orgId], references: [id])
+  orgId  String
+  name   String
+  kind   String
+  vendor String
+  ip     String
+  crit   String
+
+  @@index([orgId])
+}
+
+// ---------- Audits ----------
+model Audit {
+  id           String       @id
+  code         String
+  title        String
+  org          Organization @relation("AuditOrg", fields: [orgId], references: [id])
+  orgId        String
+  type         String
+  status       AuditStatus
+  stage        Int
+  startDate    String
+  endDate      String
+  progress     Int
+  leader       User         @relation("AuditLeader", fields: [leaderId], references: [id])
+  leaderId     String
+  lastSync     String
+  pinned       Boolean      @default(false)
+  // Current project-approval stage while status=project_pending (head|dept); null otherwise.
+  projectStage String?
+
+  // Editable project content (the Project tab). scope/tools are Postgres scalar lists.
+  goal        String?
+  methodology String?
+  scope       String[]
+  tools       String[]
+
+  // Denormalized counts (NOT derivable from seeded rows)
+  findings Json // { critical, high, medium, low }
+  tasksAgg Json // { total, done, in_progress, blocked, new }
+
+  members       AuditMember[]
+  taskList      Task[]
+  findingList   Finding[]
+  tokens        AuditToken[]
+  reports       Report[]
+  configUploads ConfigUpload[]
+
+  @@index([orgId])
+  @@index([leaderId])
+}
+
+model AuditMember {
+  audit   Audit  @relation(fields: [auditId], references: [id])
+  auditId String
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+
+  @@id([auditId, userId])
+  @@index([userId])
+}
+
+// ---------- Tasks ----------
+model Task {
+  id         String @id
+  audit      Audit  @relation(fields: [auditId], references: [id])
+  auditId    String
+  title      String
+  type       String
+  priority   String // "Yuqori" | "Oʻrta" | "Past"
+  status     String // "new" | "in_progress" | "review" | "returned" | "done" | "blocked"
+  due        String
+  assignee   User   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId String
+  findings   Int
+  files      Int
+  kpi        Int
+
+  findingList   Finding[]
+  configUploads ConfigUpload[]
+
+  @@index([auditId])
+  @@index([assigneeId])
+}
+
+// ---------- Findings ----------
+model Finding {
+  id            String        @id
+  audit         Audit         @relation(fields: [auditId], references: [id])
+  auditId       String
+  task          Task          @relation(fields: [taskId], references: [id])
+  taskId        String
+  title         String
+  severity      Severity
+  cvss          Float
+  status        FindingStatus
+  reportedBy    User          @relation("FindingReporter", fields: [reportedById], references: [id])
+  reportedById  String
+  date          String
+  asset         String
+  type          String
+  cwe           String
+  description   String
+  evidence      Int
+  ai            Boolean
+  // Current approval stage while status="review" (group_lead|head|dept); null otherwise.
+  approvalStage String?
+
+  @@index([auditId])
+  @@index([taskId])
+  @@index([reportedById])
+}
+
+// ---------- KPI ----------
+model KpiUser {
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String @id
+  audits    Int
+  tasks     Int
+  findings  Int
+  total     Int
+  delta     Int
+  sparkline Json // number[]
+}
+
+model KpiRule {
+  code   String  @id
+  label  String
+  points Int
+  active Boolean @default(true)
+}
+
+model KpiEvent {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  ruleCode  String
+  points    Int
+  auditId   String?
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([ruleCode])
+}
+
+// ---------- Tokens ----------
+model AuditToken {
+  id       String      @id
+  audit    Audit       @relation(fields: [auditId], references: [id])
+  auditId  String
+  user     User        @relation(fields: [userId], references: [id])
+  userId   String
+  device   String
+  hostname String
+  os       String
+  agent    String
+  ip       String
+  issued   String
+  expires  String
+  status   TokenStatus
+  lastUsed String
+  tasks    Int
+
+  @@index([auditId])
+}
+
+// ---------- Reports ----------
+model Report {
+  id        String @id
+  audit     Audit  @relation(fields: [auditId], references: [id])
+  auditId   String
+  title     String
+  type      String
+  status    String // "draft" | "review" | "approved"
+  generated String
+  size      String
+  format    Json // string[]
+  author    User   @relation("ReportAuthor", fields: [authorId], references: [id])
+  authorId  String
+
+  @@index([auditId])
+}
+
+// ---------- Auth security (new) ----------
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  success   Boolean
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([userId])
+}
+
+// Append-only audit log (auth events in 1A; extended in 1B).
+model AuditLog {
+  id        String   @id @default(cuid())
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  action    String // "auth.*" (1A) + "task.*" / "finding.*" (1B)
+  entity    String?
+  ip        String?
+  device    String?
+  level     String   @default("info")
+  // Mutation context: comment, before/after status (1B).
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+}
+
+// ---------- Mutation history (1B, append-only) ----------
+// Generic 3-step approval trail (entityType="finding" in 1B; "project" later).
+model ApprovalEvent {
+  id         String   @id @default(cuid())
+  entityType String // "finding"
+  entityId   String
+  who        String // userId
+  action     String // "Submit" | "Approve" | "Return"
+  stage      String // "group_lead" | "head" | "dept"
+  state      String // "done" | "returned"
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model TaskStatusHistory {
+  id         String   @id @default(cuid())
+  taskId     String
+  fromStatus String
+  toStatus   String
+  changedBy  String // userId
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([taskId])
+}
+
+// ---------- Configuration analysis ----------
+// One uploaded device-config file. Raw text stored in-DB (air-gapped; configs are
+// small) so gaps can be re-derived deterministically by the parser — no ConfigGap table.
+model ConfigUpload {
+  id           String   @id @default(cuid())
+  filename     String
+  vendor       String // VendorKey (cisco_asa | linux_sshd | … | unknown)
+  content      String   @db.Text
+  sizeBytes    Int
+  gapCount     Int      @default(0)
+  severityAgg  Json // { critical, high, medium, low }
+  audit        Audit    @relation(fields: [auditId], references: [id])
+  auditId      String
+  task         Task     @relation(fields: [taskId], references: [id])
+  taskId       String
+  uploadedBy   User     @relation("ConfigUploader", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  devices   AnalyzedDevice[]
+  aiResults AiAnalysisResult[]
+
+  @@index([auditId])
+  @@index([taskId])
+  @@index([uploadedById])
+}
+
+model AnalyzedDevice {
+  id          String       @id @default(cuid())
+  upload      ConfigUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  uploadId    String
+  hostname    String
+  vendor      String
+  model       String?
+  firmware    String?
+  findingsAgg Json // { critical, high, medium }
+  createdAt   DateTime     @default(now())
+
+  @@index([uploadId])
+}
+
+// Every AI call (docs/05 contract). `ok=false` records a degraded/unreachable call.
+model AiAnalysisResult {
+  id          String        @id @default(cuid())
+  upload      ConfigUpload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+  uploadId    String?
+  scope       String // "config"
+  model       String
+  input       String        @db.Text
+  output      String        @db.Text
+  latencyMs   Int
+  tokens      Int           @default(0)
+  ok          Boolean       @default(true)
+  createdById String
+  createdAt   DateTime      @default(now())
+
+  @@index([uploadId])
+  @@index([scope])
+}

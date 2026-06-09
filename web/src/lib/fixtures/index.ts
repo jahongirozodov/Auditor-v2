@@ -25,7 +25,7 @@ import type {
   User,
   WorkflowStep,
 } from "../types/entities";
-import type { AuditStatus, Severity } from "../types/entities";
+import type { AuditStatus, FindingStatus, Severity } from "../types/entities";
 
 /** Semantic tone → maps to design-system status tokens / tag classes. */
 export type Tone = "neutral" | "info" | "warning" | "danger" | "success";
@@ -108,12 +108,13 @@ export const ORG_RISK: Record<RiskLevel, { label: string; tag: string }> = {
 
 // ---------- Audits ----------
 export const AUDITS: Audit[] = [
-  { id: "AUD-2026-014", code: "AUD-2026-014", title: "Aloqa va kommunikatsiya vazirligi — yillik kompleks audit", org: "o1", type: "Kompleks audit", status: "in_progress", stage: 7, startDate: "2026-04-12", endDate: "2026-05-31", progress: 64, leader: "u3", members: ["u3", "u4", "u6", "u7"], findings: { critical: 4, high: 9, medium: 14, low: 7 }, tasks: { total: 38, done: 22, in_progress: 11, blocked: 2, new: 3 }, lastSync: "12 daqiqa oldin", pinned: true },
-  { id: "AUD-2026-013", code: "AUD-2026-013", title: "Soliq qoʻmitasi — DBMS va loyiha auditi", org: "o2", type: "Texnik audit", status: "review", stage: 9, startDate: "2026-03-22", endDate: "2026-05-18", progress: 88, leader: "u4", members: ["u4", "u3", "u9"], findings: { critical: 2, high: 5, medium: 8, low: 4 }, tasks: { total: 26, done: 24, in_progress: 1, blocked: 0, new: 1 }, lastSync: "2 soat oldin" },
-  { id: "AUD-2026-012", code: "AUD-2026-012", title: "Markaziy bank — mobil bank ilovasi penetration test", org: "o3", type: "Penetration test", status: "in_progress", stage: 7, startDate: "2026-05-01", endDate: "2026-06-12", progress: 42, leader: "u8", members: ["u8", "u5", "u6"], findings: { critical: 3, high: 7, medium: 11, low: 5 }, tasks: { total: 22, done: 9, in_progress: 8, blocked: 1, new: 4 }, lastSync: "31 daqiqa oldin" },
-  { id: "AUD-2026-011", code: "AUD-2026-011", title: "Davlat xizmatlari agentligi — pre-prod muhit auditi", org: "o4", type: "Kompleks audit", status: "approved", stage: 10, startDate: "2026-02-15", endDate: "2026-04-30", progress: 100, leader: "u3", members: ["u3", "u4", "u7", "u10"], findings: { critical: 1, high: 4, medium: 12, low: 9 }, tasks: { total: 31, done: 31, in_progress: 0, blocked: 0, new: 0 }, lastSync: "1 hafta oldin" },
-  { id: "AUD-2026-010", code: "AUD-2026-010", title: "Energiya vazirligi — OT/SCADA segmentatsiya auditi", org: "o5", type: "Maxsus audit", status: "planning", stage: 3, startDate: "2026-05-20", endDate: "2026-07-15", progress: 12, leader: "u10", members: ["u10", "u8", "u9"], findings: { critical: 0, high: 0, medium: 0, low: 0 }, tasks: { total: 14, done: 1, in_progress: 0, blocked: 0, new: 13 }, lastSync: "—" },
-  { id: "AUD-2026-009", code: "AUD-2026-009", title: "Toshkent shahar hokimligi — public web portfolio auditi", org: "o6", type: "Web audit", status: "returned", stage: 9, startDate: "2026-03-01", endDate: "2026-04-15", progress: 76, leader: "u5", members: ["u5", "u6", "u9"], findings: { critical: 1, high: 3, medium: 6, low: 11 }, tasks: { total: 18, done: 13, in_progress: 4, blocked: 1, new: 0 }, lastSync: "3 kun oldin" },
+  { id: "AUD-2026-014", code: "AUD-2026-014", title: "Aloqa va kommunikatsiya vazirligi — yillik kompleks audit", org: "o1", type: "Kompleks audit", status: "in_progress", stage: 7, startDate: "2026-04-12", endDate: "2026-05-31", progress: 64, leader: "u3", members: ["u3", "u4", "u6", "u7"], findings: { critical: 4, high: 9, medium: 14, low: 7 }, tasks: { total: 38, done: 22, in_progress: 11, blocked: 2, new: 3 }, lastSync: "12 daqiqa oldin", pinned: true, goal: "Aloqa va kommunikatsiya vazirligi axborot tizimlari xavfsizligini baholash, zaifliklarni aniqlash va remediatsiya boʻyicha tavsiyalar berish.", methodology: "OWASP ASVS · NIST 800-53 · ISO 27001", scope: ["Tashqi perimetr", "Ichki tarmoq (10.0.0.0/8)", "Web ilovalar (portal.gov.uz)", "Server infratuzilmasi", "Active Directory domeni", "VPN gateway", "Wi-Fi corporate"], tools: ["Nessus 10.5", "OpenVAS / GVM", "OWASP ZAP", "Burp Suite Pro", "Wireshark", "Nmap 7.94", "Suricata", "Hydra", "John the Ripper"] },
+  { id: "AUD-2026-013", code: "AUD-2026-013", title: "Soliq qoʻmitasi — DBMS va loyiha auditi", org: "o2", type: "Texnik audit", status: "review", stage: 9, startDate: "2026-03-22", endDate: "2026-05-18", progress: 88, leader: "u4", members: ["u4", "u3", "u9"], findings: { critical: 2, high: 5, medium: 8, low: 4 }, tasks: { total: 26, done: 24, in_progress: 1, blocked: 0, new: 1 }, lastSync: "2 soat oldin", goal: "Soliq qoʻmitasi DBMS va loyiha infratuzilmasi xavfsizligini texnik baholash.", methodology: "NIST SP 800-115 · CIS Benchmarks", scope: ["DBMS klasteri", "Loyiha serverlari", "Backup tizimi"], tools: ["Nessus 10.5", "Nmap 7.94", "sqlmap", "Wireshark"] },
+  { id: "AUD-2026-012", code: "AUD-2026-012", title: "Markaziy bank — mobil bank ilovasi penetration test", org: "o3", type: "Penetration test", status: "in_progress", stage: 7, startDate: "2026-05-01", endDate: "2026-06-12", progress: 42, leader: "u8", members: ["u8", "u5", "u6"], findings: { critical: 3, high: 7, medium: 11, low: 5 }, tasks: { total: 22, done: 9, in_progress: 8, blocked: 1, new: 4 }, lastSync: "31 daqiqa oldin", goal: "Markaziy bank mobil bank ilovasi uchun penetration test oʻtkazish.", methodology: "OWASP MASVS · PTES", scope: ["iOS ilova", "Android ilova", "Backend API"], tools: ["Burp Suite Pro", "MobSF", "Frida", "Nmap 7.94"] },
+  { id: "AUD-2026-011", code: "AUD-2026-011", title: "Davlat xizmatlari agentligi — pre-prod muhit auditi", org: "o4", type: "Kompleks audit", status: "approved", stage: 10, startDate: "2026-02-15", endDate: "2026-04-30", progress: 100, leader: "u3", members: ["u3", "u4", "u7", "u10"], findings: { critical: 1, high: 4, medium: 12, low: 9 }, tasks: { total: 31, done: 31, in_progress: 0, blocked: 0, new: 0 }, lastSync: "1 hafta oldin", goal: "Davlat xizmatlari agentligi pre-prod muhitining kompleks auditi.", methodology: "OWASP ASVS · NIST 800-53", scope: ["Pre-prod tarmoq", "Ilova serverlari", "CI/CD quvuri"], tools: ["Nessus 10.5", "OWASP ZAP", "Nmap 7.94"] },
+  { id: "AUD-2026-010", code: "AUD-2026-010", title: "Energiya vazirligi — OT/SCADA segmentatsiya auditi", org: "o5", type: "Maxsus audit", status: "planning", stage: 3, startDate: "2026-05-20", endDate: "2026-07-15", progress: 12, leader: "u10", members: ["u10", "u8", "u9"], findings: { critical: 0, high: 0, medium: 0, low: 0 }, tasks: { total: 14, done: 1, in_progress: 0, blocked: 0, new: 13 }, lastSync: "—", goal: "Energiya vazirligi OT/SCADA segmentatsiyasini baholash.", methodology: "IEC 62443 · NIST 800-82", scope: ["OT tarmogʻi", "SCADA HMI", "Segmentatsiya nuqtalari"], tools: ["Nmap 7.94", "Wireshark", "GRASSMARLIN"] },
+  { id: "AUD-2026-009", code: "AUD-2026-009", title: "Toshkent shahar hokimligi — public web portfolio auditi", org: "o6", type: "Web audit", status: "returned", stage: 9, startDate: "2026-03-01", endDate: "2026-04-15", progress: 76, leader: "u5", members: ["u5", "u6", "u9"], findings: { critical: 1, high: 3, medium: 6, low: 11 }, tasks: { total: 18, done: 13, in_progress: 4, blocked: 1, new: 0 }, lastSync: "3 kun oldin", goal: "Toshkent shahar hokimligi public web portfeli xavfsizlik auditi.", methodology: "OWASP ASVS · OWASP Top 10", scope: ["Public web saytlar", "CMS platformasi", "DNS konfiguratsiya"], tools: ["OWASP ZAP", "Nikto", "Nmap 7.94", "sslscan"] },
+  { id: "AUD-2026-015", code: "AUD-2026-015", title: "Markaziy bank — yangi toʻlov shlyuzi loyiha auditi", org: "o3", type: "Kompleks audit", status: "project_pending", stage: 4, startDate: "2026-06-01", endDate: "2026-07-20", progress: 8, leader: "u3", members: ["u3", "u6", "u7"], findings: { critical: 0, high: 0, medium: 0, low: 0 }, tasks: { total: 0, done: 0, in_progress: 0, blocked: 0, new: 0 }, lastSync: "5 daqiqa oldin", goal: "Markaziy bank yangi toʻlov shlyuzi loyiha auditi.", methodology: "PCI DSS · OWASP ASVS", scope: ["Toʻlov shlyuzi", "HSM integratsiya", "Tranzaksiya API"], tools: ["Burp Suite Pro", "Nessus 10.5", "Nmap 7.94"] },
 ];
 
 export const STATUS_LABELS: Record<AuditStatus, { label: string; tag: string; tone: Tone }> = {
@@ -128,6 +129,20 @@ export const STATUS_LABELS: Record<AuditStatus, { label: string; tag: string; to
   approved: { label: "Tasdiqlangan", tag: "tag--success", tone: "success" },
   completed: { label: "Yakunlangan", tag: "tag--success", tone: "success" },
   cancelled: { label: "Bekor qilingan", tag: "tag--ghost", tone: "neutral" },
+};
+
+// Finding status pill labels (all 8 states). review/returned/approved deliberately match
+// STATUS_LABELS so the seeded findings list renders pixel-identically; the remediation states
+// (fixing/fixed/retest/closed) are new.
+export const FINDING_STATUS_LABELS: Record<FindingStatus, { label: string; tone: Tone }> = {
+  new: { label: "Yangi", tone: "neutral" },
+  review: { label: "Tekshiruvda", tone: "warning" },
+  returned: { label: "Qaytarilgan", tone: "danger" },
+  approved: { label: "Tasdiqlangan", tone: "success" },
+  fixing: { label: "Tuzilmoqda", tone: "info" },
+  fixed: { label: "Tuzildi", tone: "info" },
+  retest: { label: "Qayta test", tone: "warning" },
+  closed: { label: "Yopilgan", tone: "success" },
 };
 
 export const WORKFLOW: WorkflowStep[] = [
@@ -161,6 +176,7 @@ export const TASKS: Task[] = [
 
 export const TASK_STATUS: Record<TaskStatus, { label: string; tone: Tone }> = {
   new: { label: "Yangi", tone: "neutral" },
+  assigned: { label: "Tayinlangan", tone: "info" },
   in_progress: { label: "Jarayonda", tone: "info" },
   review: { label: "Tekshiruvda", tone: "warning" },
   returned: { label: "Qaytarilgan", tone: "danger" },
@@ -192,36 +208,38 @@ export const SEV_LABELS: Record<Severity, string> = {
 
 // ---------- KPI ----------
 export const KPI_RULES: KpiRule[] = [
-  { event: "Auditda ishtirok etish", points: 5 },
-  { event: "Audit guruhi rahbari sifatida", points: 15 },
-  { event: "Audit loyihasini ishlab chiqish", points: 15 },
-  { event: "Vazifalarni toʻgʻri taqsimlash", points: 10 },
-  { event: "Auditor sifatida qatnashish", points: 10 },
-  { event: "Har bir bajarilgan vazifa", points: 5 },
-  { event: "Vazifani muddatida bajarish", points: 5 },
-  { event: "Vazifani kechiktirish", points: -5 },
-  { event: "Tasdiqlangan zaiflik (har biri)", points: 3 },
-  { event: "Critical zaiflik qoʻshimcha", points: 10 },
-  { event: "High zaiflik qoʻshimcha", points: 7 },
-  { event: "Medium zaiflik qoʻshimcha", points: 4 },
-  { event: "Low zaiflik qoʻshimcha", points: 1 },
-  { event: "Konfiguratsiya fayli tahlili", points: 5 },
-  { event: "Skaner natijasini import va tahlil", points: 5 },
-  { event: "Trafik tahlilini bajarish", points: 7 },
-  { event: "Hisobotga texnik xulosa", points: 5 },
-  { event: "Qayta ishlashga qaytarilgan zaiflik", points: -2 },
-  { event: "Notoʻgʻri kiritilgan zaiflik", points: -3 },
+  { code: "act_as_group_lead",      label: "Audit guruhi rahbari sifatida",          points: 15 },
+  { code: "develop_project",        label: "Audit loyihasini ishlab chiqish",         points: 15 },
+  { code: "assign_tasks_correctly", label: "Vazifalarni toʻgʻri taqsimlash",         points: 10 },
+  { code: "act_as_auditor",         label: "Auditor sifatida qatnashish",            points: 10 },
+  { code: "vuln_critical_bonus",    label: "Critical zaiflik qoʻshimcha",            points: 10 },
+  { code: "traffic_analysis",       label: "Trafik tahlilini bajarish",              points: 7 },
+  { code: "vuln_high_bonus",        label: "High zaiflik qoʻshimcha",               points: 7 },
+  { code: "audit_participation",    label: "Auditda ishtirok etish",                 points: 5 },
+  { code: "task_completed",         label: "Har bir bajarilgan vazifa",              points: 5 },
+  { code: "task_on_time",           label: "Vazifani muddatida bajarish",            points: 5 },
+  { code: "config_analysis",        label: "Konfiguratsiya fayli tahlili",           points: 5 },
+  { code: "scanner_import",         label: "Skaner natijasini import va tahlil",     points: 5 },
+  { code: "report_section",         label: "Hisobotga texnik xulosa",               points: 5 },
+  { code: "vuln_medium_bonus",      label: "Medium zaiflik qoʻshimcha",             points: 4 },
+  { code: "vuln_approved",          label: "Tasdiqlangan zaiflik (har biri)",        points: 3 },
+  { code: "vuln_low_bonus",         label: "Low zaiflik qoʻshimcha",                points: 1 },
+  { code: "vuln_returned",          label: "Qayta ishlashga qaytarilgan zaiflik",   points: -2 },
+  { code: "vuln_rejected",          label: "Notoʻgʻri kiritilgan zaiflik",          points: -3 },
+  { code: "task_overdue",           label: "Vazifani kechiktirish",                 points: -5 },
 ];
 
 export const KPI_USERS: KpiUser[] = [
-  { user: "u3", audits: 4, tasks: 31, findings: 14, total: 287, delta: 18, sparkline: [120, 145, 180, 210, 255, 287] },
-  { user: "u4", audits: 5, tasks: 28, findings: 22, total: 264, delta: 21, sparkline: [110, 130, 165, 195, 230, 264] },
-  { user: "u8", audits: 3, tasks: 22, findings: 16, total: 218, delta: 12, sparkline: [98, 124, 152, 180, 200, 218] },
-  { user: "u10", audits: 3, tasks: 19, findings: 11, total: 196, delta: 9, sparkline: [85, 102, 128, 155, 180, 196] },
-  { user: "u6", audits: 4, tasks: 26, findings: 18, total: 188, delta: 14, sparkline: [76, 99, 121, 148, 172, 188] },
-  { user: "u7", audits: 3, tasks: 21, findings: 9, total: 162, delta: 6, sparkline: [68, 86, 110, 134, 152, 162] },
-  { user: "u5", audits: 3, tasks: 17, findings: 7, total: 138, delta: 3, sparkline: [62, 78, 95, 110, 128, 138] },
-  { user: "u9", audits: 2, tasks: 12, findings: 6, total: 96, delta: -2, sparkline: [42, 58, 72, 84, 98, 96] },
+  { user: "u3",  audits: 4, tasks: 31, findings: 14, total: 287, delta: 18,  sparkline: [120, 145, 180, 210, 255, 287] },
+  { user: "u4",  audits: 5, tasks: 28, findings: 22, total: 264, delta: 21,  sparkline: [110, 130, 165, 195, 230, 264] },
+  { user: "u8",  audits: 3, tasks: 22, findings: 16, total: 218, delta: 12,  sparkline: [98, 124, 152, 180, 200, 218] },
+  { user: "u10", audits: 3, tasks: 19, findings: 11, total: 196, delta: 9,   sparkline: [85, 102, 128, 155, 180, 196] },
+  { user: "u6",  audits: 4, tasks: 26, findings: 18, total: 188, delta: 14,  sparkline: [76, 99, 121, 148, 172, 188] },
+  { user: "u7",  audits: 3, tasks: 21, findings: 9,  total: 162, delta: 6,   sparkline: [68, 86, 110, 134, 152, 162] },
+  { user: "u5",  audits: 3, tasks: 17, findings: 7,  total: 138, delta: 3,   sparkline: [62, 78, 95, 110, 128, 138] },
+  { user: "u9",  audits: 2, tasks: 12, findings: 6,  total: 96,  delta: -2,  sparkline: [42, 58, 72, 84, 98, 96] },
+  { user: "u1",  audits: 0, tasks: 0,  findings: 0,  total: 0,   delta: 0,   sparkline: [] },
+  { user: "u2",  audits: 0, tasks: 0,  findings: 0,  total: 0,   delta: 0,   sparkline: [] },
 ];
 
 // ---------- AI ----------

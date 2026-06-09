@@ -53,6 +53,7 @@ export const MODULES = [
   { id: "assign", name: "Vazifalarni biriktirish" },
   { id: "mytasks", name: "Oʻz vazifalarini koʻrish" },
   { id: "finding", name: "Kamchilik/zaiflik" },
+  { id: "config", name: "Konfiguratsiya tahlili" },
   { id: "agent", name: "EXE agent" },
   { id: "token", name: "Audit token" },
   { id: "ai", name: "AI tahlil" },
