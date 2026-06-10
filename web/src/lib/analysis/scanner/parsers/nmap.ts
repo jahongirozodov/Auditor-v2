@@ -14,12 +14,6 @@ function portSeverity(portNum: number, hasScripts: boolean): ScannerSeverity {
   return "info";
 }
 
-/** Extract text content of the first occurrence of <tagName ...>...</tagName>. */
-function childText(block: string, tagName: string): string {
-  const m = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i").exec(block);
-  return m ? m[1].trim() : "";
-}
-
 /** Extract a named attribute from a tag string. */
 function attr(tag: string, name: string): string {
   const m = new RegExp(`\\b${name}="([^"]*)"`, "i").exec(tag);

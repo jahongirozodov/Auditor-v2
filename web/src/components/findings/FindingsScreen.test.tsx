@@ -21,6 +21,23 @@ const approvals = Object.fromEntries(
     { stages: APPROVAL_STAGES, timeline: [], current: currentOf(f.status, null) },
   ]),
 );
+const evidenceByFindingId = Object.fromEntries(
+  FINDINGS.map((finding) => [
+    finding.id,
+    [
+    {
+      id: "ev-1",
+      findingId: finding.id,
+      filename: "screenshot.png",
+      mimeType: "image/png",
+      sizeBytes: 1024,
+      dataUrl: "data:image/png;base64,aW1n",
+      kind: "screenshot",
+      createdAt: "2026-06-10T00:00:00.000Z",
+    },
+  ],
+  ]),
+);
 
 function renderScreen() {
   return render(
@@ -30,6 +47,7 @@ function renderScreen() {
         usersById={usersById}
         approvals={approvals}
         remediations={{}}
+        evidenceByFindingId={evidenceByFindingId}
         audits={AUDITS}
         tasks={TASKS}
         userId="u1"
@@ -50,6 +68,7 @@ describe("FindingsScreen", () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByText("3-bosqichli tasdiqlash")).toBeInTheDocument();
     expect(screen.getByText("Tavsif")).toBeInTheDocument();
+    expect(screen.getByText("screenshot.png")).toBeInTheDocument();
   });
 
   it("closes the drawer on Escape", async () => {

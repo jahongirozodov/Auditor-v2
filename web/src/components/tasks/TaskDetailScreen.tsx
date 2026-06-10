@@ -26,7 +26,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useToast } from "@/components/ui/Toast";
 import { TASK_STATUS } from "@/lib/fixtures";
 import { reassignTask, taskTransition } from "@/lib/actions/tasks";
-import type { TaskAction } from "@/lib/tasks-machine";
+import { actionsFor, type TaskAction } from "@/lib/tasks-machine";
 import type { TaskHistoryEntry } from "@/lib/data/tasks";
 import type { Audit, Finding, Task, TaskPriority, User } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
@@ -39,25 +39,15 @@ const FLOW: { key: string; labelKey: string; icon: LucideIcon }[] = [
   { key: "done", labelKey: "fDone", icon: Check },
 ];
 
-const ACTIONS: Record<string, string[]> = {
-  new: ["aAssign"],
-  assigned: ["aStart"],
-  in_progress: ["aSubmit", "aComplete"],
-  review: ["aApprove", "aReturn"],
-  returned: ["aRestart"],
-  done: [],
-  blocked: ["aUnblock"],
-};
-
-const ACTION_OF: Record<string, TaskAction> = {
-  aAssign: "assign",
-  aStart: "start",
-  aSubmit: "submit",
-  aComplete: "complete",
-  aApprove: "approve",
-  aReturn: "return",
-  aRestart: "restart",
-  aUnblock: "unblock",
+const ACTION_LABEL: Record<TaskAction, string> = {
+  assign: "aAssign",
+  start: "aStart",
+  submit: "aSubmit",
+  complete: "aComplete",
+  approve: "aApprove",
+  return: "aReturn",
+  restart: "aRestart",
+  unblock: "aUnblock",
 };
 
 const PRIORITY_TONE: Record<TaskPriority, TagTone> = {
@@ -82,6 +72,8 @@ export function TaskDetailScreen({
   usersById,
   history,
   linkedFindings,
+  userId,
+  role,
 }: TaskDetailScreenProps) {
   const t = useTranslations("taskDetail");
   const toast = useToast();
@@ -109,7 +101,12 @@ export function TaskDetailScreen({
   const members = audit ? audit.members.map(pick) : [assignee];
   const st = TASK_STATUS[task.status];
   const curIdx = FLOW.findIndex((f) => f.key === task.status);
-  const actions = ACTIONS[task.status] ?? [];
+  const actions = actionsFor(task.status, {
+    role,
+    isAssignee: task.assignee === userId,
+    isAuditLeader: audit?.leader === userId,
+    isSuper: role === "super",
+  });
   const created: TaskHistoryEntry = { who: task.assignee, action: t("aAssign"), time: task.due };
   const timeline = [created, ...history];
 
@@ -126,8 +123,7 @@ export function TaskDetailScreen({
     });
   }
 
-  function onAction(labelKey: string) {
-    const action = ACTION_OF[labelKey];
+  function onAction(action: TaskAction) {
     if (action === "return") {
       setReturning((v) => !v);
       return;
@@ -201,11 +197,11 @@ export function TaskDetailScreen({
               <button
                 key={act}
                 type="button"
-                className={`btn btn--sm ${act === "aReturn" ? "btn--danger" : "btn--primary"}`}
+                className={`btn btn--sm ${act === "return" ? "btn--danger" : "btn--primary"}`}
                 disabled={pending}
                 onClick={() => onAction(act)}
               >
-                {t(act)}
+                {t(ACTION_LABEL[act])}
               </button>
             ))}
           </div>

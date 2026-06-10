@@ -26,6 +26,7 @@ function renderModal(onClose = vi.fn()) {
         audits={AUDITS}
         usersById={usersById}
         defaultAuditId={AUDIT_ID}
+        defaultAssigneeId="u6"
       />
     </NextIntlClientProvider>,
   );
@@ -46,6 +47,11 @@ describe("CreateTaskModal", () => {
     // u6 is a member of AUD-2026-014.
     const u6 = USERS.find((u) => u.id === "u6")!;
     expect(within(select).getByRole("option", { name: new RegExp(u6.name) })).toBeInTheDocument();
+  });
+
+  it("defaults the assignee to the preferred audit member", () => {
+    renderModal();
+    expect(screen.getByLabelText(m.fAssignee)).toHaveValue("u6");
   });
 
   it("submits create+assign and calls the action", async () => {

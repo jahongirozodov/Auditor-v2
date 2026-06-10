@@ -60,6 +60,7 @@ export const MODULES = [
   { id: "kpi", name: "KPI" },
   { id: "report", name: "Hisobotlar" },
   { id: "log", name: "Audit log" },
+  { id: "settings", name: "Sozlamalar" },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];

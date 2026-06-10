@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { RoleCode } from "@/lib/types/roles";
+import type { NavCounts } from "@/lib/nav";
 import { CommandPalette } from "@/components/search/CommandPalette";
 import { ToastProvider } from "@/components/ui/Toast";
 import { Sidebar } from "./Sidebar";
@@ -19,7 +20,15 @@ export interface ShellUser {
  * Authenticated app chrome — the `.app` CSS grid (Topbar across the top, Sidebar
  * left, scrolling canvas right). Holds sidebar collapse state.
  */
-export function AppShell({ user, children }: { user: ShellUser; children: React.ReactNode }) {
+export function AppShell({
+  user,
+  navCounts,
+  children,
+}: {
+  user: ShellUser;
+  navCounts: NavCounts;
+  children: React.ReactNode;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -43,7 +52,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
         onToggleCollapse={() => setCollapsed((c) => !c)}
         onOpenSearch={() => setPaletteOpen(true)}
       />
-      <Sidebar role={user.role} />
+      <Sidebar role={user.role} counts={navCounts} />
       <main className="canvas">
         <ToastProvider>
           <div className="canvas__inner">{children}</div>

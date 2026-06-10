@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Auditor.Agent.Core/Auditor.Agent.Core.csproj" />
+    <Project Path="src/Auditor.Agent.Desktop/Auditor.Agent.Desktop.csproj" />
+    <Project Path="src/Auditor.Agent.Shared/Auditor.Agent.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Auditor.Agent.Tests/Auditor.Agent.Tests.csproj" />
+  </Folder>
+</Solution>

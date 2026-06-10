@@ -12,7 +12,13 @@ import { findingApproval, findingRemediation } from "@/lib/actions/findings";
 import { APPROVAL_STAGES, canActAt, currentOf } from "@/lib/approval";
 import { REMEDIATION_STATUSES, type RemediationAction } from "@/lib/findings-machine";
 import type { FindingApprovalView } from "@/lib/data/approval";
-import type { ApprovalEvent, Finding, Task, User } from "@/lib/types/entities";
+import type {
+  ApprovalEvent,
+  Finding,
+  FindingEvidenceView,
+  Task,
+  User,
+} from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 
 type ApprovalAction = "submit" | "resubmit" | "approve" | "return";
@@ -21,6 +27,7 @@ export interface FindingDrawerProps {
   finding: Finding | null;
   approval: FindingApprovalView | null;
   remediation: ApprovalEvent[];
+  evidences: FindingEvidenceView[];
   tasks: Task[];
   usersById: Record<string, User>;
   userId: string;
@@ -32,6 +39,7 @@ export function FindingDrawer({
   finding,
   approval,
   remediation,
+  evidences,
   tasks,
   usersById,
   userId,
@@ -171,27 +179,40 @@ export function FindingDrawer({
       ) : null}
 
       <h4 style={{ marginTop: 20 }}>
-        {t("drawerEvidence")} ({finding.evidence})
+        {t("drawerEvidence")} ({evidences.length})
       </h4>
-      <div className="tile-grid">
-        {Array.from({ length: finding.evidence }).map((_, i) => (
-          <div key={i} className="tile">
-            <div className={`tile__thumb${i === 1 ? " tile__thumb--code" : ""}`} />
-            <div className="tile__body">
-              <div className="tile__name font-mono">
-                {
-                  ["screenshot.png", "config-dump.txt", "scan.csv", "capture.pcap", "log.txt"][
-                    i % 5
-                  ]
-                }
-              </div>
-              <div className="tile__meta">
-                {["1.2 MB", "4 KB", "18 KB", "3.4 MB", "9 KB"][i % 5]}
+      {evidences.length > 0 ? (
+        <div className="tile-grid">
+          {evidences.map((evidence) => (
+            <div key={evidence.id} className="tile">
+              <div
+                role="img"
+                aria-label={evidence.filename}
+                className="tile__thumb"
+                style={{
+                  backgroundImage: `url(${evidence.dataUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              />
+              <div className="tile__body">
+                <div className="tile__name font-mono">{evidence.filename}</div>
+                <div className="tile__meta">{Math.ceil(evidence.sizeBytes / 1024)} KB</div>
               </div>
             </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tile-grid">
+          <div className="tile">
+            <div className="tile__thumb tile__thumb--code" />
+            <div className="tile__body">
+              <div className="tile__name font-mono">{t("evidenceEmpty")}</div>
+              <div className="tile__meta">{t("evidenceHint")}</div>
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </Drawer>
   );
 }

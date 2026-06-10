@@ -9,7 +9,14 @@ import { FindingsList } from "./FindingsList";
 import { FindingDrawer } from "./FindingDrawer";
 import { CreateFindingModal } from "./CreateFindingModal";
 import type { FindingApprovalView } from "@/lib/data/approval";
-import type { ApprovalEvent, Audit, Finding, Task, User } from "@/lib/types/entities";
+import type {
+  ApprovalEvent,
+  Audit,
+  Finding,
+  FindingEvidenceView,
+  Task,
+  User,
+} from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 
 export interface FindingsScreenProps {
@@ -17,6 +24,7 @@ export interface FindingsScreenProps {
   usersById: Record<string, User>;
   approvals: Record<string, FindingApprovalView>;
   remediations: Record<string, ApprovalEvent[]>;
+  evidenceByFindingId: Record<string, FindingEvidenceView[]>;
   audits: Audit[];
   tasks: Task[];
   userId: string;
@@ -28,6 +36,7 @@ export function FindingsScreen({
   usersById,
   approvals,
   remediations,
+  evidenceByFindingId,
   audits,
   tasks,
   userId,
@@ -104,6 +113,7 @@ export function FindingsScreen({
         finding={selected}
         approval={selected ? (approvals[selected.id] ?? null) : null}
         remediation={selected ? (remediations[selected.id] ?? []) : []}
+        evidences={selected ? (evidenceByFindingId[selected.id] ?? []) : []}
         tasks={tasks}
         usersById={usersById}
         userId={userId}

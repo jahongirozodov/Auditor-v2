@@ -1,0 +1,39 @@
+<UserControl x:Class="Auditor.Agent.Desktop.Views.FilesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             AllowDrop="True" DragOver="Root_DragOver" Drop="Root_Drop">
+    <StackPanel>
+        <DockPanel Margin="0,0,0,8">
+            <TextBlock DockPanel.Dock="Left" Text="Lokal fayllar" Style="{StaticResource H1}" />
+            <Button DockPanel.Dock="Right" HorizontalAlignment="Right" Content="Biriktirish"
+                    Style="{StaticResource BtnSoft}" Command="{Binding AttachCommand}" />
+        </DockPanel>
+        <TextBlock Style="{StaticResource Meta}" Margin="0,0,0,14"
+                   Text="Lokal shifrlangan SQLite + fayl bazasida saqlanadi. Tarmoq tiklangach avtomatik yuboriladi." />
+
+        <ItemsControl ItemsSource="{Binding Files}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource Tile}" Width="170">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,10">
+                                <Border DockPanel.Dock="Right" VerticalAlignment="Top" Style="{StaticResource Tag}"
+                                        Background="{Binding StateKind, Converter={StaticResource KindToBrush}}">
+                                    <TextBlock Text="{Binding StateLabel}" FontSize="10" Foreground="{StaticResource TextPrimary}" />
+                                </Border>
+                                <TextBlock Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="24"
+                                           Foreground="{StaticResource TextTertiary}" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding Name}" FontFamily="{StaticResource FontMono}" FontSize="12"
+                                       Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding SizeLabel}" Style="{StaticResource Meta}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

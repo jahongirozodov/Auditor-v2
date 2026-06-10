@@ -4,13 +4,80 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { canActAt, nextStage, projectCurrentOf } from "@/lib/approval";
-import type { ApprovalStageKey, AuditStatus } from "@/lib/types/entities";
+import { canActAt, auditProjectCurrentOf, nextStage } from "@/lib/approval";
+import { emitKpiEvent } from "@/lib/kpi-engine";
+import type { ApprovalStageKey, AuditProjectStatus, AuditStatus } from "@/lib/types/entities";
+import type { RoleCode } from "@/lib/types/roles";
 import type { ActionResult } from "./types";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
 const isStage = (c: unknown): c is ApprovalStageKey =>
   c === "group_lead" || c === "head" || c === "dept";
+
+function canLeadProject(userId: string, role: RoleCode, leaderId: string): boolean {
+  return userId === leaderId || role === "super" || role === "head";
+}
+
+const CreateProjectInput = z.object({ auditId: z.string().min(1) });
+
+export async function createAuditProject(
+  input: z.input<typeof CreateProjectInput>,
+): Promise<ActionResult> {
+  const parsed = CreateProjectInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const { auditId } = parsed.data;
+
+  const { userId, role } = await requireSession();
+  const audit = await prisma.audit.findUnique({
+    where: { id: auditId },
+    select: {
+      status: true,
+      leaderId: true,
+      goal: true,
+      methodology: true,
+      scope: true,
+      tools: true,
+    },
+  });
+  if (!audit) return { ok: false, error: "not_found" };
+  if (!canLeadProject(userId, role, audit.leaderId)) return { ok: false, error: "forbidden" };
+  if (audit.status !== "group_forming") return { ok: false, error: "illegal_status" };
+
+  try {
+    await prisma.$transaction([
+      prisma.auditProject.create({
+        data: {
+          auditId,
+          status: "draft",
+          currentApprovalStage: null,
+          goal: audit.goal,
+          methodology: audit.methodology,
+          scope: audit.scope,
+          tools: audit.tools,
+        },
+      }),
+      prisma.audit.update({
+        where: { id: auditId },
+        data: { status: "project_draft", stage: 3 },
+      }),
+      prisma.auditLog.create({
+        data: {
+          userId,
+          action: "project.create",
+          entity: auditId,
+          level: "info",
+        },
+      }),
+    ]);
+  } catch {
+    return { ok: false, error: "duplicate" };
+  }
+
+  revalidatePath(`/audits/${auditId}`);
+  revalidatePath("/audits");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
 
 const ProjectApprovalInput = z.object({
   auditId: z.string().min(1),
@@ -18,11 +85,6 @@ const ProjectApprovalInput = z.object({
   comment: z.string().optional(),
 });
 
-/**
- * Per-audit project approval. Group lead submits (completes group_lead) → head →
- * dept; final dept approval advances Audit.status to `assigning` (docs/04). Return
- * sets `returned` (mandatory comment). Mirrors the finding flow + couples lifecycle.
- */
 export async function projectApproval(
   input: z.input<typeof ProjectApprovalInput>,
 ): Promise<ActionResult> {
@@ -31,15 +93,17 @@ export async function projectApproval(
   const { auditId, action, comment } = parsed.data;
 
   const { userId, role } = await requireSession();
-  const audit = await prisma.audit.findUnique({
-    where: { id: auditId },
-    select: { status: true, projectStage: true },
+  const project = await prisma.auditProject.findUnique({
+    where: { auditId },
+    include: { audit: { select: { status: true, leaderId: true } } },
   });
-  if (!audit) return { ok: false, error: "not_found" };
+  if (!project) return { ok: false, error: "not_found" };
 
-  const cur = projectCurrentOf(audit.status as AuditStatus, audit.projectStage);
+  const cur = auditProjectCurrentOf(project.status, project.currentApprovalStage);
 
-  let nextStatus: AuditStatus;
+  let nextProjectStatus: AuditProjectStatus;
+  let nextAuditStatus: AuditStatus;
+  let nextAuditStage: number | undefined;
   let nextProjectStage: string | null;
   let evAction: "Submit" | "Approve" | "Return";
   let evStage: ApprovalStageKey;
@@ -49,9 +113,13 @@ export async function projectApproval(
   if (action === "submit" || action === "resubmit") {
     const want = action === "submit" ? "new" : "returned";
     if (cur !== want) return { ok: false, error: "illegal_transition" };
-    if (!canActAt(role, "group_lead")) return { ok: false, error: "forbidden" }; // group_lead duty
-    nextStatus = "project_pending";
-    nextProjectStage = "head"; // group_lead is the submitter → first approver is head
+    if (!canLeadProject(userId, role, project.audit.leaderId)) {
+      return { ok: false, error: "forbidden" };
+    }
+    nextProjectStatus = "submitted";
+    nextProjectStage = "head";
+    nextAuditStatus = "project_pending";
+    nextAuditStage = 4;
     evAction = "Submit";
     evStage = "group_lead";
     evState = "done";
@@ -60,65 +128,92 @@ export async function projectApproval(
     if (!isStage(cur) || cur === "group_lead") return { ok: false, error: "illegal_transition" };
     if (!canActAt(role, cur)) return { ok: false, error: "forbidden" };
     const nxt = nextStage(cur);
+    nextProjectStatus = nxt ? "submitted" : "approved";
     nextProjectStage = nxt;
-    nextStatus = nxt ? "project_pending" : "assigning"; // dept approve → audit proceeds
+    nextAuditStatus = nxt ? "project_pending" : "assigning";
+    nextAuditStage = nxt ? 4 : 5;
     evAction = "Approve";
     evStage = cur;
     evState = "done";
     logAction = `project.approve.${cur}`;
   } else {
-    // return
     if (!isStage(cur) || cur === "group_lead") return { ok: false, error: "illegal_transition" };
     if (!canActAt(role, cur)) return { ok: false, error: "forbidden" };
     if (!comment?.trim()) return { ok: false, error: "comment_required" };
-    nextStatus = "returned";
+    nextProjectStatus = "returned";
     nextProjectStage = null;
+    nextAuditStatus = "returned";
+    nextAuditStage = undefined;
     evAction = "Return";
     evStage = cur;
     evState = "returned";
     logAction = "project.return";
   }
 
-  await prisma.$transaction([
-    prisma.audit.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.auditProject.update({
+      where: { id: project.id },
+      data: { status: nextProjectStatus, currentApprovalStage: nextProjectStage },
+    });
+    await tx.audit.update({
       where: { id: auditId },
-      data: { status: nextStatus, projectStage: nextProjectStage },
-    }),
-    prisma.approvalEvent.create({
+      data: { status: nextAuditStatus, ...(nextAuditStage ? { stage: nextAuditStage } : {}) },
+    });
+    await tx.auditProjectApproval.create({
       data: {
-        entityType: "project",
-        entityId: auditId,
-        who: userId,
+        projectId: project.id,
+        actorId: userId,
         action: evAction,
         stage: evStage,
         state: evState,
         comment: comment?.trim() ? comment.trim() : null,
       },
-    }),
-    prisma.auditLog.create({
+    });
+    await tx.auditLog.create({
       data: {
         userId,
         action: logAction,
         entity: auditId,
         level: evState === "returned" ? "warn" : "info",
         payload: J({
-          from: audit.status,
-          to: nextStatus,
+          projectId: project.id,
+          from: project.status,
+          to: nextProjectStatus,
           stage: evStage,
           comment: comment ?? null,
         }),
       },
-    }),
-  ]);
+    });
+
+    if (action === "submit") {
+      const alreadyCredited = await tx.kpiEvent.findFirst({
+        where: {
+          userId: project.audit.leaderId,
+          auditId,
+          ruleCode: "develop_project",
+        },
+        select: { id: true },
+      });
+      if (!alreadyCredited) {
+        await emitKpiEvent(tx, {
+          userId: project.audit.leaderId,
+          ruleCode: "develop_project",
+          points: 15,
+          auditId,
+          payload: { projectId: project.id },
+        });
+      }
+    }
+  });
 
   revalidatePath(`/audits/${auditId}`);
   revalidatePath("/audits");
   revalidatePath("/dashboard");
+  revalidatePath("/kpi");
   return { ok: true };
 }
 
-// The project content is editable only before/around submission (group lead's window).
-const EDITABLE_PROJECT = ["project_draft", "returned"];
+const EDITABLE_PROJECT: AuditProjectStatus[] = ["draft", "returned"];
 
 const EditProjectInput = z.object({
   auditId: z.string().min(1),
@@ -128,21 +223,24 @@ const EditProjectInput = z.object({
   tools: z.array(z.string().trim().min(1)).default([]),
 });
 
-/** Edit the Project tab content (goal/methodology/scope/tools). Group lead, while drafting. */
 export async function editProject(input: z.input<typeof EditProjectInput>): Promise<ActionResult> {
   const parsed = EditProjectInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, goal, methodology, scope, tools } = parsed.data;
 
   const { userId, role } = await requireSession();
-  if (!canActAt(role, "group_lead")) return { ok: false, error: "forbidden" }; // group_lead duty
-  const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { status: true } });
-  if (!audit) return { ok: false, error: "not_found" };
-  if (!EDITABLE_PROJECT.includes(audit.status)) return { ok: false, error: "illegal_status" };
+  const project = await prisma.auditProject.findUnique({
+    where: { auditId },
+    include: { audit: { select: { leaderId: true } } },
+  });
+  if (!project) return { ok: false, error: "not_found" };
+  if (!canLeadProject(userId, role, project.audit.leaderId))
+    return { ok: false, error: "forbidden" };
+  if (!EDITABLE_PROJECT.includes(project.status)) return { ok: false, error: "illegal_status" };
 
   await prisma.$transaction([
-    prisma.audit.update({
-      where: { id: auditId },
+    prisma.auditProject.update({
+      where: { id: project.id },
       data: { goal: goal || null, methodology: methodology || null, scope, tools },
     }),
     prisma.auditLog.create({
@@ -151,7 +249,7 @@ export async function editProject(input: z.input<typeof EditProjectInput>): Prom
         action: "project.edit",
         entity: auditId,
         level: "info",
-        payload: J({ scope: scope.length, tools: tools.length }),
+        payload: J({ projectId: project.id, scope: scope.length, tools: tools.length }),
       },
     }),
   ]);

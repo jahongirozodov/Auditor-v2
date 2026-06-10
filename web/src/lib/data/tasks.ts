@@ -1,7 +1,9 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import type { Task, TaskPriority, TaskStatus } from "@/lib/types/entities";
+import { userHasPermission } from "@/lib/rbac.server";
+import type { Audit, Task, TaskPriority, TaskStatus } from "@/lib/types/entities";
+import type { RoleCode } from "@/lib/types/roles";
 
 type Row = {
   id: string;
@@ -46,6 +48,61 @@ export const getTaskById = cache(async (id: string): Promise<Task | undefined> =
 export const getTasksByAudit = cache(
   async (auditId: string): Promise<Task[]> =>
     (await prisma.task.findMany({ where: { auditId }, orderBy: { id: "asc" } })).map(toTask),
+);
+
+export const getMyTasks = cache(
+  async (userId: string): Promise<Task[]> =>
+    (await prisma.task.findMany({ where: { assigneeId: userId }, orderBy: { id: "asc" } })).map(
+      toTask,
+    ),
+);
+
+// Tasks visible on the assignment board, scoped server-side:
+// super/head see every task; everyone else only tasks in audits they lead
+// (mirrors getCreatableTaskAudits — "audit-group leader distributes tasks").
+export const getAssignableTasks = cache(
+  async (userId: string, role: RoleCode): Promise<Task[]> => {
+    const where =
+      role === "super" || role === "head" ? {} : { audit: { leaderId: userId } };
+    return (await prisma.task.findMany({ where, orderBy: { id: "asc" } })).map(toTask);
+  },
+);
+
+export const getCreatableTaskAudits = cache(
+  async (userId: string, role: RoleCode): Promise<Audit[]> => {
+    if (!(await userHasPermission(userId, "task.assign"))) return [];
+
+    const rows = await prisma.audit.findMany({
+      where: {
+        status: { in: ["assigning", "in_progress"] },
+        ...(role === "super" || role === "head" ? {} : { leaderId: userId }),
+      },
+      include: { members: { select: { userId: true } } },
+      orderBy: { code: "desc" },
+    });
+    return rows.map((a) => ({
+      id: a.id,
+      code: a.code,
+      title: a.title,
+      org: a.orgId,
+      type: a.type,
+      status: a.status as Audit["status"],
+      stage: a.stage,
+      startDate: a.startDate,
+      endDate: a.endDate,
+      progress: a.progress,
+      leader: a.leaderId,
+      members: a.members.map((m) => m.userId),
+      findings: a.findings as unknown as Audit["findings"],
+      tasks: a.tasksAgg as unknown as Audit["tasks"],
+      lastSync: a.lastSync,
+      pinned: a.pinned,
+      goal: a.goal ?? undefined,
+      methodology: a.methodology ?? undefined,
+      scope: a.scope,
+      tools: a.tools,
+    }));
+  },
 );
 
 export interface TaskHistoryEntry {

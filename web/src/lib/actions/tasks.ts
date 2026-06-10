@@ -2,13 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { canDoTask, isLead, type TaskAction } from "@/lib/tasks-machine";
+import { requirePermission } from "@/lib/rbac.server";
+import { canDoTask, type TaskAction } from "@/lib/tasks-machine";
 import { nextTaskCode } from "@/lib/task-code";
 import { emitKpiEvent } from "@/lib/kpi-engine";
 import type { TaskStatus } from "@/lib/types/entities";
+import type { RoleCode } from "@/lib/types/roles";
 import type { ActionResult, CreateResult } from "./types";
 
 // Plain-JSON clone (typed any) for Prisma Json columns.
@@ -26,6 +28,10 @@ async function recountTasksAgg(tx: Prisma.TransactionClient, auditId: string) {
     else if (r.status === "new") agg.new++;
   }
   await tx.audit.update({ where: { id: auditId }, data: { tasksAgg: J(agg) } });
+}
+
+function canCreateTaskForAudit(userId: string, role: RoleCode, leaderId: string): boolean {
+  return userId === leaderId || role === "super" || role === "head";
 }
 
 const TaskTransitionInput = z.object({
@@ -62,13 +68,23 @@ export async function taskTransition(
   const { taskId, action, comment } = parsed.data;
 
   const { userId, role } = await requireSession();
-  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  const requiredPermission = action === "assign" ? "task.assign" : "task.update_status";
+  if (!(await requirePermission(userId, requiredPermission))) return { ok: false, error: "forbidden" };
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: { audit: { select: { leaderId: true } } },
+  });
   if (!task) return { ok: false, error: "not_found" };
 
   const guard = canDoTask(
     action,
     task.status as TaskStatus,
-    { role, isAssignee: task.assigneeId === userId },
+    {
+      role,
+      isAssignee: task.assigneeId === userId,
+      isAuditLeader: task.audit.leaderId === userId,
+      isSuper: role === "super",
+    },
     comment,
   );
   if (!guard.ok) return { ok: false, error: guard.reason };
@@ -138,6 +154,7 @@ export async function reassignTask(input: z.input<typeof ReassignInput>): Promis
   const { taskId, assigneeId } = parsed.data;
 
   const { userId, role } = await requireSession();
+  if (!(await requirePermission(userId, "task.assign"))) return { ok: false, error: "forbidden" };
   if (!["chief", "lead", "head", "super"].includes(role)) return { ok: false, error: "forbidden" };
 
   const task = await prisma.task.findUnique({
@@ -184,15 +201,17 @@ export async function createTask(input: z.input<typeof CreateTaskInput>): Promis
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, title, type, priority, due, assigneeId } = parsed.data;
 
-  // Role-gated: the group lead creates + assigns. (LEAD_ROLES — no duty column yet.)
   const { userId, role } = await requireSession();
-  if (!isLead(role)) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "task.assign"))) return { ok: false, error: "forbidden" };
 
   const audit = await prisma.audit.findUnique({
     where: { id: auditId },
-    select: { status: true, members: { select: { userId: true } } },
+    select: { status: true, leaderId: true, members: { select: { userId: true } } },
   });
   if (!audit) return { ok: false, error: "not_found" };
+  if (!canCreateTaskForAudit(userId, role, audit.leaderId)) {
+    return { ok: false, error: "forbidden" };
+  }
   if (!TASK_CREATE_STATUSES.includes(audit.status)) return { ok: false, error: "illegal_status" };
   if (!audit.members.some((m) => m.userId === assigneeId))
     return { ok: false, error: "not_member" };
@@ -246,8 +265,12 @@ export async function createTask(input: z.input<typeof CreateTaskInput>): Promis
         auditId,
       });
     });
-  } catch {
-    return { ok: false, error: "code_conflict" };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { ok: false, error: "code_conflict" };
+    }
+    console.error("createTask failed", error);
+    return { ok: false, error: "failed" };
   }
 
   revalidatePath("/tasks/assign");

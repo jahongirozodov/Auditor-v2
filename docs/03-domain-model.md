@@ -26,6 +26,11 @@ The current DbContext has ~38 tables. Entities grouped by aggregate:
 - **AuditProject** — goal, scope, methodology, targets, tools, approval stage.
 - **AuditProjectApproval** — project approval timeline (immutable).
 
+Implementation mapping: the Next.js app stores audit project content in `AuditProject` with one row per
+audit (`auditId` unique). Legacy `Audit.goal`, `Audit.methodology`, `Audit.scope`, `Audit.tools`, and
+`Audit.projectStage` fields are kept only as backfill/migration compatibility fields and should not be
+used for new project reads or writes.
+
 ## Tasks
 - **AuditTask** — code, name, task_type, priority, due_date, assignee, status, progress.
 - **TaskAssignment** — assignment history.

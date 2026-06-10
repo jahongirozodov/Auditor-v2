@@ -1,13 +1,25 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
 import { getActiveAuditCount, getOrgDetails, getOrgs } from "@/lib/data/orgs";
 import { OrgsScreen } from "@/components/organizations/OrgsScreen";
+import { requireAnyPermission } from "@/lib/rbac.server";
 
 export default async function OrganizationsPage() {
-  await requireSession();
-  const [orgs, orgDetails, activeAuditCount] = await Promise.all([
+  const { userId } = await requireSession();
+  const [orgs, orgDetails, activeAuditCount, canView, canEdit] = await Promise.all([
     getOrgs(),
     getOrgDetails(),
     getActiveAuditCount(),
+    requireAnyPermission(userId, ["org.view_all", "org.view_own", "org.create", "org.update"]),
+    requireAnyPermission(userId, ["org.create", "org.update", "org.delete"]),
   ]);
-  return <OrgsScreen orgs={orgs} orgDetails={orgDetails} activeAuditCount={activeAuditCount} />;
+  if (!canView) redirect("/dashboard");
+  return (
+    <OrgsScreen
+      orgs={orgs}
+      orgDetails={orgDetails}
+      activeAuditCount={activeAuditCount}
+      canEdit={canEdit}
+    />
+  );
 }

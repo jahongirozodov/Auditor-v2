@@ -1,14 +1,20 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { APPROVAL_STAGES, currentOf, projectCurrentOf, type ApprovalCurrent } from "@/lib/approval";
+import {
+  APPROVAL_STAGES,
+  auditProjectCurrentOf,
+  currentOf,
+  reportCurrentOf,
+  type ApprovalCurrent,
+} from "@/lib/approval";
 import type {
   ApprovalEvent,
   ApprovalStage,
   ApprovalStageKey,
   ApprovalState,
-  AuditStatus,
   FindingStatus,
+  ReportStatus,
 } from "@/lib/types/entities";
 
 export interface FindingApprovalView {
@@ -100,6 +106,38 @@ export const getFindingApprovals = cache(async (): Promise<Record<string, Findin
   );
 });
 
+/** id → approval view for the reports list (cards read without a round-trip). */
+export const getReportApprovals = cache(async (): Promise<Record<string, ApprovalView>> => {
+  const reports = await prisma.report.findMany({
+    select: { id: true, status: true, approvalStage: true },
+  });
+  const events = await prisma.approvalEvent.findMany({
+    where: { entityType: "report" },
+    orderBy: { createdAt: "asc" },
+  });
+  const byId: Record<string, ApprovalEvent[]> = {};
+  for (const e of events) {
+    (byId[e.entityId] ??= []).push({
+      who: e.who,
+      action: e.action,
+      stage: e.stage as ApprovalStageKey,
+      t: e.createdAt.toISOString().slice(0, 10),
+      state: e.state as ApprovalState,
+      comment: e.comment ?? undefined,
+    });
+  }
+  return Object.fromEntries(
+    reports.map((r) => [
+      r.id,
+      {
+        stages: APPROVAL_STAGES,
+        timeline: byId[r.id] ?? [],
+        current: reportCurrentOf(r.status as ReportStatus, r.approvalStage),
+      },
+    ]),
+  );
+});
+
 /** id → remediation timeline (finding_remediation events) for the findings drawer. */
 export const getFindingRemediations = cache(async (): Promise<Record<string, ApprovalEvent[]>> => {
   const events = await prisma.approvalEvent.findMany({
@@ -113,18 +151,21 @@ export const getFindingRemediations = cache(async (): Promise<Record<string, App
 
 /** Project (per-audit) approval view — group_lead submits, head → dept approve. */
 export const getProjectApproval = cache(async (auditId: string): Promise<ApprovalView | null> => {
-  const a = await prisma.audit.findUnique({
-    where: { id: auditId },
-    select: { status: true, projectStage: true },
+  const project = await prisma.auditProject.findUnique({
+    where: { auditId },
+    include: { approvals: { orderBy: { createdAt: "asc" } } },
   });
-  if (!a) return null;
-  const events = await prisma.approvalEvent.findMany({
-    where: { entityType: "project", entityId: auditId },
-    orderBy: { createdAt: "asc" },
-  });
+  if (!project) return null;
   return {
     stages: APPROVAL_STAGES,
-    timeline: toTimeline(events),
-    current: projectCurrentOf(a.status as AuditStatus, a.projectStage),
+    timeline: project.approvals.map((e) => ({
+      who: e.actorId,
+      action: e.action,
+      stage: e.stage as ApprovalStageKey,
+      t: e.createdAt.toISOString().slice(0, 10),
+      state: e.state as ApprovalState,
+      comment: e.comment ?? undefined,
+    })),
+    current: auditProjectCurrentOf(project.status, project.currentApprovalStage),
   };
 });

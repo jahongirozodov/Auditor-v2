@@ -1,5 +1,6 @@
 ﻿import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { TrafficAnalysisScreen } from "./TrafficAnalysisScreen";
 import type { TrafficAnalysisScreenProps } from "./TrafficAnalysisScreen";
 import type { Audit, Task } from "@/lib/types/entities";
@@ -12,23 +13,45 @@ vi.mock("next-intl", () => ({
     return `${ns}.${key}`;
   },
 }));
+const reanalyzeTraffic = vi.fn().mockResolvedValue({ ok: true, analysis: null });
 vi.mock("@/lib/actions/traffic", () => ({
   uploadTrafficFile: vi.fn().mockResolvedValue({ ok: true, uploadId: "upl-1" }),
   createTrafficDrafts: vi.fn().mockResolvedValue({ ok: true, ids: ["f-1", "f-2"] }),
+  reanalyzeTraffic: (...a: unknown[]) => reanalyzeTraffic(...a),
 }));
 vi.mock("@/lib/analysis/traffic", () => ({
   analyzeTraffic: vi.fn().mockReturnValue({
     format: "suricata",
     anomalies: [
-      { severity: "high", title: "ET SCAN", srcIp: "10.0.0.1", dstIpPort: "443", timeRange: "12:00-12:05", eventCount: 42 },
+      {
+        severity: "high",
+        title: "ET SCAN",
+        srcIp: "10.0.0.1",
+        dstIpPort: "443",
+        timeRange: "12:00-12:05",
+        eventCount: 42,
+      },
     ],
     totalPackets: 10000,
     uniqueIps: 5,
     durationHours: 24,
     protocols: [
-      { protocol: "TCP",  packets: 7000 },
-      { protocol: "DNS",  packets: 2000 },
+      { protocol: "TCP", packets: 7000 },
+      { protocol: "DNS", packets: 2000 },
       { protocol: "HTTP", packets: 1000 },
+    ],
+    timeline: [
+      { label: "00:00", packets: 100 },
+      { label: "12:00", packets: 900 },
+      { label: "23:00", packets: 200 },
+    ],
+    topTalkers: [
+      { ip: "10.0.0.1", packets: 6000 },
+      { ip: "10.0.0.2", packets: 4000 },
+    ],
+    topPorts: [
+      { port: 443, packets: 5000, service: "HTTPS" },
+      { port: 23, packets: 400, service: "TELNET" },
     ],
   }),
   TRAFFIC_FORMAT_LABELS: {},
@@ -36,14 +59,72 @@ vi.mock("@/lib/analysis/traffic", () => ({
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => vi.fn() }));
 
 // ---- fixtures ----
-const AUDITS: Audit[] = [{ id: "aud-1", code: "A-001", title: "Test audit", org: "", type: "", status: "in_progress", stage: 3, startDate: "", endDate: "", progress: 0, leader: "", members: [], findings: { critical:0,high:0,medium:0,low:0 }, tasks: { total:1,done:0,in_progress:1,blocked:0,new:0 }, lastSync: "", scope: [], tools: [] } as Audit];
-const TASKS: Task[]  = [{ id: "tsk-1", auditId: "aud-1", title: "Scan task", type: "", priority: "Yuqori", status: "in_progress", due: "", assignee: "", findings: 0, files: 0, kpi: 0 } as Task];
+const AUDITS: Audit[] = [
+  {
+    id: "aud-1",
+    code: "A-001",
+    title: "Test audit",
+    org: "",
+    type: "",
+    status: "in_progress",
+    stage: 3,
+    startDate: "",
+    endDate: "",
+    progress: 0,
+    leader: "",
+    members: [],
+    findings: { critical: 0, high: 0, medium: 0, low: 0 },
+    tasks: { total: 1, done: 0, in_progress: 1, blocked: 0, new: 0 },
+    lastSync: "",
+    scope: [],
+    tools: [],
+  } as Audit,
+];
+const TASKS: Task[] = [
+  {
+    id: "tsk-1",
+    auditId: "aud-1",
+    title: "Scan task",
+    type: "",
+    priority: "Yuqori",
+    status: "in_progress",
+    due: "",
+    assignee: "",
+    findings: 0,
+    files: 0,
+    kpi: 0,
+  } as Task,
+];
 const LATEST = {
-  id: "upl-0", filename: "eve.json", format: "suricata",
+  id: "upl-0",
+  filename: "eve.json",
+  format: "suricata",
   content: '{"event_type":"alert"}',
-  auditId: "aud-1", taskId: "tsk-1",
-  anomalyCount: 1, totalPackets: 1000, uniqueIps: 3,
+  parsed: null,
+  auditId: "aud-1",
+  taskId: "tsk-1",
+  anomalyCount: 1,
+  totalPackets: 1000,
+  uniqueIps: 3,
   createdAt: new Date().toISOString(),
+};
+
+const AI = {
+  summary: "Trafik asosan normal.",
+  overallRisk: "medium" as const,
+  anomalies: [
+    {
+      title: "Telnet ochiq",
+      severity: "high" as const,
+      attackType: "plaintext" as const,
+      confidence: "high" as const,
+      affectedHosts: ["10.0.0.1"],
+      risk: "Shifrlanmagan",
+      impact: "MITM",
+      recommendation: "Telnetni oʻchiring",
+    },
+  ],
+  recommendations: ["Segmentatsiya"],
 };
 
 function setup(props: Partial<TrafficAnalysisScreenProps> = {}) {
@@ -52,6 +133,7 @@ function setup(props: Partial<TrafficAnalysisScreenProps> = {}) {
       audits={AUDITS}
       tasks={TASKS}
       latest={props.latest ?? null}
+      latestAi={props.latestAi ?? null}
       {...props}
     />,
   );
@@ -83,7 +165,7 @@ describe("TrafficAnalysisScreen", () => {
 
   it("renders stat cards (packets, uniqueIps)", () => {
     setup({ latest: LATEST });
-    expect(screen.getByText("10K")).toBeInTheDocument();
+    expect(screen.getByText("10.0K")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
@@ -117,13 +199,24 @@ describe("TrafficAnalysisScreen", () => {
     expect(svg).toBeTruthy();
   });
 
-  it("renders red spike path when anomalies exist", () => {
+  it("renders the real timeline peak marker (danger-colored) from timeline data", () => {
     setup({ latest: LATEST });
-    const paths = document.querySelectorAll("path");
-    const hasDangerFill = Array.from(paths).some(
-      (p) => p.getAttribute("fill") === "var(--status-danger-fg)",
+    // Peak marker is a danger-stroked dashed line + a danger-filled circle.
+    const circles = document.querySelectorAll("circle");
+    const hasDangerPeak = Array.from(circles).some(
+      (c) => c.getAttribute("fill") === "var(--status-danger-fg)",
     );
-    expect(hasDangerFill).toBe(true);
+    expect(hasDangerPeak).toBe(true);
+    // The peak label shows a real bucket value/label, not a hardcoded string.
+    expect(screen.getByText(/900 · 12:00/)).toBeInTheDocument();
+  });
+
+  it("renders real top talkers and top ports from the parser", () => {
+    setup({ latest: LATEST });
+    expect(screen.getByText("traffic.topTalkers")).toBeInTheDocument();
+    expect(screen.getAllByText("10.0.0.1").length).toBeGreaterThan(0);
+    expect(screen.getByText("traffic.topPorts")).toBeInTheDocument();
+    expect(screen.getByText(/TELNET/)).toBeInTheDocument();
   });
 
   it("renders tabs with traffic active", () => {
@@ -131,5 +224,24 @@ describe("TrafficAnalysisScreen", () => {
     expect(screen.getByText("nav.traffic")).toBeInTheDocument();
     expect(screen.getByText("nav.scanner")).toBeInTheDocument();
     expect(screen.getByText("nav.config")).toBeInTheDocument();
+  });
+
+  it("renders the AI analysis panel from latestAi", () => {
+    setup({ latest: LATEST, latestAi: AI });
+    expect(screen.getByText("Trafik asosan normal.")).toBeInTheDocument();
+    expect(screen.getByText("Telnet ochiq")).toBeInTheDocument();
+    expect(screen.getByText("Telnetni oʻchiring")).toBeInTheDocument();
+  });
+
+  it("re-runs AI via the reanalyze button", async () => {
+    const user = userEvent.setup();
+    setup({ latest: LATEST, latestAi: AI });
+    await user.click(screen.getByText("traffic.aiReanalyze"));
+    expect(reanalyzeTraffic).toHaveBeenCalledWith({ uploadId: "upl-0" });
+  });
+
+  it("shows the AI intro body when nothing uploaded", () => {
+    setup({ latest: null, latestAi: null });
+    expect(screen.getByText("traffic.aiBody")).toBeInTheDocument();
   });
 });

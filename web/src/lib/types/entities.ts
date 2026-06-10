@@ -10,6 +10,7 @@ export interface User {
   id: string;
   name: string;
   role: RoleCode;
+  customRoleCode?: string | null;
   title: string;
   /** Initials shown in the avatar. */
   avatar: string;
@@ -112,6 +113,25 @@ export interface Audit {
   tools: string[];
 }
 
+export type AuditProjectStatus =
+  | "draft"
+  | "submitted"
+  | "approved"
+  | "returned"
+  | "executing"
+  | "completed";
+
+export interface AuditProject {
+  id: string;
+  auditId: string;
+  status: AuditProjectStatus;
+  currentApprovalStage: ApprovalStageKey | null;
+  goal: string | null;
+  methodology: string | null;
+  scope: string[];
+  tools: string[];
+}
+
 export interface WorkflowStep {
   n: number;
   key: string;
@@ -183,6 +203,17 @@ export interface Finding {
   ai: boolean;
 }
 
+export interface FindingEvidenceView {
+  id: string;
+  findingId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  dataUrl: string;
+  kind: string;
+  createdAt: string;
+}
+
 // ---------- Configuration analysis ----------
 /** A device whose config was parsed (drives the "analyzed devices" panel). */
 export interface AnalyzedDeviceView {
@@ -217,6 +248,7 @@ export interface ScannerUploadView {
   taskId: string;
   status: string;
   findingCount: number;
+  aiOk: boolean;
   createdAt: string;
 }
 
@@ -230,13 +262,12 @@ export interface ScanImportRowView {
   createdAt: string;
 }
 
-
-
 // ---------- Users admin ----------
 export interface AdminUserView {
   id: string;
   name: string;
   role: import("./roles").RoleCode;
+  customRoleCode: string | null;
   title: string;
   avatar: string;
   dept: string;
@@ -250,6 +281,8 @@ export interface TrafficUploadView {
   filename: string;
   format: string;
   content: string;
+  /** Pre-parsed TrafficParseResult JSON for binary formats (pcap); null for text. */
+  parsed: string | null;
   auditId: string;
   taskId: string;
   anomalyCount: number;
@@ -307,6 +340,20 @@ export interface AuditToken {
   tasks: number;
 }
 
+// ---------- Audit evidence (Fayllar & dalillar) ----------
+export interface AuditEvidenceView {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  comment: string;
+  /** User id of the uploader. */
+  uploadedBy: string;
+  uploadedByName: string;
+  uploadedByAvatar: string;
+  createdAt: string;
+}
+
 // ---------- Audit log ----------
 export type LogLevel = "info" | "warn" | "danger";
 
@@ -321,8 +368,44 @@ export interface LogEntry {
   level: LogLevel;
 }
 
+/** A row from the append-only AuditLog table (joined with the actor). */
+export interface AuditLogView {
+  id: string;
+  /** ISO timestamp (createdAt). */
+  time: string;
+  userId: string | null;
+  userName: string | null;
+  avatar: string | null;
+  action: string;
+  entity: string;
+  ip: string;
+  device: string;
+  /** "info" | "warn" | "danger". */
+  level: string;
+  /** Mutation context (before/after, comment, …) — only loaded for the detail drawer. */
+  payload?: unknown;
+}
+
+export type LogCategory = "all" | "auth" | "finding" | "task" | "config" | "error";
+
+export interface AuditLogFilters {
+  from?: string;
+  to?: string;
+  level?: "info" | "warn" | "danger";
+  category?: LogCategory;
+  actorId?: string;
+  q?: string;
+}
+
+export interface AuditLogPage {
+  rows: AuditLogView[];
+  nextCursor: string | null;
+  total: number;
+  counts: Record<LogCategory, number>;
+}
+
 // ---------- Reports ----------
-export type ReportStatus = "draft" | "review" | "approved";
+export type ReportStatus = "draft" | "review" | "approved" | "returned";
 
 export interface Report {
   id: string;
@@ -336,6 +419,10 @@ export interface Report {
   format: string[];
   /** User id of the author. */
   author: string;
+  /** Approval stage when status is "review" (group_lead | head | dept), else null. */
+  approvalStage: string | null;
+  /** AI-enriched executive summary, rendered in the print view. */
+  summary: string | null;
 }
 
 // ---------- Topology ----------

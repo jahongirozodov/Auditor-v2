@@ -24,12 +24,12 @@ describe("parseWireshark", () => {
   it("extracts protocol stats", () => {
     const r = parseWireshark(WS_CSV);
     expect(r.protocols.length).toBeGreaterThan(0);
-    expect(r.protocols.some(p => p.protocol === "TCP")).toBe(true);
+    expect(r.protocols.some((p) => p.protocol === "TCP")).toBe(true);
   });
 
   it("returns dns protocol stat", () => {
     const r = parseWireshark(WS_CSV);
-    expect(r.protocols.some(p => p.protocol === "DNS")).toBe(true);
+    expect(r.protocols.some((p) => p.protocol === "DNS")).toBe(true);
   });
 
   it("never throws on empty input", () => {
@@ -42,7 +42,8 @@ describe("parseWireshark", () => {
   });
 
   it("handles quoted fields with commas", () => {
-    const csv = '"No.","Time","Source","Destination","Protocol","Length","Info"\n"1","0.0","1.2.3.4","5.6.7.8","TCP","60","SYN, good"';
+    const csv =
+      '"No.","Time","Source","Destination","Protocol","Length","Info"\n"1","0.0","1.2.3.4","5.6.7.8","TCP","60","SYN, good"';
     const r = parseWireshark(csv);
     expect(r.totalPackets).toBe(1);
   });

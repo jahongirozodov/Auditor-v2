@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "7A2VWR1hO0A=",
+  "success": true,
+  "projectFilePath": "D:\\auditor-v6\\agent\\src\\Auditor.Agent.Core\\Auditor.Agent.Core.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\microsoft.data.sqlite\\8.0.28\\microsoft.data.sqlite.8.0.28.nupkg.sha512",
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\microsoft.data.sqlite.core\\8.0.28\\microsoft.data.sqlite.core.8.0.28.nupkg.sha512",
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\sqlitepclraw.bundle_e_sqlite3\\2.1.6\\sqlitepclraw.bundle_e_sqlite3.2.1.6.nupkg.sha512",
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\sqlitepclraw.core\\2.1.6\\sqlitepclraw.core.2.1.6.nupkg.sha512",
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\sqlitepclraw.lib.e_sqlite3\\2.1.6\\sqlitepclraw.lib.e_sqlite3.2.1.6.nupkg.sha512",
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\sqlitepclraw.provider.e_sqlite3\\2.1.6\\sqlitepclraw.provider.e_sqlite3.2.1.6.nupkg.sha512",
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\system.memory\\4.5.3\\system.memory.4.5.3.nupkg.sha512",
+    "C:\\Users\\j.ozodov\\.nuget\\packages\\system.security.cryptography.protecteddata\\8.0.0\\system.security.cryptography.protecteddata.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

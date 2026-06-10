@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/session";
 
 const h = vi.hoisted(() => ({
+  canManage: true,
   audit: { status: "group_forming", leaderId: "u3" } as { status: string; leaderId: string },
   codes: [{ code: "AUD-2026-015" }] as { code: string }[],
 }));
@@ -12,6 +13,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/session", () => ({
   requireSession: vi.fn(async () => ({ userId: "u2", role: "head", name: "" })),
 }));
+vi.mock("@/lib/rbac.server", () => ({ requirePermission: vi.fn(async () => h.canManage) }));
 vi.mock("@/lib/prisma", () => {
   const prisma = {
     audit: {
@@ -38,7 +40,7 @@ vi.mock("@/lib/prisma", () => {
   return { prisma };
 });
 
-import { addMember, createAudit, promoteLead, removeMember, startProjectDraft } from "./audits";
+import { addMember, createAudit, promoteLead, removeMember } from "./audits";
 import { prisma } from "@/lib/prisma";
 // kpiEvent/kpiUser land with the schema migration; cast until `prisma db push` regenerates the client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,6 +58,7 @@ const validCreate = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.canManage = true;
   h.audit = { status: "group_forming", leaderId: "u3" };
   h.codes = [{ code: "AUD-2026-015" }];
 });
@@ -67,6 +70,7 @@ describe("createAudit", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/audits");
   });
   it("forbids a t1", async () => {
+    h.canManage = false;
     vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u9", role: "t1", name: "" });
     expect(await createAudit(validCreate)).toEqual({ ok: false, error: "forbidden" });
   });
@@ -125,25 +129,5 @@ describe("KPI emission", () => {
   it("removeMember does NOT emit KPI events", async () => {
     await removeMember({ auditId: "AUD-1", userId: "u6" });
     expect(mockPrisma.kpiEvent.create).not.toHaveBeenCalled();
-  });
-});
-
-describe("startProjectDraft", () => {
-  it("moves group_forming → project_draft", async () => {
-    expect(await startProjectDraft({ auditId: "AUD-1" })).toEqual({ ok: true });
-  });
-  it("forbids a t1", async () => {
-    vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u9", role: "t1", name: "" });
-    expect(await startProjectDraft({ auditId: "AUD-1" })).toEqual({
-      ok: false,
-      error: "forbidden",
-    });
-  });
-  it("rejects when not group_forming", async () => {
-    h.audit = { status: "project_draft", leaderId: "u3" };
-    expect(await startProjectDraft({ auditId: "AUD-1" })).toEqual({
-      ok: false,
-      error: "illegal_status",
-    });
   });
 });

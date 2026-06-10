@@ -3,9 +3,24 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { AuditToken, TokenStatus } from "@/lib/types/entities";
 
-export const getTokensByAudit = cache(async (auditId: string): Promise<AuditToken[]> => {
-  const rows = await prisma.auditToken.findMany({ where: { auditId } });
-  return rows.map((t) => ({
+type Row = {
+  id: string;
+  auditId: string;
+  userId: string;
+  device: string;
+  hostname: string;
+  os: string;
+  agent: string;
+  ip: string;
+  issued: string;
+  expires: string;
+  status: string;
+  lastUsed: string;
+  tasks: number;
+};
+
+function toToken(t: Row): AuditToken {
+  return {
     id: t.id,
     audit: t.auditId,
     user: t.userId,
@@ -19,5 +34,16 @@ export const getTokensByAudit = cache(async (auditId: string): Promise<AuditToke
     status: t.status as TokenStatus,
     lastUsed: t.lastUsed,
     tasks: t.tasks,
-  }));
-});
+  };
+}
+
+/** All audit tokens, newest issued first — the admin tokens screen. */
+export const getAllTokens = cache(
+  async (): Promise<AuditToken[]> =>
+    (await prisma.auditToken.findMany({ orderBy: { issued: "desc" } })).map(toToken),
+);
+
+export const getTokensByAudit = cache(
+  async (auditId: string): Promise<AuditToken[]> =>
+    (await prisma.auditToken.findMany({ where: { auditId } })).map(toToken),
+);

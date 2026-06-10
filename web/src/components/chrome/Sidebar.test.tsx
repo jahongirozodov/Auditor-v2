@@ -15,6 +15,14 @@ function renderSidebar(role: RoleCode) {
   );
 }
 
+function renderSidebarWithCounts() {
+  return render(
+    <NextIntlClientProvider locale="uz" messages={messages}>
+      <Sidebar role="super" counts={{ audits: 3, tasks: 2, findings: 5 }} />
+    </NextIntlClientProvider>,
+  );
+}
+
 describe("Sidebar", () => {
   it("shows common items to every role", () => {
     renderSidebar("t1");
@@ -27,6 +35,7 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /Rollar va ruxsatlar/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Foydalanuvchilar/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Audit tokenlar/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /EXE agent/ })).toBeInTheDocument();
   });
 
   it("head sees users/tokens but NOT permissions", () => {
@@ -45,5 +54,13 @@ describe("Sidebar", () => {
   it("marks the active route", () => {
     renderSidebar("super");
     expect(screen.getByRole("link", { name: /Boshqaruv paneli/ })).toHaveClass("is-active");
+  });
+
+  it("shows dynamic backend counts instead of prototype counts", () => {
+    renderSidebarWithCounts();
+    expect(screen.getByRole("link", { name: /Auditlar3/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Mening vazifalarim2/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Findinglar5/ })).toBeInTheDocument();
+    expect(screen.queryByText("34")).toBeNull();
   });
 });

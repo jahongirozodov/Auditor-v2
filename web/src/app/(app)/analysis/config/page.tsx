@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
-import { canView } from "@/lib/rbac";
+import { requirePermission } from "@/lib/rbac.server";
 import { getAudits } from "@/lib/data/audits";
 import { getTasks } from "@/lib/data/tasks";
-import { getAnalyzedDevices, getLatestConfigUpload } from "@/lib/data/config";
+import { getAnalyzedDevices, getLatestConfigUpload, getLatestConfigAi } from "@/lib/data/config";
 import { ConfigAnalysisScreen } from "@/components/analysis/ConfigAnalysisScreen";
 
 export default async function ConfigAnalysisPage() {
-  const { role } = await requireSession();
-  if (!canView(role, "config")) redirect("/dashboard");
+  const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "config.upload"))) redirect("/dashboard");
 
   const [audits, tasks, devices, latest] = await Promise.all([
     getAudits(),
@@ -16,6 +16,15 @@ export default async function ConfigAnalysisPage() {
     getAnalyzedDevices(),
     getLatestConfigUpload(),
   ]);
+  const latestAi = latest ? await getLatestConfigAi(latest.id) : null;
 
-  return <ConfigAnalysisScreen audits={audits} tasks={tasks} devices={devices} latest={latest} />;
+  return (
+    <ConfigAnalysisScreen
+      audits={audits}
+      tasks={tasks}
+      devices={devices}
+      latest={latest}
+      latestAi={latestAi}
+    />
+  );
 }

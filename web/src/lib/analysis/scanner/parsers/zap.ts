@@ -88,11 +88,7 @@ export function parseZap(content: string): ScannerParseResult {
     }
 
     // Handle site-based format.
-    const sites = parsed.site
-      ? Array.isArray(parsed.site)
-        ? parsed.site
-        : [parsed.site]
-      : [];
+    const sites = parsed.site ? (Array.isArray(parsed.site) ? parsed.site : [parsed.site]) : [];
 
     for (const site of sites) {
       const siteName = site["@name"] ?? site.name;

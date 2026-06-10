@@ -1,10 +1,12 @@
 "use server";
 
+import { createHash } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
+import { requirePermission } from "@/lib/rbac.server";
 import { canActAt, currentOf, nextStage } from "@/lib/approval";
 import { nextFindingCode } from "@/lib/finding-code";
 import { canDoRemediation } from "@/lib/findings-machine";
@@ -13,6 +15,17 @@ import type { ApprovalStageKey, FindingStatus, Severity } from "@/lib/types/enti
 import type { ActionResult, CreateResult } from "./types";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
+const ALLOWED_EVIDENCE_MIME = ["image/png", "image/jpeg", "image/webp"] as const;
+const MAX_EVIDENCE_IMAGES = 5;
+const MAX_EVIDENCE_IMAGE_BYTES = 5 * 1024 * 1024;
+
+interface ValidEvidenceImage {
+  filename: string;
+  mimeType: (typeof ALLOWED_EVIDENCE_MIME)[number];
+  sizeBytes: number;
+  bytes: Uint8Array<ArrayBuffer>;
+  sha256: string;
+}
 
 /** The fields needed to write one Finding row (status starts at "new"). */
 export interface FindingRowInput {
@@ -27,6 +40,9 @@ export interface FindingRowInput {
   description: string;
   /** Whether AI enriched the recommendation (config drafts may set this true). */
   ai?: boolean;
+  /** Client-generated dedup key for findings synced from the desktop agent (TZ §9.5). */
+  idempotencyKey?: string;
+  evidenceCount?: number;
 }
 
 // Create one finding row + its append-only audit-log entry inside a transaction.
@@ -54,9 +70,10 @@ async function createFindingTx(
       type: d.type,
       cwe: d.cwe,
       description: d.description,
-      evidence: 0,
+      evidence: d.evidenceCount ?? 0,
       ai: d.ai ?? false,
       approvalStage: null,
+      idempotencyKey: d.idempotencyKey ?? null,
     },
   });
   await tx.auditLog.create({
@@ -65,7 +82,13 @@ async function createFindingTx(
       action: "finding.create",
       entity: id,
       level: "info",
-      payload: J({ auditId: d.auditId, taskId: d.taskId, severity: d.severity, source }),
+      payload: J({
+        auditId: d.auditId,
+        taskId: d.taskId,
+        severity: d.severity,
+        source,
+        evidenceCount: d.evidenceCount ?? 0,
+      }),
     },
   });
 }
@@ -150,6 +173,8 @@ export async function findingApproval(
   let logAction: string;
 
   if (action === "submit" || action === "resubmit") {
+    if (!(await requirePermission(userId, "finding.create")))
+      return { ok: false, error: "forbidden" };
     const want = action === "submit" ? "new" : "returned";
     if (cur !== want) return { ok: false, error: "illegal_transition" };
     if (!(isReporter || canActAt(role, "group_lead"))) return { ok: false, error: "forbidden" };
@@ -160,6 +185,8 @@ export async function findingApproval(
     evState = "done";
     logAction = "finding.submit_review";
   } else if (action === "approve") {
+    if (!(await requirePermission(userId, "finding.approve")))
+      return { ok: false, error: "forbidden" };
     if (!isStage(cur)) return { ok: false, error: "illegal_transition" };
     if (!canActAt(role, cur)) return { ok: false, error: "forbidden" };
     const nxt = nextStage(cur);
@@ -171,6 +198,8 @@ export async function findingApproval(
     logAction = `finding.approve.${cur}`;
   } else {
     // return
+    if (!(await requirePermission(userId, "finding.reject")))
+      return { ok: false, error: "forbidden" };
     if (!isStage(cur)) return { ok: false, error: "illegal_transition" };
     if (!canActAt(role, cur)) return { ok: false, error: "forbidden" };
     if (!comment?.trim()) return { ok: false, error: "comment_required" };
@@ -249,17 +278,59 @@ const CreateFindingInput = z.object({
   asset: z.string().default(""),
   type: z.string().min(1),
   description: z.string().default(""),
+  evidenceImages: z
+    .array(
+      z.object({
+        filename: z.string().min(1).max(256),
+        mimeType: z.enum(ALLOWED_EVIDENCE_MIME),
+        sizeBytes: z.number().int().positive().max(MAX_EVIDENCE_IMAGE_BYTES),
+        dataBase64: z.string().min(1),
+      }),
+    )
+    .max(MAX_EVIDENCE_IMAGES)
+    .optional(),
 });
+
+function decodeEvidenceImages(
+  images: z.infer<typeof CreateFindingInput>["evidenceImages"],
+): ValidEvidenceImage[] | null {
+  if (!images?.length) return [];
+
+  const valid: ValidEvidenceImage[] = [];
+  for (const image of images) {
+    if (image.dataBase64.length % 4 !== 0) return null;
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image.dataBase64)) return null;
+
+    const decoded = Buffer.from(image.dataBase64, "base64");
+    const bytes = new Uint8Array(new ArrayBuffer(decoded.length));
+    bytes.set(decoded);
+    if (bytes.length === 0 || bytes.length !== image.sizeBytes) return null;
+    if (bytes.length > MAX_EVIDENCE_IMAGE_BYTES) return null;
+
+    valid.push({
+      filename: image.filename,
+      mimeType: image.mimeType,
+      sizeBytes: bytes.length,
+      bytes,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    });
+  }
+  return valid;
+}
 
 export async function createFinding(
   input: z.input<typeof CreateFindingInput>,
 ): Promise<CreateResult> {
   const parsed = CreateFindingInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
-  const { auditId, taskId, title, severity, cvss, cwe, asset, type, description } = parsed.data;
+  const { auditId, taskId, title, severity, cvss, cwe, asset, type, description, evidenceImages } =
+    parsed.data;
+  const evidence = decodeEvidenceImages(evidenceImages);
+  if (!evidence) return { ok: false, error: "invalid" };
 
-  // Any authenticated user may file a finding; the reporter is the session user.
+  // Any user with finding.create may file a finding; the reporter is the session user.
   const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "finding.create"))) return { ok: false, error: "forbidden" };
 
   const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { id: true } });
   if (!audit) return { ok: false, error: "not_found" };
@@ -283,12 +354,60 @@ export async function createFinding(
       await createFindingTx(
         tx,
         userId,
-        { auditId, taskId, title, severity, cvss, cwe, asset, type, description, ai: false },
+        {
+          auditId,
+          taskId,
+          title,
+          severity,
+          cvss,
+          cwe,
+          asset,
+          type,
+          description,
+          ai: false,
+          evidenceCount: evidence.length,
+        },
         id,
         date,
         "manual",
       );
+      for (const image of evidence) {
+        const file = await tx.fileStorage.create({
+          data: {
+            filename: image.filename,
+            mimeType: image.mimeType,
+            sizeBytes: image.sizeBytes,
+            sha256: image.sha256,
+            provider: "db",
+            bytes: image.bytes,
+            uploadedById: userId,
+          },
+        });
+        await tx.findingEvidence.create({
+          data: {
+            findingId: id,
+            fileId: file.id,
+            kind: "screenshot",
+            uploadedById: userId,
+          },
+        });
+      }
       await recountFindingsAgg(tx, auditId);
+      if (evidence.length > 0) {
+        await tx.auditLog.create({
+          data: {
+            userId,
+            action: "finding.evidence.upload",
+            entity: id,
+            level: "info",
+            payload: J({
+              count: evidence.length,
+              filenames: evidence.map((image) => image.filename),
+              sizeBytes: evidence.reduce((sum, image) => sum + image.sizeBytes, 0),
+            }),
+          },
+        });
+      }
     });
   } catch {
     return { ok: false, error: "code_conflict" };

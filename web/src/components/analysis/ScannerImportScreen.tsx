@@ -12,6 +12,8 @@ import {
   Layers,
   Link,
   Network,
+  Plus,
+  RefreshCw,
   Server,
   Sparkles,
   Upload,
@@ -25,8 +27,10 @@ import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { SCANNER_LABELS } from "@/lib/analysis/scanner";
-import { uploadScannerFile } from "@/lib/actions/scanner";
-import type { Audit, Task, ScanImportRowView } from "@/lib/types/entities";
+import type { ScannerNormalization } from "@/lib/analysis/scanner";
+import { uploadScannerFile, reanalyzeScanner, createScannerDrafts } from "@/lib/actions/scanner";
+import { ScannerAiResult } from "./ScannerAiResult";
+import type { Audit, Task, ScanImportRowView, ScannerUploadView } from "@/lib/types/entities";
 
 const SCANNER_ORDER = ["nessus", "openvas", "nmap", "zap", "burp", "universal"] as const;
 type ScannerKey = (typeof SCANNER_ORDER)[number];
@@ -73,13 +77,26 @@ function SevPills({ agg }: { agg: ScanImportRowView["severityAgg"] }) {
   );
 }
 
+interface ActiveUpload {
+  uploadId: string;
+  filename: string;
+}
+
 export interface ScannerImportScreenProps {
   audits: Audit[];
   tasks: Task[];
   imports: ScanImportRowView[];
+  latest: ScannerUploadView | null;
+  latestAi: ScannerNormalization | null;
 }
 
-export function ScannerImportScreen({ audits, tasks, imports }: ScannerImportScreenProps) {
+export function ScannerImportScreen({
+  audits,
+  tasks,
+  imports,
+  latest,
+  latestAi,
+}: ScannerImportScreenProps) {
   const t = useTranslations("scanner");
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
@@ -87,6 +104,13 @@ export function ScannerImportScreen({ audits, tasks, imports }: ScannerImportScr
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [active, setActive] = useState<ActiveUpload | null>(
+    latest ? { uploadId: latest.id, filename: latest.filename } : null,
+  );
+  const [ai, setAi] = useState<ScannerNormalization | null>(latestAi);
+  const [aiDegraded, setAiDegraded] = useState(false);
+  const [aiPending, setAiPending] = useState(false);
 
   const [pendingFile, setPendingFile] = useState<{ name: string; text: string } | null>(null);
   const [auditId, setAuditId] = useState(audits[0]?.id ?? "");
@@ -132,11 +156,47 @@ export function ScannerImportScreen({ audits, tasks, imports }: ScannerImportScr
   function confirmUpload() {
     if (!pendingFile || !auditId || !taskId) return;
     const { name, text } = pendingFile;
+    setAiPending(true);
+    setAiDegraded(false);
     startTransition(async () => {
       const res = await uploadScannerFile({ filename: name, content: text, auditId, taskId });
-      if (res.ok) {
+      if (res.ok && res.uploadId) {
+        setActive({ uploadId: res.uploadId, filename: name });
+        setAi(res.ai ?? null);
+        setAiDegraded(res.aiOk === false); // imported, but AI normalization deferred
         setPendingFile(null);
         toast(t("uploaded"), "success");
+        router.refresh();
+      } else {
+        toast(t("failed"), "danger");
+      }
+      setAiPending(false);
+    });
+  }
+
+  async function reanalyze() {
+    if (!active) return;
+    setAiPending(true);
+    setAiDegraded(false);
+    try {
+      const res = await reanalyzeScanner({ uploadId: active.uploadId });
+      if (res.ok && res.normalization) {
+        setAi(res.normalization);
+      } else {
+        setAiDegraded(true);
+      }
+    } finally {
+      setAiPending(false);
+      router.refresh();
+    }
+  }
+
+  function createDrafts() {
+    if (!active) return;
+    startTransition(async () => {
+      const res = await createScannerDrafts({ uploadId: active.uploadId });
+      if (res.ok) {
+        toast(t("draftsCreated", { n: res.ids?.length ?? 0 }), "success");
         router.refresh();
       } else {
         toast(t("failed"), "danger");
@@ -254,17 +314,12 @@ export function ScannerImportScreen({ audits, tasks, imports }: ScannerImportScr
                               <div className="stat__icon">
                                 <Icon size={13} />
                               </div>
-                              <span
-                                className="font-mono"
-                                style={{ fontSize: 13 }}
-                              >
+                              <span className="font-mono" style={{ fontSize: 13 }}>
                                 {imp.filename}
                               </span>
                             </div>
                           </td>
-                          <td>
-                            {SCANNER_LABELS[imp.scanner as ScannerKey]?.name ?? imp.scanner}
-                          </td>
+                          <td>{SCANNER_LABELS[imp.scanner as ScannerKey]?.name ?? imp.scanner}</td>
                           <td>{imp.auditCode}</td>
                           <td>
                             <SevPills agg={imp.severityAgg} />
@@ -338,7 +393,31 @@ export function ScannerImportScreen({ audits, tasks, imports }: ScannerImportScr
                 </div>
                 <span className="ai-card__title">{t("aiTitle")}</span>
               </div>
-              <p className="ai-card__body">{t("aiBody")}</p>
+
+              <ScannerAiResult analysis={ai} loading={aiPending} degraded={aiDegraded} />
+
+              {active ? (
+                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={<Plus size={13} />}
+                    onClick={createDrafts}
+                    disabled={pending || aiPending}
+                  >
+                    {t("createDrafts", { n: ai?.findings.length ?? 0 })}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="soft"
+                    icon={<RefreshCw size={13} className={aiPending ? "spin" : undefined} />}
+                    onClick={reanalyze}
+                    disabled={aiPending}
+                  >
+                    {aiPending ? t("aiAnalyzing") : t("aiReanalyze")}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

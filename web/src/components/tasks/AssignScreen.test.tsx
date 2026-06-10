@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/../messages/uz.json";
@@ -13,34 +13,85 @@ vi.mock("@/lib/actions/tasks", () => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const usersById = Object.fromEntries(USERS.map((u) => [u.id, u]));
+const creatableAudits = AUDITS.filter((audit) => audit.id === "AUD-2026-014");
 
-function renderScreen(role = "lead" as const) {
+function renderScreen({ creatable = creatableAudits, currentUserId = "u6" } = {}) {
   return render(
     <NextIntlClientProvider locale="uz" messages={messages}>
-      <AssignScreen audits={AUDITS} tasks={TASKS} usersById={usersById} role={role} />
+      <AssignScreen
+        audits={AUDITS}
+        tasks={TASKS}
+        usersById={usersById}
+        currentUserId={currentUserId}
+        creatableAudits={creatable}
+      />
     </NextIntlClientProvider>,
   );
 }
 
+function bodyRows() {
+  // All tbody rows except a single full-width empty-state row.
+  return screen
+    .getAllByRole("row")
+    .filter((r) => within(r).queryAllByRole("columnheader").length === 0)
+    .filter((r) => !within(r).queryByText(messages.assign.empty));
+}
+
 describe("AssignScreen", () => {
-  it("renders the audit selector, task table and workload sidebar", () => {
+  it("renders every task with an audit column", () => {
     renderScreen();
     expect(screen.getByRole("heading", { name: "Vazifalarni taqsimlash" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Audit:")).toBeInTheDocument();
-    // first audit with tasks (AUD-2026-014) → T-114 row
+    expect(bodyRows()).toHaveLength(TASKS.length);
     expect(screen.getByRole("link", { name: "T-114" })).toHaveAttribute("href", "/tasks/T-114");
-    expect(screen.getByText("Ish yuki taqsimoti")).toBeInTheDocument();
+    // Audit column header + each row's audit code.
+    expect(screen.getByRole("columnheader", { name: messages.assign.thAudit })).toBeInTheDocument();
+    expect(screen.getAllByText("AUD-2026-014").length).toBe(TASKS.length);
   });
 
-  it("opens the create modal for a lead", async () => {
+  it("filters by status", async () => {
+    renderScreen();
+    await userEvent.selectOptions(
+      screen.getByLabelText(messages.assign.filterStatus),
+      "done",
+    );
+    // T-116 and T-122 are the only done tasks.
+    expect(bodyRows()).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "T-116" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "T-114" })).not.toBeInTheDocument();
+  });
+
+  it("filters by assignee", async () => {
+    renderScreen();
+    // u7 (Jasur Tursunov) owns T-115 and T-121.
+    await userEvent.selectOptions(screen.getByLabelText(messages.assign.filterAssignee), "u7");
+    expect(bodyRows()).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "T-115" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "T-121" })).toBeInTheDocument();
+  });
+
+  it("searches by id and title", async () => {
+    renderScreen();
+    await userEvent.type(screen.getByLabelText(messages.assign.search), "firewall");
+    expect(bodyRows()).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "T-114" })).toBeInTheDocument();
+  });
+
+  it("shows an empty state when nothing matches", async () => {
+    renderScreen();
+    await userEvent.type(screen.getByLabelText(messages.assign.search), "zzz-no-match");
+    expect(bodyRows()).toHaveLength(0);
+    expect(screen.getByText(messages.assign.empty)).toBeInTheDocument();
+  });
+
+  it("opens the create modal when the user has a creatable audit", async () => {
     renderScreen();
     await userEvent.click(screen.getByRole("button", { name: messages.assign.newTask }));
     // The modal's submit button ("Yaratish va biriktirish") is unique to the open modal.
     expect(screen.getByRole("button", { name: messages.assign.create })).toBeInTheDocument();
   });
 
-  it("hides the create button for a t1", () => {
-    renderScreen("t1" as never);
+  it("hides the create button when the user has no creatable audits", () => {
+    renderScreen({ creatable: [] });
     expect(screen.queryByRole("button", { name: messages.assign.newTask })).not.toBeInTheDocument();
   });
 });

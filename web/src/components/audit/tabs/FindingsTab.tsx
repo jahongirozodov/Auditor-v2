@@ -21,6 +21,7 @@ export function FindingsTab({ a, role }: { a: Audit; role: RoleCode }) {
         finding={selected}
         approval={null}
         remediation={[]}
+        evidences={[]}
         tasks={TASKS}
         usersById={usersById}
         userId=""

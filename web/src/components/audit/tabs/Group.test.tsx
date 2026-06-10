@@ -11,7 +11,6 @@ vi.mock("@/lib/actions/audits", () => ({
   addMember: vi.fn(),
   removeMember: vi.fn(),
   promoteLead: vi.fn(),
-  startProjectDraft: vi.fn(),
 }));
 
 const usersById = Object.fromEntries(USERS.map((u) => [u.id, u]));
@@ -35,12 +34,12 @@ describe("Group tab", () => {
     );
   });
 
-  it("shows the start-draft CTA only for a group_forming audit", () => {
+  it("does not expose project creation from the group tab", () => {
     const base = AUDITS.find((a) => a.id === "AUD-2026-015")!;
     renderGroup({ ...base, status: "group_forming" }, "super");
     expect(
-      screen.getByRole("button", { name: /Loyiha qoralamasini boshlash/ }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /Loyiha qoralamasini boshlash|Loyiha yaratish/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides team-edit controls for a non-manager (t1)", () => {

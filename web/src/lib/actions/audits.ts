@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { canManage } from "@/lib/rbac";
-import { canActAt } from "@/lib/approval";
+import { requirePermission } from "@/lib/rbac.server";
 import { nextAuditCode } from "@/lib/audit-code";
 import { emitKpiEvent } from "@/lib/kpi-engine";
 import type { ActionResult, CreateResult } from "./types";
@@ -30,8 +30,8 @@ export async function createAudit(input: z.input<typeof CreateAuditInput>): Prom
   const { title, type, orgId, startDate, endDate, leaderId, memberIds } = parsed.data;
   if (startDate > endDate) return { ok: false, error: "bad_dates" };
 
-  const { userId, role } = await requireSession();
-  if (!canManage(role, "audit")) return { ok: false, error: "forbidden" };
+  const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "audit.create"))) return { ok: false, error: "forbidden" };
 
   const year = startDate.slice(0, 4);
   const existing = await prisma.audit.findMany({
@@ -94,8 +94,12 @@ export async function createAudit(input: z.input<typeof CreateAuditInput>): Prom
         countField: "audits",
       });
     });
-  } catch {
-    return { ok: false, error: "code_conflict" };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { ok: false, error: "code_conflict" };
+    }
+    console.error("createAudit failed", error);
+    return { ok: false, error: "failed" };
   }
 
   revalidatePath("/audits");
@@ -118,8 +122,8 @@ export async function addMember(input: z.input<typeof TeamInput>): Promise<Actio
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, userId } = parsed.data;
 
-  const { userId: actorId, role } = await requireSession();
-  if (!canManage(role, "audit")) return { ok: false, error: "forbidden" };
+  const { userId: actorId } = await requireSession();
+  if (!(await requirePermission(actorId, "group.edit"))) return { ok: false, error: "forbidden" };
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
@@ -158,8 +162,8 @@ export async function removeMember(input: z.input<typeof TeamInput>): Promise<Ac
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, userId } = parsed.data;
 
-  const { userId: actorId, role } = await requireSession();
-  if (!canManage(role, "audit")) return { ok: false, error: "forbidden" };
+  const { userId: actorId } = await requireSession();
+  if (!(await requirePermission(actorId, "group.edit"))) return { ok: false, error: "forbidden" };
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
@@ -187,8 +191,8 @@ export async function promoteLead(input: z.input<typeof TeamInput>): Promise<Act
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, userId } = parsed.data;
 
-  const { userId: actorId, role } = await requireSession();
-  if (!canManage(role, "audit")) return { ok: false, error: "forbidden" };
+  const { userId: actorId } = await requireSession();
+  if (!(await requirePermission(actorId, "group.edit"))) return { ok: false, error: "forbidden" };
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
@@ -212,32 +216,5 @@ export async function promoteLead(input: z.input<typeof TeamInput>): Promise<Act
   ]);
   revalidatePath(`/audits/${auditId}`);
   revalidatePath("/audits");
-  return { ok: true };
-}
-
-const StartDraftInput = z.object({ auditId: z.string().min(1) });
-
-export async function startProjectDraft(
-  input: z.input<typeof StartDraftInput>,
-): Promise<ActionResult> {
-  const parsed = StartDraftInput.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "invalid" };
-  const { auditId } = parsed.data;
-
-  const { userId, role } = await requireSession();
-  if (!canActAt(role, "group_lead")) return { ok: false, error: "forbidden" };
-  const a = await loadAudit(auditId);
-  if (!a) return { ok: false, error: "not_found" };
-  if (a.status !== "group_forming") return { ok: false, error: "illegal_status" };
-
-  await prisma.$transaction([
-    prisma.audit.update({ where: { id: auditId }, data: { status: "project_draft", stage: 3 } }),
-    prisma.auditLog.create({
-      data: { userId, action: "project.draft", entity: auditId, level: "info" },
-    }),
-  ]);
-  revalidatePath(`/audits/${auditId}`);
-  revalidatePath("/audits");
-  revalidatePath("/dashboard");
   return { ok: true };
 }

@@ -21,3 +21,9 @@
 .ds-no-transition * {
   transition: none !important;
 }
+
+/* Full-bleed main content: let pages use the whole canvas width on large
+   screens instead of the centered 1480px column (overrides app.css). */
+.canvas__inner {
+  max-width: none;
+}

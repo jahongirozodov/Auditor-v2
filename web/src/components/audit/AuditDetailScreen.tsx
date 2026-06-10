@@ -21,7 +21,16 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import { orgById, WORKFLOW } from "@/lib/fixtures";
 import type { ApprovalView } from "@/lib/data/approval";
-import type { Audit, KpiUser, User } from "@/lib/types/entities";
+import type {
+  Audit,
+  AuditEvidenceView,
+  AuditProject,
+  AuditToken,
+  KpiUser,
+  Report,
+  Task,
+  User,
+} from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 import { Overview } from "./tabs/Overview";
 import { Group } from "./tabs/Group";
@@ -32,22 +41,44 @@ import { Files } from "./tabs/Files";
 import { Tokens } from "./tabs/Tokens";
 import { Kpi } from "./tabs/Kpi";
 import { Reports } from "./tabs/Reports";
+import { AiTab } from "./tabs/AiTab";
 import { TabSoon } from "./tabs/TabSoon";
+import type { AuditAnalysis } from "@/lib/analysis/audit/types";
 
 export function AuditDetailScreen({
   role,
+  currentUserId,
   audit,
+  project,
   usersById,
   allUsers,
   projectApproval,
   kpiUsers,
+  tasks,
+  canCreateTasks,
+  evidence,
+  canAddEvidence,
+  tokens,
+  canIssueTokens,
+  latestAuditAi,
+  reports,
 }: {
   role: RoleCode;
+  currentUserId: string;
   audit: Audit | null;
+  project: AuditProject | null;
   usersById: Record<string, User>;
   allUsers: User[];
   projectApproval: ApprovalView | null;
   kpiUsers: KpiUser[];
+  tasks: Task[];
+  canCreateTasks: boolean;
+  evidence: AuditEvidenceView[];
+  canAddEvidence: boolean;
+  tokens: AuditToken[];
+  canIssueTokens: boolean;
+  latestAuditAi: AuditAnalysis | null;
+  reports: Report[];
 }) {
   const t = useTranslations("auditDetail");
   const [tab, setTab] = useState("overview");
@@ -134,19 +165,37 @@ export function AuditDetailScreen({
       ) : tab === "group" ? (
         <Group a={a} usersById={usersById} allUsers={allUsers} role={role} />
       ) : tab === "project" ? (
-        <Project a={a} role={role} approval={projectApproval} />
+        <Project
+          a={a}
+          project={project}
+          role={role}
+          currentUserId={currentUserId}
+          approval={projectApproval}
+        />
       ) : tab === "tasks" ? (
-        <TasksTab a={a} />
+        <TasksTab
+          audit={a}
+          tasks={tasks}
+          usersById={usersById}
+          canCreate={canCreateTasks}
+        />
       ) : tab === "findings" ? (
         <FindingsTab a={a} role={role} />
       ) : tab === "files" ? (
-        <Files a={a} />
+        <Files a={a} evidence={evidence} canAdd={canAddEvidence} currentUserId={currentUserId} />
       ) : tab === "tokens" ? (
-        <Tokens a={a} />
+        <Tokens audit={a} tokens={tokens} usersById={usersById} canIssue={canIssueTokens} />
       ) : tab === "kpi" ? (
         <Kpi a={a} kpiUsers={kpiUsers} usersById={usersById} />
       ) : tab === "reports" ? (
-        <Reports a={a} />
+        <Reports reports={reports} />
+      ) : tab === "ai" ? (
+        <AiTab
+          audit={a}
+          latestAi={latestAuditAi}
+          userName={usersById[currentUserId]?.name ?? ""}
+          orgName={org?.name ?? ""}
+        />
       ) : (
         <TabSoon />
       )}

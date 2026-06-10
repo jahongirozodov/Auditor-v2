@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/../messages/uz.json";
@@ -55,6 +55,38 @@ describe("CreateFindingModal", () => {
     await userEvent.click(create);
     expect(createFinding).toHaveBeenCalledWith(
       expect.objectContaining({ auditId: AUDIT_ID, taskId: "T-114" }),
+    );
+  });
+
+  it("previews and removes selected evidence images", async () => {
+    renderModal();
+    const file = new File(["image-bytes"], "screenshot.png", { type: "image/png" });
+    await userEvent.upload(screen.getByLabelText(m.fEvidenceImages), file);
+    expect(await screen.findByText("screenshot.png")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: m.removeEvidence }));
+    expect(screen.queryByText("screenshot.png")).not.toBeInTheDocument();
+  });
+
+  it("submits selected evidence images", async () => {
+    renderModal();
+    const file = new File(["image-bytes"], "screenshot.png", { type: "image/png" });
+    await userEvent.upload(screen.getByLabelText(m.fEvidenceImages), file);
+    await userEvent.type(screen.getByLabelText(m.fName), "Login forma â€” SQL injection");
+    await userEvent.click(screen.getByRole("button", { name: m.create }));
+
+    await waitFor(() =>
+      expect(createFinding).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evidenceImages: [
+            expect.objectContaining({
+              filename: "screenshot.png",
+              mimeType: "image/png",
+              sizeBytes: file.size,
+            }),
+          ],
+        }),
+      ),
     );
   });
 

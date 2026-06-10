@@ -1,17 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { BarChart3, Info, Plus, Star } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Avatar } from "@/components/ui/Avatar";
 import { TASK_STATUS } from "@/lib/fixtures";
-import { isLead } from "@/lib/tasks-machine";
 import { CreateTaskModal } from "./CreateTaskModal";
-import type { Audit, Task, TaskPriority, User } from "@/lib/types/entities";
-import type { RoleCode } from "@/lib/types/roles";
+import type { Audit, Task, TaskPriority, TaskStatus, User } from "@/lib/types/entities";
 
 const PRIORITY_TONE: Record<TaskPriority, TagTone> = {
   Yuqori: "danger",
@@ -19,33 +17,63 @@ const PRIORITY_TONE: Record<TaskPriority, TagTone> = {
   Past: "ghost",
 };
 
+const STATUS_KEYS = Object.keys(TASK_STATUS) as TaskStatus[];
+
 export interface AssignScreenProps {
   audits: Audit[];
   tasks: Task[];
   usersById: Record<string, User>;
-  role: RoleCode;
+  currentUserId: string;
+  creatableAudits: Audit[];
 }
 
-export function AssignScreen({ audits, tasks, usersById, role }: AssignScreenProps) {
+export function AssignScreen({
+  audits,
+  tasks,
+  usersById,
+  currentUserId,
+  creatableAudits,
+}: AssignScreenProps) {
   const t = useTranslations("assign");
-  // Default to the first audit that has tasks → the table loads populated (and keeps the
-  // historical AUD-2026-014 default once flipped to the code-desc DB order).
-  const firstWithTasks = audits.find((a) => tasks.some((tk) => tk.auditId === a.id)) ?? audits[0];
-  const [auditId, setAuditId] = useState(firstWithTasks?.id ?? "");
+  const [search, setSearch] = useState("");
+  const [assigneeFilter, setAssigneeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [auditFilter, setAuditFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const canCreate = isLead(role);
+  const canCreate = creatableAudits.length > 0;
 
   const pick = (id: string): Pick<User, "id" | "avatar" | "name" | "title"> =>
     usersById[id] ?? { id, avatar: "?", name: id, title: "" };
 
-  const audit = audits.find((a) => a.id === auditId);
-  const auditTasks = tasks.filter((tk) => tk.auditId === auditId);
-  const members = audit ? audit.members.map((id) => pick(id)) : [];
+  const auditsById = useMemo(() => {
+    const map: Record<string, Audit> = {};
+    for (const a of audits) map[a.id] = a;
+    return map;
+  }, [audits]);
 
-  const workload: Record<string, number> = {};
-  for (const m of members) workload[m.id] = 0;
-  for (const tk of auditTasks) workload[tk.assignee] = (workload[tk.assignee] ?? 0) + 1;
-  const maxLoad = Math.max(1, ...Object.values(workload));
+  // Assignee filter lists only people actually assigned to a visible task.
+  const assigneeOptions = useMemo(() => {
+    const ids = Array.from(new Set(tasks.map((tk) => tk.assignee)));
+    return ids
+      .map((id) => pick(id))
+      .sort((a, b) => a.name.localeCompare(b.name, "uz"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, usersById]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return tasks.filter((tk) => {
+      if (assigneeFilter && tk.assignee !== assigneeFilter) return false;
+      if (statusFilter && tk.status !== statusFilter) return false;
+      if (auditFilter && tk.auditId !== auditFilter) return false;
+      if (q && !`${tk.id} ${tk.title}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [tasks, search, assigneeFilter, statusFilter, auditFilter]);
+
+  const createDefaultAuditId = creatableAudits.some((a) => a.id === auditFilter)
+    ? auditFilter
+    : (creatableAudits[0]?.id ?? "");
 
   return (
     <div className="route-anim">
@@ -71,60 +99,107 @@ export function AssignScreen({ audits, tasks, usersById, role }: AssignScreenPro
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 12,
+          gap: 10,
           marginBottom: 16,
           flexWrap: "wrap",
         }}
       >
-        <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>{t("auditLabel")}</span>
+        <div className="input-group" style={{ width: 240 }}>
+          <Search className="icon-l" size={14} />
+          <input
+            className="input"
+            aria-label={t("search")}
+            placeholder={t("search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         <select
           className="select"
-          value={auditId}
-          onChange={(e) => setAuditId(e.target.value)}
-          style={{ maxWidth: 420 }}
-          aria-label={t("auditLabel")}
+          aria-label={t("filterAssignee")}
+          style={{ width: 200 }}
+          value={assigneeFilter}
+          onChange={(e) => setAssigneeFilter(e.target.value)}
         >
+          <option value="">{t("assigneeAll")}</option>
+          {assigneeOptions.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select"
+          aria-label={t("filterStatus")}
+          style={{ width: 180 }}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">{t("statusAll")}</option>
+          {STATUS_KEYS.map((s) => (
+            <option key={s} value={s}>
+              {TASK_STATUS[s].label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select"
+          aria-label={t("filterAudit")}
+          style={{ width: 280 }}
+          value={auditFilter}
+          onChange={(e) => setAuditFilter(e.target.value)}
+        >
+          <option value="">{t("auditAll")}</option>
           {audits.map((a) => (
             <option key={a.id} value={a.id}>
               {a.code} — {a.title}
             </option>
           ))}
         </select>
-        <Tag tone="ghost">{t("taskCount", { n: auditTasks.length })}</Tag>
+        <Tag tone="ghost">{t("taskCount", { n: filtered.length })}</Tag>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) 300px",
-          gap: 16,
-          alignItems: "start",
-        }}
-      >
-        <div className="tbl-wrap">
-          <div className="tbl-scroll">
-            <table className="tbl">
-              <thead>
+      <div className="tbl-wrap">
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>{t("thId")}</th>
+                <th>{t("thAudit")}</th>
+                <th>{t("thTask")}</th>
+                <th>{t("thType")}</th>
+                <th>{t("thPriority")}</th>
+                <th>{t("thAssignee")}</th>
+                <th>{t("thStatus")}</th>
+                <th>{t("thDue")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
                 <tr>
-                  <th>{t("thId")}</th>
-                  <th>{t("thTask")}</th>
-                  <th>{t("thType")}</th>
-                  <th>{t("thPriority")}</th>
-                  <th>{t("thAssignee")}</th>
-                  <th>{t("thStatus")}</th>
-                  <th>{t("thDue")}</th>
+                  <td colSpan={8} className="cell-sub" style={{ textAlign: "center", padding: 24 }}>
+                    {t("empty")}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {auditTasks.map((tk) => {
+              ) : (
+                filtered.map((tk) => {
                   const u = pick(tk.assignee);
                   const st = TASK_STATUS[tk.status];
+                  const aud = auditsById[tk.auditId];
+                  const href = `/tasks/${tk.id}`;
                   return (
                     <tr key={tk.id}>
                       <td className="cell-mono">
-                        <Link href={`/tasks/${tk.id}`}>{tk.id}</Link>
+                        <Link href={href}>{tk.id}</Link>
                       </td>
-                      <td className="text-primary font-semi">{tk.title}</td>
+                      <td className="cell-mono cell-sub" title={aud?.title ?? tk.auditId}>
+                        {aud?.code ?? tk.auditId}
+                      </td>
+                      <td>
+                        <Link href={href} className="text-primary font-semi">
+                          {tk.title}
+                        </Link>
+                      </td>
                       <td>
                         <Tag tone="outline">{tk.type}</Tag>
                       </td>
@@ -143,81 +218,10 @@ export function AssignScreen({ audits, tasks, usersById, role }: AssignScreenPro
                       <td className="tabular cell-sub">{tk.due}</td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <section className="panel">
-            <div className="panel__h">
-              <div className="panel__t">
-                <BarChart3 size={15} />
-                <span>{t("workloadTitle")}</span>
-              </div>
-            </div>
-            <div
-              className="panel__body"
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
-            >
-              {members.map((u) => {
-                const load = workload[u.id] ?? 0;
-                const isLeader = u.id === audit?.leader;
-                return (
-                  <div key={u.id}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <Avatar initials={u.avatar} name={u.name} />
-                      <span
-                        style={{
-                          flex: 1,
-                          fontSize: 13,
-                          fontWeight: 550,
-                          color: "var(--text-primary)",
-                        }}
-                      >
-                        {u.name}
-                      </span>
-                      {isLeader ? (
-                        <Tag tone="brand">
-                          <Star size={10} /> {t("leader")}
-                        </Tag>
-                      ) : null}
-                      <span className="tabular font-semi">{load}</span>
-                    </div>
-                    <div
-                      style={{
-                        height: 6,
-                        borderRadius: 3,
-                        background: "var(--bg-surface-3)",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${(load / maxLoad) * 100}%`,
-                          height: "100%",
-                          background: isLeader ? "var(--brand)" : "var(--status-info-fg)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <div className="card" style={{ background: "var(--bg-surface-2)" }}>
-            <div
-              className="card__pad-sm"
-              style={{ display: "flex", gap: 10, alignItems: "flex-start" }}
-            >
-              <Info size={16} style={{ color: "var(--brand)", flexShrink: 0, marginTop: 1 }} />
-              <span style={{ fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                {t("note")}
-              </span>
-            </div>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -225,9 +229,10 @@ export function AssignScreen({ audits, tasks, usersById, role }: AssignScreenPro
         <CreateTaskModal
           open
           onClose={() => setCreateOpen(false)}
-          audits={audits}
+          audits={creatableAudits}
           usersById={usersById}
-          defaultAuditId={auditId}
+          defaultAuditId={createDefaultAuditId}
+          defaultAssigneeId={currentUserId}
         />
       ) : null}
     </div>

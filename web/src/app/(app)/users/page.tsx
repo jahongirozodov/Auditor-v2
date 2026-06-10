@@ -1,20 +1,19 @@
 ﻿import { requireSession } from "@/lib/session";
 import { getAdminUsers } from "@/lib/data/users";
 import { getKpiUsers } from "@/lib/data/kpi";
-import { canManage } from "@/lib/rbac";
+import { getCustomRoles } from "@/lib/data/settings";
+import { requireAnyPermission } from "@/lib/rbac.server";
 import { UsersScreen } from "@/components/users/UsersScreen";
-import type { RoleCode } from "@/lib/types/roles";
 
 export default async function UsersPage() {
-  const { role } = await requireSession();
-  const [users, kpi] = await Promise.all([getAdminUsers(), getKpiUsers()]);
-  return (
-    <UsersScreen
-      users={users}
-      kpi={kpi}
-      canEdit={canManage(role as RoleCode, "users")}
-    />
-  );
+  const { userId } = await requireSession();
+  const [users, kpi, customRoles, canEdit] = await Promise.all([
+    getAdminUsers(),
+    getKpiUsers(),
+    getCustomRoles(),
+    requireAnyPermission(userId, ["user.create", "user.update", "user.disable"]),
+  ]);
+  return <UsersScreen users={users} kpi={kpi} customRoles={customRoles} canEdit={canEdit} />;
 }
 
 export const dynamic = "force-dynamic";

@@ -31,6 +31,8 @@ const ACCESS: Record<ModuleId, Record<RoleCode, AccessLevel>> = {
   kpi: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
   report: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
   log: { super: "full", head: "read", chief: "own", lead: "own", t1: "own" },
+  // System settings — admin only (mirrors the nav allowlist super/head).
+  settings: { super: "full", head: "full", chief: "no", lead: "no", t1: "no" },
 };
 
 /** Access level a role has on a module ("no" if the module is unknown). */

@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { NAV, navVisible } from "@/lib/nav";
+import type { NavCounts } from "@/lib/nav";
 import type { RoleCode } from "@/lib/types/roles";
 
 /**
  * Role-filtered nav. Visibility is an explicit allowlist (lib/nav.ts) mirroring the
  * prototype — UI gating only. Real authorization is enforced server-side per page.
  */
-export function Sidebar({ role }: { role: RoleCode }) {
+export function Sidebar({ role, counts }: { role: RoleCode; counts?: NavCounts }) {
   const pathname = usePathname();
   const tNav = useTranslations("nav");
   const tShell = useTranslations("shell");
@@ -28,6 +29,7 @@ export function Sidebar({ role }: { role: RoleCode }) {
               {items.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const count = item.countKey ? counts?.[item.countKey] : undefined;
                 return (
                   <Link
                     key={item.id}
@@ -37,7 +39,7 @@ export function Sidebar({ role }: { role: RoleCode }) {
                   >
                     <Icon />
                     <span className="label">{tNav(item.labelKey)}</span>
-                    {item.count != null ? <span className="count">{item.count}</span> : null}
+                    {count != null ? <span className="count">{count}</span> : null}
                   </Link>
                 );
               })}

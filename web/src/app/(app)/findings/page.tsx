@@ -1,5 +1,5 @@
 import { requireSession } from "@/lib/session";
-import { getFindings } from "@/lib/data/findings";
+import { getFindingEvidenceMap, getFindings } from "@/lib/data/findings";
 import { getAudits } from "@/lib/data/audits";
 import { getTasks } from "@/lib/data/tasks";
 import { getUsersById } from "@/lib/data/users";
@@ -8,13 +8,15 @@ import { FindingsScreen } from "@/components/findings/FindingsScreen";
 
 export default async function FindingsPage() {
   const { userId, role } = await requireSession();
-  const [findings, usersById, approvals, remediations, audits, tasks] = await Promise.all([
+  const [findings, usersById, approvals, remediations, audits, tasks, evidenceByFindingId] =
+    await Promise.all([
     getFindings(),
     getUsersById(),
     getFindingApprovals(),
     getFindingRemediations(),
     getAudits(),
     getTasks(),
+    getFindingEvidenceMap(),
   ]);
   return (
     <FindingsScreen
@@ -24,6 +26,7 @@ export default async function FindingsPage() {
       remediations={remediations}
       audits={audits}
       tasks={tasks}
+      evidenceByFindingId={evidenceByFindingId}
       userId={userId}
       role={role}
     />

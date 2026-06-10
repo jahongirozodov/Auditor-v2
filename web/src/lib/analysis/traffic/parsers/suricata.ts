@@ -1,4 +1,5 @@
 ﻿import type { TrafficParseResult, TrafficAnomaly, AnomalySeverity } from "../types";
+import { bucketTimeline, topTalkers, topPorts, topConversations, convKey } from "../profile";
 
 const SEV_MAP: Record<number, AnomalySeverity> = { 1: "high", 2: "medium", 3: "low" };
 
@@ -11,6 +12,10 @@ export function parseSuricata(content: string): TrafficParseResult {
     const lines = content.split("\n").filter(Boolean);
     const allIps = new Set<string>();
     const protocols: Record<string, number> = {};
+    const talkerCounts: Record<string, number> = {};
+    const portCounts: Record<number, number> = {};
+    const convCounts: Record<string, number> = {};
+    const times: number[] = [];
     const sigMap = new Map<string, TrafficAnomaly>();
     let totalPackets = 0;
     let earliestMs = Infinity;
@@ -18,11 +23,16 @@ export function parseSuricata(content: string): TrafficParseResult {
 
     for (const line of lines) {
       let obj: Record<string, unknown>;
-      try { obj = JSON.parse(line) as Record<string, unknown>; } catch { continue; }
+      try {
+        obj = JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
 
       const ts = String(obj.timestamp ?? "");
       const tsMs = ts ? new Date(ts).getTime() : NaN;
       if (!isNaN(tsMs)) {
+        times.push(tsMs / 1000);
         if (tsMs < earliestMs) earliestMs = tsMs;
         if (tsMs > latestMs) latestMs = tsMs;
       }
@@ -34,8 +44,19 @@ export function parseSuricata(content: string): TrafficParseResult {
       const srcIp = String(obj.src_ip ?? "");
       const destIp = String(obj.dest_ip ?? "");
       const destPort = obj.dest_port != null ? String(obj.dest_port) : "";
-      if (srcIp) allIps.add(srcIp);
+      if (srcIp) {
+        allIps.add(srcIp);
+        talkerCounts[srcIp] = (talkerCounts[srcIp] ?? 0) + 1;
+      }
       if (destIp) allIps.add(destIp);
+      if (srcIp && destIp) {
+        const k = convKey(srcIp, destIp);
+        convCounts[k] = (convCounts[k] ?? 0) + 1;
+      }
+      const destPortNum = Number(destPort);
+      if (destPort && Number.isInteger(destPortNum) && destPortNum > 0) {
+        portCounts[destPortNum] = (portCounts[destPortNum] ?? 0) + 1;
+      }
 
       if (String(obj.event_type) !== "alert") continue;
 
@@ -50,7 +71,14 @@ export function parseSuricata(content: string): TrafficParseResult {
       if (existing) {
         existing.eventCount++;
       } else {
-        sigMap.set(sig, { severity: sev, title: sig, srcIp, dstIpPort, timeRange: timeLabel, eventCount: 1 });
+        sigMap.set(sig, {
+          severity: sev,
+          title: sig,
+          srcIp,
+          dstIpPort,
+          timeRange: timeLabel,
+          eventCount: 1,
+        });
       }
     }
 
@@ -74,6 +102,10 @@ export function parseSuricata(content: string): TrafficParseResult {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 8)
         .map(([protocol, packets]) => ({ protocol, packets })),
+      timeline: bucketTimeline(times, { epoch: true }),
+      topTalkers: topTalkers(talkerCounts),
+      topPorts: topPorts(portCounts),
+      conversations: topConversations(convCounts),
       scanDate: isFinite(earliestMs) ? new Date(earliestMs).toISOString().slice(0, 10) : undefined,
     };
   } catch {

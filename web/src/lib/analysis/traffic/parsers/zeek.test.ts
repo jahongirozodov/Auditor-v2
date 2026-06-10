@@ -29,7 +29,7 @@ describe("parseZeek", () => {
 
   it("detects suspicious Telnet on port 23", () => {
     const r = parseZeek(ZEEK_LOG);
-    expect(r.anomalies.some(a => a.title.toLowerCase().includes("telnet"))).toBe(true);
+    expect(r.anomalies.some((a) => a.title.toLowerCase().includes("telnet"))).toBe(true);
   });
 
   it("includes protocol stats", () => {
@@ -49,5 +49,29 @@ describe("parseZeek", () => {
   it("calculates duration when timestamps present", () => {
     const r = parseZeek(ZEEK_LOG);
     expect(r.durationHours).toBeGreaterThanOrEqual(0);
+  });
+
+  it("builds a real timeline from timestamps", () => {
+    const r = parseZeek(ZEEK_LOG);
+    expect(r.timeline && r.timeline.length).toBeGreaterThan(0);
+    expect(r.timeline?.reduce((s, p) => s + p.packets, 0)).toBe(3);
+    expect(r.timeline?.[0].label).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it("ranks top talkers (source IPs) and top ports", () => {
+    const r = parseZeek(ZEEK_LOG);
+    // 10.10.42.16 is the source on two rows → top talker.
+    expect(r.topTalkers?.[0]).toMatchObject({ ip: "10.10.42.16", packets: 2 });
+    const ports = r.topPorts?.map((p) => p.port) ?? [];
+    expect(ports).toContain(23);
+    expect(r.topPorts?.find((p) => p.port === 23)?.service).toBe("TELNET");
+  });
+
+  it("emits host-to-host conversations for the communication graph", () => {
+    const r = parseZeek(ZEEK_LOG);
+    expect(r.conversations && r.conversations.length).toBeGreaterThan(0);
+    expect(
+      r.conversations?.some((c) => c.src === "10.10.42.16" && c.dst === "8.8.8.8"),
+    ).toBe(true);
   });
 });

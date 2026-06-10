@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Plus } from "lucide-react";
+import { ImagePlus, Plus, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
@@ -26,6 +26,27 @@ const TYPES = [
   "Trafik anomaliya",
   "Operatsion kamchilik",
 ];
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+const MAX_IMAGE_COUNT = 5;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+type EvidenceMimeType = (typeof ALLOWED_IMAGE_TYPES)[number];
+
+interface SelectedEvidenceImage {
+  id: string;
+  filename: string;
+  mimeType: EvidenceMimeType;
+  sizeBytes: number;
+  dataBase64: string;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
 
 export interface CreateFindingModalProps {
   open: boolean;
@@ -57,6 +78,7 @@ export function CreateFindingModal({
   const [asset, setAsset] = useState("");
   const [type, setType] = useState(TYPES[0]);
   const [description, setDescription] = useState("");
+  const [evidenceImages, setEvidenceImages] = useState<SelectedEvidenceImage[]>([]);
 
   const valid =
     title.trim().length >= 3 && Boolean(auditId) && Boolean(taskId) && cvss >= 0 && cvss <= 10;
@@ -69,6 +91,35 @@ export function CreateFindingModal({
   function changeSeverity(v: Severity) {
     setSeverity(v);
     setCvss(SEV_CVSS[v]); // auto-derive CVSS (still editable)
+  }
+
+  async function addEvidenceImages(files: FileList | null) {
+    if (!files?.length) return;
+    const next = [...evidenceImages];
+    for (const file of Array.from(files)) {
+      if (next.length >= MAX_IMAGE_COUNT) {
+        toast(t("invalidEvidence"), "danger");
+        break;
+      }
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type as EvidenceMimeType) || file.size > MAX_IMAGE_BYTES) {
+        toast(t("invalidEvidence"), "danger");
+        continue;
+      }
+      const mimeType = file.type as EvidenceMimeType;
+      const dataBase64 = bytesToBase64(new Uint8Array(await file.arrayBuffer()));
+      next.push({
+        id: `${file.name}-${file.size}-${file.lastModified}-${next.length}`,
+        filename: file.name,
+        mimeType,
+        sizeBytes: file.size,
+        dataBase64,
+      });
+    }
+    setEvidenceImages(next);
+  }
+
+  function removeEvidenceImage(id: string) {
+    setEvidenceImages((items) => items.filter((item) => item.id !== id));
   }
 
   function submit() {
@@ -84,6 +135,7 @@ export function CreateFindingModal({
         asset,
         type,
         description,
+        evidenceImages,
       });
       if (res.ok) {
         toast(t("created"), "success");
@@ -238,6 +290,73 @@ export function CreateFindingModal({
               style={{ minHeight: 96 }}
             />
           </Field>
+        </div>
+
+        <div style={{ gridColumn: "span 2" }}>
+          <Field label={t("fEvidenceImages")} htmlFor="cf-evidence">
+            <input
+              id="cf-evidence"
+              className="input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              onChange={(e) => {
+                void addEvidenceImages(e.target.files);
+                e.currentTarget.value = "";
+              }}
+            />
+          </Field>
+          <div style={{ marginTop: 6, color: "var(--text-tertiary)", fontSize: 12.5 }}>
+            {t("evidenceHint")}
+          </div>
+          {evidenceImages.length > 0 ? (
+            <div className="tile-grid" style={{ marginTop: 10 }}>
+              {evidenceImages.map((image) => (
+                <div key={image.id} className="tile">
+                  <div
+                    role="img"
+                    aria-label={image.filename}
+                    className="tile__thumb"
+                    style={{
+                      backgroundImage: `url(data:${image.mimeType};base64,${image.dataBase64})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
+                  />
+                  <div className="tile__body">
+                    <div className="tile__name font-mono">{image.filename}</div>
+                    <div className="tile__meta">{Math.ceil(image.sizeBytes / 1024)} KB</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => removeEvidenceImage(image.id)}
+                    aria-label={t("removeEvidence")}
+                    style={{ margin: 8 }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="card"
+              style={{
+                marginTop: 10,
+                background: "var(--bg-surface-2)",
+                borderStyle: "dashed",
+              }}
+            >
+              <div
+                className="card__pad-sm"
+                style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-tertiary)" }}
+              >
+                <ImagePlus size={15} />
+                <span style={{ fontSize: 12.5 }}>{t("evidenceEmpty")}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Modal>

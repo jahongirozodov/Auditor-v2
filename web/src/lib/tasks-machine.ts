@@ -22,6 +22,8 @@ export const isLead = (role: RoleCode): boolean => LEAD_ROLES.includes(role);
 export interface TaskActorCtx {
   role: RoleCode;
   isAssignee: boolean;
+  isAuditLeader: boolean;
+  isSuper: boolean;
 }
 
 interface Transition {
@@ -38,13 +40,38 @@ export const TASK_TRANSITIONS: Record<TaskAction, Transition> = {
     to: "in_progress",
     allow: (c) => c.isAssignee || isLead(c.role),
   },
-  submit: { from: ["in_progress"], to: "review", allow: (c) => c.isAssignee || isLead(c.role) },
-  complete: { from: ["in_progress"], to: "done", allow: (c) => c.isAssignee || isLead(c.role) },
-  approve: { from: ["review"], to: "done", allow: (c) => isLead(c.role) },
-  return: { from: ["review"], to: "returned", needsComment: true, allow: (c) => isLead(c.role) },
-  restart: { from: ["returned"], to: "in_progress", allow: (c) => c.isAssignee || isLead(c.role) },
+  submit: {
+    from: ["in_progress"],
+    to: "review",
+    allow: (c) => c.isAssignee || isLead(c.role),
+  },
+  complete: {
+    from: ["in_progress"],
+    to: "done",
+    allow: (c) => c.isAssignee || isLead(c.role),
+  },
+  approve: {
+    from: ["review"],
+    to: "done",
+    allow: (c) => !c.isAssignee && canManageGroupTask(c),
+  },
+  return: {
+    from: ["review"],
+    to: "returned",
+    needsComment: true,
+    allow: (c) => !c.isAssignee && canManageGroupTask(c),
+  },
+  restart: {
+    from: ["returned"],
+    to: "in_progress",
+    allow: (c) => c.isAssignee || isLead(c.role),
+  },
   unblock: { from: ["blocked"], to: "in_progress", allow: (c) => isLead(c.role) },
 };
+
+function canManageGroupTask(ctx: TaskActorCtx): boolean {
+  return ctx.isAuditLeader || ctx.isSuper;
+}
 
 export interface TaskGuardResult {
   ok: boolean;
@@ -68,8 +95,14 @@ export function canDoTask(
 }
 
 /** Button actions available for a status (drives TaskDetailScreen). */
-export function actionsFor(status: TaskStatus): TaskAction[] {
-  return (Object.keys(TASK_TRANSITIONS) as TaskAction[]).filter((a) =>
+export function actionsFor(status: TaskStatus, ctx?: TaskActorCtx): TaskAction[] {
+  const actions = (Object.keys(TASK_TRANSITIONS) as TaskAction[]).filter((a) =>
     TASK_TRANSITIONS[a].from.includes(status),
   );
+  if (!ctx) return actions;
+  return actions.filter((action) => {
+    const transition = TASK_TRANSITIONS[action];
+    const comment = transition.needsComment ? "__visible__" : undefined;
+    return canDoTask(action, status, ctx, comment).ok;
+  });
 }

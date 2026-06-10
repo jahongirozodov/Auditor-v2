@@ -5,8 +5,10 @@
 import type {
   ApprovalStage,
   ApprovalStageKey,
+  AuditProjectStatus,
   AuditStatus,
   FindingStatus,
+  ReportStatus,
 } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 
@@ -62,5 +64,32 @@ export function projectCurrentOf(
   if (status === "returned") return "returned";
   if (status === "project_pending") return (projectStage as ApprovalStageKey) ?? "head";
   // assigning/in_progress/review/approved/completed → project already approved (or not started).
+  return null;
+}
+
+/** Map an AuditProject status + stored stage onto the approval strip's `current`. */
+export function auditProjectCurrentOf(
+  status: AuditProjectStatus,
+  currentApprovalStage: string | null | undefined,
+): ApprovalCurrent {
+  if (status === "draft") return "new";
+  if (status === "returned") return "returned";
+  if (status === "submitted") return (currentApprovalStage as ApprovalStageKey) ?? "head";
+  return null;
+}
+
+/**
+ * Map a report's status + stored stage onto the approval strip's `current`.
+ * Reports share the 3-stage flow: the author submits a draft (group_lead → head →
+ * dept approve). "returned" sends it back to the author for edits.
+ */
+export function reportCurrentOf(
+  status: ReportStatus,
+  approvalStage: string | null | undefined,
+): ApprovalCurrent {
+  if (status === "draft") return "new";
+  if (status === "returned") return "returned";
+  if (status === "review") return (approvalStage as ApprovalStageKey) ?? "group_lead";
+  // approved
   return null;
 }

@@ -51,21 +51,32 @@ failed counters).
 
 ## Agent endpoints (TZ §19.3)
 
-| Method | Path | Auth |
-| --- | --- | --- |
-| POST | `/api/v1/agent/auth/login` | anonymous |
-| POST | `/api/v1/agent/audit-token/validate` | anonymous |
-| POST | `/api/v1/agent/audit-token/tasks` | anonymous |
-| POST | `/api/v1/agent/audit-token/context` | anonymous |
-| GET | `/api/v1/agent/audits/{auditId}/my-tasks` | auth |
-| POST | `/api/v1/agent/findings/sync` | auth (batch) |
-| GET | `/api/v1/agent/vulnerabilities` | auth |
-| POST | `/api/v1/agent/evidences/upload` | auth (multipart) |
-| GET | `/api/v1/agent/vulnerabilities/{id}/evidences` | auth |
-| POST | `/api/v1/agent/sync/start` \| `/sync/complete` | auth |
-| GET | `/api/v1/agent/sync/ping` | anonymous |
-| POST | `/api/v1/agent/logs/upload` | auth |
-| POST | `/api/v1/agent/token/revoke` \| `/token/refresh` | auth |
-| GET | `/api/v1/agent/version` | anonymous |
+Status: **✅ implemented** (milestone 1, walking skeleton — see
+[ADR-0002](decisions/0002-desktop-agent-scope.md)) · **▫ deferred** (stubbed, later milestone).
+Implemented handlers live under `web/src/app/api/v1/agent/**`; agent-`auth` rows verify the HS256 agent
+JWT (`web/src/lib/agent/auth.ts`) and re-check the backing token on every call.
+
+| Method | Path | Auth | Status |
+| --- | --- | --- | --- |
+| POST | `/api/v1/agent/auth/login` | anonymous | ✅ |
+| POST | `/api/v1/agent/audit-token/validate` | anonymous | ✅ (returns the audit context too) |
+| POST | `/api/v1/agent/audit-token/tasks` | anonymous | ▫ (use `my-tasks` after validate) |
+| POST | `/api/v1/agent/audit-token/context` | anonymous | ▫ (folded into `validate`) |
+| GET | `/api/v1/agent/audits/{auditId}/my-tasks` | agent | ✅ |
+| POST | `/api/v1/agent/findings/sync` | agent (batch) | ✅ idempotent (`idempotencyKey`) |
+| POST | `/api/v1/agent/evidences/upload` | agent (multipart) | ✅ bytes → `FileStorage.bytes` (bytea) + `FindingEvidence` |
+| GET | `/api/v1/agent/vulnerabilities` | agent | ✅ findings in the token's audit |
+| GET | `/api/v1/agent/vulnerabilities/{id}/evidences` | agent | ✅ evidence file metadata |
+| POST | `/api/v1/agent/tasks/{taskId}/status` | agent | ✅ two-way status (reuses the `tasks-machine` guard) |
+| POST | `/api/v1/agent/sync/start` \| `/sync/complete` | agent | ✅ |
+| GET | `/api/v1/agent/sync/ping` | anonymous | ✅ |
+| POST | `/api/v1/agent/logs/upload` | agent | ✅ each line → append-only `AuditLog` (`agent.log`) |
+| POST | `/api/v1/agent/token/revoke` \| `/token/refresh` | agent | ✅ revoke (Settings logout) + refresh (extend JWT on sync) |
+| GET | `/api/v1/agent/version` | anonymous | ✅ |
 
 **Admin:** `POST /api/v1/admin/audit-tokens` (issue token), `POST /api/v1/admin/users/{id}/reset-password`.
+
+> **Auth model:** password login → a login-scoped agent JWT; `audit-token/validate` re-mints an
+> **audit-scoped** JWT (carries `auditId` + `tokenId`). Scoped endpoints reject a JWT whose audit
+> doesn't match the path, or whose backing `AuditToken` is revoked/expired. Every token use is written
+> to `AuditTokenUsageLog`; each sync session to `AgentSyncSession`.

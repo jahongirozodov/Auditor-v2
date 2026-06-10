@@ -13,7 +13,7 @@ vi.mock("@/lib/actions/tasks", () => ({
 
 const usersById = Object.fromEntries(USERS.map((u) => [u.id, u]));
 
-function renderTask(id: string, role: RoleCode = "super") {
+function renderTask(id: string, role: RoleCode = "super", userId = "u1") {
   const task = TASKS.find((x) => x.id === id) ?? null;
   const audit = task ? AUDITS.find((a) => a.id === task.auditId) : undefined;
   const linkedFindings = task ? FINDINGS.filter((f) => f.taskId === id) : [];
@@ -25,7 +25,7 @@ function renderTask(id: string, role: RoleCode = "super") {
         usersById={usersById}
         history={[]}
         linkedFindings={linkedFindings}
-        userId="u1"
+        userId={userId}
         role={role}
       />
     </NextIntlClientProvider>,
@@ -54,5 +54,23 @@ describe("TaskDetailScreen", () => {
   it("shows a not-found state for an unknown task", () => {
     renderTask("nope");
     expect(screen.getByRole("heading", { name: "Vazifa topilmadi" })).toBeInTheDocument();
+  });
+
+  it("hides approve and return on a self-assigned review task", () => {
+    renderTask("T-123", "lead", "u4");
+    expect(screen.queryByRole("button", { name: messages.taskDetail.aApprove })).toBeNull();
+    expect(screen.queryByRole("button", { name: messages.taskDetail.aReturn })).toBeNull();
+  });
+
+  it("shows approve and return for the audit leader reviewing another user's task", () => {
+    renderTask("T-123", "chief", "u3");
+    expect(screen.getByRole("button", { name: messages.taskDetail.aApprove })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: messages.taskDetail.aReturn })).toBeInTheDocument();
+  });
+
+  it("hides approve and return for a lead role user who is not the audit leader", () => {
+    renderTask("T-117", "lead", "u4");
+    expect(screen.queryByRole("button", { name: messages.taskDetail.aApprove })).toBeNull();
+    expect(screen.queryByRole("button", { name: messages.taskDetail.aReturn })).toBeNull();
   });
 });

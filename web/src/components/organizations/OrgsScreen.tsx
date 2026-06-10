@@ -1,9 +1,22 @@
+"use client";
+
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Building2, ChevronRight, FolderKanban, Plus, Server, ShieldAlert } from "lucide-react";
+import { useState } from "react";
+import {
+  Building2,
+  ChevronRight,
+  Edit3,
+  FolderKanban,
+  Plus,
+  Server,
+  ShieldAlert,
+} from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Stat } from "@/components/ui/Stat";
 import { Tag } from "@/components/ui/Tag";
+import { Button } from "@/components/ui/Button";
+import { OrgFormModal, type EditableOrganization } from "./OrgFormModal";
 import { ORG_RISK } from "@/lib/fixtures";
 import type { Organization, OrgDetail, RiskLevel } from "@/lib/types/entities";
 import type { TagTone } from "@/components/ui/Tag";
@@ -18,6 +31,7 @@ export interface OrgsScreenProps {
   orgs: Organization[];
   orgDetails: Record<string, OrgDetail>;
   activeAuditCount: number;
+  canEdit?: boolean;
 }
 
 function initials(name: string): string {
@@ -29,10 +43,27 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-export function OrgsScreen({ orgs, orgDetails, activeAuditCount }: OrgsScreenProps) {
+export function OrgsScreen({
+  orgs,
+  orgDetails,
+  activeAuditCount,
+  canEdit = true,
+}: OrgsScreenProps) {
   const t = useTranslations("orgs");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<EditableOrganization | null>(null);
   const highRisk = orgs.filter((o) => orgDetails[o.id]?.risk === "high").length;
   const devices = orgs.reduce((s, o) => s + (orgDetails[o.id]?.devices.length ?? 0), 0);
+
+  function openCreate() {
+    setEditing(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(org: Organization, detail: OrgDetail) {
+    setEditing({ org, detail });
+    setModalOpen(true);
+  }
 
   return (
     <div className="route-anim">
@@ -41,10 +72,11 @@ export function OrgsScreen({ orgs, orgDetails, activeAuditCount }: OrgsScreenPro
         title={t("title")}
         sub={t("sub")}
         actions={
-          <button type="button" className="btn btn--primary btn--sm">
-            <Plus size={14} />
-            <span>{t("add")}</span>
-          </button>
+          canEdit ? (
+            <Button size="sm" variant="primary" icon={<Plus size={14} />} onClick={openCreate}>
+              {t("add")}
+            </Button>
+          ) : null
         }
       />
 
@@ -110,9 +142,33 @@ export function OrgsScreen({ orgs, orgDetails, activeAuditCount }: OrgsScreenPro
                     <td className="tabular">{det?.devices.length ?? 0}</td>
                     <td className="tabular text-primary font-semi">{o.audits}</td>
                     <td className="cell-actions">
-                      <Link href={`/organizations/${o.id}`} aria-label={`${o.name} — batafsil`}>
-                        <ChevronRight size={16} />
-                      </Link>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 4,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {canEdit && det ? (
+                          <button
+                            type="button"
+                            className="iconbtn"
+                            aria-label={t("editOrg", { name: o.name })}
+                            onClick={() => openEdit(o, det)}
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        ) : null}
+                        <Link
+                          href={`/organizations/${o.id}`}
+                          className="iconbtn"
+                          aria-label={`${o.name} — batafsil`}
+                        >
+                          <ChevronRight size={16} />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -121,6 +177,14 @@ export function OrgsScreen({ orgs, orgDetails, activeAuditCount }: OrgsScreenPro
           </table>
         </div>
       </div>
+      {modalOpen ? (
+        <OrgFormModal
+          key={editing?.org.id ?? "new"}
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          organization={editing}
+        />
+      ) : null}
     </div>
   );
 }

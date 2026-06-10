@@ -1,0 +1,3 @@
+{"event_type":"alert","src_ip":"10.20.4.5","dest_ip":"10.20.4.1","dest_port":23,"proto":"TCP","alert":{"signature":"ET SCAN Telnet brute force","severity":1}}
+{"event_type":"alert","src_ip":"10.20.4.6","dest_ip":"8.8.8.8","dest_port":53,"proto":"UDP","alert":{"signature":"ET DNS Tunneling detected","severity":2}}
+{"event_type":"alert","src_ip":"10.20.4.7","dest_ip":"185.12.4.9","dest_port":4444,"proto":"TCP","alert":{"signature":"ET MALWARE C2 beacon","severity":1}}
