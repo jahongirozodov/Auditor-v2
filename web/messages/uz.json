@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "name": "Auditor",
     "tagline": "Kiberxavfsizlik auditi avtomatlashtirilgan tizimi"
@@ -173,7 +173,37 @@
     "aiBody": "Yuklangan har bir skaner natijasi Ollama orqali tahlil qilinadi: oddiy texnik tilga aylantiriladi, takrorlanuvchi findinglar bitta yozuvga birlashtiriladi va remediation tavsiyasi tayyorlanadi.",
     "createDrafts": "{n} ta finding yaratish"
   },
-  "dashboard": {
+    "traffic": {
+    "title": "Trafik tahlili",
+    "crumb": "Trafik tahlili",
+    "sub": "PCAP / Suricata / Zeek / Wireshark trafik fayllarini anomaliyalar boʻyicha tahlil qiling.",
+    "fileUpload": "Fayl yuklash",
+    "uploadTitle": "Trafik faylini yuklash",
+    "uploadHint": ".pcap, .pcapng, Suricata EVE JSON, Zeek conn.log, Wireshark CSV — barchasi qoʻllab-quvvatlanadi (≤ 10 MB).",
+    "uploadBtn": "Trafik yuklash",
+    "chartTitle": "Trafik grafigi — 24 soat",
+    "anomaliesTitle": "Aniqlangan anomaliyalar",
+    "anomaliesEmpty": "Hali trafik fayli yuklanmagan.",
+    "profileTitle": "Trafik profili",
+    "packets": "PAKETLAR",
+    "anomalies": "ANOMALIYALAR",
+    "uniqueIps": "NOYOB IP",
+    "duration": "DAVOMIYLIK",
+    "aiTitle": "AI trafik tahlili",
+    "aiBody": "Yuklangan trafik fayli Ollama orqali tahlil qilinadi: anomaliyalar aniqlanadi, shubhali IP va portlar belgilanadi va remediation tavsiyasi tayyorlanadi.",
+    "createDrafts": "{n} ta finding yaratish",
+    "targetTitle": "Auditga biriktirish",
+    "targetSub": "Yuklangan trafik fayli va undan yaratiladigan findinglar shu auditga biriktiriladi.",
+    "targetAudit": "Audit",
+    "targetTask": "Vazifa",
+    "noTasks": "Bu auditda vazifa yoʻq",
+    "analyze": "Tahlil qilish",
+    "analyzing": "Tahlil qilinmoqda...",
+    "uploaded": "Trafik fayli tahlil qilindi",
+    "draftsCreated": "{n} ta finding qoralama yaratildi",
+    "failed": "Amalni bajarib boʻlmadi",
+    "fileTooLarge": "Fayl 10 MB dan oshmasligi kerak"
+  },"dashboard": {
     "greeting": "Yaxshi kun, {name}.",
     "subLeader": "Bugun auditlar jarayonda, kritik findinglar koʻrib chiqishni kutmoqda.",
     "subMember": "Sizga vazifalar biriktirilgan. Bir nechtasi muddati bilan yopiladi.",

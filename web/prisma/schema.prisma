@@ -95,6 +95,7 @@ model User {
   auditLogs        AuditLog[]
   configUploads    ConfigUpload[]  @relation("ConfigUploader")
   scannerUploads   ScannerUpload[] @relation("ScannerUploader")
+  trafficUploads   TrafficUpload[] @relation("TrafficUploader")
 
   @@index([email])
 }
@@ -182,6 +183,7 @@ model Audit {
   reports        Report[]
   configUploads  ConfigUpload[]
   scannerUploads ScannerUpload[]
+  trafficUploads TrafficUpload[]
 
   @@index([orgId])
   @@index([leaderId])
@@ -216,6 +218,7 @@ model Task {
   findingList    Finding[]
   configUploads  ConfigUpload[]
   scannerUploads ScannerUpload[]
+  trafficUploads TrafficUpload[]
 
   @@index([auditId])
   @@index([assigneeId])
@@ -440,6 +443,31 @@ model AiAnalysisResult {
   @@index([scope])
 }
 
+
+// ---------- Traffic analysis ----------
+model TrafficUpload {
+  id           String   @id @default(cuid())
+  filename     String
+  format       String   // TrafficFormat: pcap | suricata | zeek | wireshark_csv | universal
+  content      String   @db.Text
+  sizeBytes    Int
+  anomalyCount Int      @default(0)
+  severityAgg  Json     // { critical, high, medium, low }
+  totalPackets Int      @default(0)
+  uniqueIps    Int      @default(0)
+  status       String   @default("analyzed")
+  audit        Audit    @relation(fields: [auditId], references: [id])
+  auditId      String
+  task         Task     @relation(fields: [taskId], references: [id])
+  taskId       String
+  uploadedBy   User     @relation("TrafficUploader", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  @@index([auditId])
+  @@index([taskId])
+  @@index([uploadedById])
+}
 // ---------- Scanner import ----------
 model ScannerUpload {
   id           String   @id @default(cuid())

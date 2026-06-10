@@ -1,13 +1,27 @@
-import { getTranslations } from "next-intl/server";
-import { ComingSoon } from "@/components/ui/ComingSoon";
+﻿import { getTranslations } from "next-intl/server";
+import { TrafficAnalysisScreen } from "@/components/analysis/TrafficAnalysisScreen";
+import { getLatestTrafficUpload } from "@/lib/data/traffic";
+import { getAudits } from "@/lib/data/audits";
+import { getTasks } from "@/lib/data/tasks";
 
-// Sibling of the config analysis tab — full build lands in a later increment.
 export default async function TrafficPage() {
-  const t = await getTranslations("nav");
+  const t = await getTranslations("traffic");
+  const [latest, audits, tasks] = await Promise.all([
+    getLatestTrafficUpload(),
+    getAudits(),
+    getTasks(),
+  ]);
+
   return (
-    <ComingSoon
-      crumbs={[{ label: t("dashboard"), href: "/dashboard" }, { label: t("traffic") }]}
-      title={t("traffic")}
+    <TrafficAnalysisScreen
+      latest={latest}
+      audits={audits}
+      tasks={tasks}
     />
   );
+}
+
+export async function generateMetadata() {
+  const t = await getTranslations("traffic");
+  return { title: t("title") };
 }

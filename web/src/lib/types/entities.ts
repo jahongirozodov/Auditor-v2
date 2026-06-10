@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Domain entity types, shaped to the prototype's data (data.js) so screens render
  * faithfully. Where the prototype carries Uzbek display strings (priority, device
  * criticality), the type is the literal label union — the backend (Phase 1) will
@@ -230,6 +230,20 @@ export interface ScanImportRowView {
   createdAt: string;
 }
 
+
+// ---------- Traffic analysis ----------
+export interface TrafficUploadView {
+  id: string;
+  filename: string;
+  format: string;
+  content: string;
+  auditId: string;
+  taskId: string;
+  anomalyCount: number;
+  totalPackets: number;
+  uniqueIps: number;
+  createdAt: string;
+}
 // ---------- KPI ----------
 export interface KpiRule {
   code: string;
