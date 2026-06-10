@@ -1,13 +1,20 @@
-import { requireSession } from "@/lib/session";
-import { ComingSoon } from "@/components/ui/ComingSoon";
+﻿import { requireSession } from "@/lib/session";
+import { getAdminUsers } from "@/lib/data/users";
+import { getKpiUsers } from "@/lib/data/kpi";
+import { canManage } from "@/lib/rbac";
+import { UsersScreen } from "@/components/users/UsersScreen";
+import type { RoleCode } from "@/lib/types/roles";
 
-// Placeholder — Users screen ships in a later increment.
 export default async function UsersPage() {
-  await requireSession();
+  const { role } = await requireSession();
+  const [users, kpi] = await Promise.all([getAdminUsers(), getKpiUsers()]);
   return (
-    <ComingSoon
-      crumbs={[{ label: "Boshqaruv paneli", href: "/dashboard" }, { label: "Foydalanuvchilar" }]}
-      title="Foydalanuvchilar"
+    <UsersScreen
+      users={users}
+      kpi={kpi}
+      canEdit={canManage(role as RoleCode, "users")}
     />
   );
 }
+
+export const dynamic = "force-dynamic";

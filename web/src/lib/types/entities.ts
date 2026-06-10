@@ -231,6 +231,19 @@ export interface ScanImportRowView {
 }
 
 
+
+// ---------- Users admin ----------
+export interface AdminUserView {
+  id: string;
+  name: string;
+  role: import("./roles").RoleCode;
+  title: string;
+  avatar: string;
+  dept: string;
+  email: string;
+  disabled: boolean;
+  lastLogin: string | null;
+}
 // ---------- Traffic analysis ----------
 export interface TrafficUploadView {
   id: string;

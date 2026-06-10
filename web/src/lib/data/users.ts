@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { User } from "@/lib/types/entities";
@@ -30,4 +30,29 @@ export const getUserById = cache(async (id: string): Promise<User> => {
 export const getUsersById = cache(async (): Promise<Record<string, User>> => {
   const users = await getUsers();
   return Object.fromEntries(users.map((u) => [u.id, u]));
+});
+
+export const getAdminUsers = cache(async () => {
+  const rows = await (prisma as import("@prisma/client").PrismaClient).user.findMany({
+    orderBy: { name: "asc" },
+    include: {
+      loginAttempts: {
+        where: { success: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true },
+      },
+    },
+  });
+  return rows.map((u) => ({
+    id: u.id,
+    name: u.name,
+    role: u.role as import("../types/roles").RoleCode,
+    title: u.title,
+    avatar: u.avatar,
+    dept: u.dept,
+    email: u.email,
+    disabled: u.disabled,
+    lastLogin: u.loginAttempts[0]?.createdAt.toISOString() ?? null,
+  })) satisfies import("../types/entities").AdminUserView[];
 });
