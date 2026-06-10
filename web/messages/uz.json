@@ -173,7 +173,31 @@
     "aiBody": "Yuklangan har bir skaner natijasi Ollama orqali tahlil qilinadi: oddiy texnik tilga aylantiriladi, takrorlanuvchi findinglar bitta yozuvga birlashtiriladi va remediation tavsiyasi tayyorlanadi.",
     "createDrafts": "{n} ta finding yaratish"
   },
-      "users": {
+        "reports": {
+    "title": "Hisobotlar",
+    "crumb": "Hisobotlar",
+    "sub": "{total} ta hisobot · {drafts} qoralama · {approved} tasdiqlangan",
+    "searchPlaceholder": "Hisobot, audit...",
+    "generate": "Hisobot generatsiya",
+    "generateTitle": "Yangi hisobot",
+    "fieldTitle": "Sarlavha",
+    "fieldTitlePlaceholder": "Hisobot nomi...",
+    "fieldAudit": "Audit",
+    "fieldType": "Tur",
+    "fieldFormat": "Format",
+    "generating": "Yaratilmoqda...",
+    "generated": "Hisobot qoralama sifatida yaratildi",
+    "notGenerated": "Hali yaratilmagan",
+    "download": "Yuklash",
+    "delete": "Oʻchirish",
+    "aiRegenerate": "AI orqali qayta yaratish",
+    "aiStarted": "AI orqali qayta yaratish boshlandi (qwen2.5:14b)",
+    "downloading": "{title} yuklab olinmoqda... ({format})",
+    "deleted": "Hisobot oʻchirildi",
+    "deleteConfirm": "{title} hisobotini oʻchirishni tasdiqlaysizmi?",
+    "failed": "Amalni bajarib boʻlmadi",
+    "empty": "Hisobotlar topilmadi."
+  },"users": {
     "title": "Foydalanuvchilar",
     "crumb": "Foydalanuvchilar",
     "sub": "{users} ta foydalanuvchi · {roles} ta rol",
