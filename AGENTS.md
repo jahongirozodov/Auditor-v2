@@ -12,7 +12,10 @@ faithfully as clean code.
 
 ## Repo map
 
-- `web/` — the production Next.js app. **All new code goes here.** See [web/AGENTS.md](web/AGENTS.md).
+- `web/` — the production Next.js app. **Almost all new code goes here.** See [web/AGENTS.md](web/AGENTS.md).
+- `agent/` — the **.NET 8 WPF desktop agent** (TZ §16). The **one** exception to "code lives in `web/`":
+  a native Windows app can't live in the Next.js tree. Its server contract still lives in `web/` under
+  `src/app/api/v1/agent/**`. See [ADR-0002](docs/decisions/0002-desktop-agent-scope.md).
 - `docs/` — **curated English specification** (the build-facing reference). Start at
   [docs/README.md](docs/README.md): requirements split by domain (overview, RBAC, domain model,
   workflows, analysis/AI, reporting/KPI, audit-log/agent, security) + an ADR layer in

@@ -26,8 +26,11 @@ export function gapToFindingInput(
   ctx: { auditId: string; taskId: string; asset: string; aiNote?: string },
 ): FindingDraftInput {
   const parts = [gap.description.trim()];
+  if (gap.risk?.trim()) parts.push(`Xavf: ${gap.risk.trim()}`);
+  if (gap.impact?.trim()) parts.push(`Taʼsir: ${gap.impact.trim()}`);
   if (ctx.aiNote?.trim()) parts.push(ctx.aiNote.trim());
   parts.push(`Tavsiya: ${gap.recommendation}`);
+  if (gap.command?.trim()) parts.push(`Buyruq: ${gap.command.trim()}`);
   if (gap.line > 0 && gap.evidenceLine) parts.push(`Satr ${gap.line}: ${gap.evidenceLine}`);
   return {
     auditId: ctx.auditId,

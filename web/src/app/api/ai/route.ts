@@ -1,51 +1,43 @@
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/rbac.server";
 import { generate, getOllamaConfig, isAiEnabled } from "@/lib/ai/ollama";
+import { SYSTEM } from "@/lib/ai/prompts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const Body = z.object({
-  scope: z.literal("config"),
-  uploadId: z.string().min(1),
+  scope: z.literal("chat"),
   prompt: z.string().min(1).max(20_000),
 });
 
-const SYSTEM = [
-  "Sen Auditor kiberxavfsizlik audit platformasining AI yordamchisisan — lokal Ollama, yopiq tarmoq.",
-  "Faqat o‘zbek tilida (lotin yozuvi), rasmiy va aniq javob ber.",
-  "Konfiguratsiya tahlili natijalarini izohlab, har bir kamchilik uchun qisqa remediation tavsiyasini ber.",
-].join("\n");
-
 /**
- * Local-Ollama proxy for config-analysis enrichment. Writes every call to
- * AiAnalysisResult (docs/05) and degrades gracefully: unreachable AI → `degraded`
- * with no text, so the caller still creates drafts. Output is plain text (the
- * client never renders it as HTML).
+ * Local-Ollama proxy for the /ai chat report builder. Config analysis no longer
+ * goes through here — it runs as a server action (uploadConfig / reanalyzeConfig)
+ * because the model IS the analyzer. Writes every call to AiAnalysisResult and
+ * degrades gracefully when the model is unreachable.
  */
 export async function POST(request: Request): Promise<Response> {
   const session = await getSession();
   if (!session?.user) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  if (!(await requirePermission(session.user.id, "ai.use")))
+    return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
 
   const json = await request.json().catch(() => null);
   const parsed = Body.safeParse(json);
   if (!parsed.success) return Response.json({ ok: false, error: "invalid" }, { status: 400 });
-  const { scope, uploadId, prompt } = parsed.data;
+  const { scope, prompt } = parsed.data;
 
   if (!isAiEnabled()) return Response.json({ ok: false, degraded: true, text: "" });
 
   const { model } = getOllamaConfig();
-  const reply = await generate(`${SYSTEM}\n\n${prompt}`);
+  const reply = await generate(`${SYSTEM[scope]}\n\n${prompt}`);
 
-  // Persist the call. The upload may be transient (not yet/never stored) — null the
-  // FK in that case rather than failing the request.
-  const exists = uploadId
-    ? await prisma.configUpload.findUnique({ where: { id: uploadId }, select: { id: true } })
-    : null;
   await prisma.aiAnalysisResult.create({
     data: {
-      uploadId: exists ? uploadId : null,
+      uploadId: null,
       scope,
       model,
       input: prompt.slice(0, 20_000),

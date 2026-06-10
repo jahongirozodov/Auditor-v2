@@ -122,11 +122,10 @@ export function parseUniversal(content: string): ScannerParseResult {
     for (const row of dataRows) {
       if (row.every((cell) => !cell.trim())) continue;
 
-      const title =
-        titleIdx !== -1 ? row[titleIdx]?.trim() : `Row ${findings.length + 1}`;
-      const rawSeverity = severityIdx !== -1 ? row[severityIdx]?.trim() ?? "" : "";
+      const title = titleIdx !== -1 ? row[titleIdx]?.trim() : `Row ${findings.length + 1}`;
+      const rawSeverity = severityIdx !== -1 ? (row[severityIdx]?.trim() ?? "") : "";
       const severity = normalizeSeverity(rawSeverity);
-      const description = descIdx !== -1 ? row[descIdx]?.trim() ?? title ?? "" : title ?? "";
+      const description = descIdx !== -1 ? (row[descIdx]?.trim() ?? title ?? "") : (title ?? "");
       const host = hostIdx !== -1 ? row[hostIdx]?.trim() || undefined : undefined;
       const solution = solutionIdx !== -1 ? row[solutionIdx]?.trim() || undefined : undefined;
 

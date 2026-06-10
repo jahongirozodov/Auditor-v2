@@ -22,12 +22,6 @@ function childText(block: string, tagName: string): string {
   return m ? m[1].trim() : "";
 }
 
-/** Extract a named attribute from a tag string, e.g. oid="1.2.3" → "1.2.3". */
-function attr(tag: string, name: string): string {
-  const m = new RegExp(`\\b${name}="([^"]*)"`, "i").exec(tag);
-  return m ? m[1] : "";
-}
-
 export function parseOpenVas(content: string): ScannerParseResult {
   try {
     const findings: ScannerFinding[] = [];
@@ -51,7 +45,7 @@ export function parseOpenVas(content: string): ScannerParseResult {
 
       // Extract NVT block for CVE and CVSS.
       const nvtBlock = /<nvt\s([^>]*)>([\s\S]*?)<\/nvt>/i.exec(body);
-      let cveList: string[] = [];
+      const cveList: string[] = [];
       let cvssBase: number | undefined;
       let nvtName = "";
 
@@ -100,7 +94,7 @@ export function parseOpenVas(content: string): ScannerParseResult {
         port: portNum,
         protocol,
         cve: cveList.length > 0 ? cveList : undefined,
-        cvss: cvssBase !== undefined ? cvssBase : (!isNaN(severityNum) ? severityNum : undefined),
+        cvss: cvssBase !== undefined ? cvssBase : !isNaN(severityNum) ? severityNum : undefined,
       };
 
       findings.push(finding);

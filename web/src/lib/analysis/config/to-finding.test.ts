@@ -10,6 +10,8 @@ const gap: ConfigGap = {
   cwe: "CWE-1188",
   recommendation: "security-level belgilang.",
   evidenceLine: "no security-level",
+  risk: "Trafik nazoratsiz oqadi",
+  impact: "Lateral harakat osonlashadi",
 };
 
 describe("gapToFindingInput", () => {

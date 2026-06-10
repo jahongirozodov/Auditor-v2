@@ -44,8 +44,8 @@ export function parseBurp(content: string): ScannerParseResult {
       const body = m[1];
 
       const name = stripMarkup(childText(body, "name"));
-      const hostBlock = /<host\s[^>]*>([^<]*)<\/host>/i.exec(body) ??
-        /<host>([^<]*)<\/host>/i.exec(body);
+      const hostBlock =
+        /<host\s[^>]*>([^<]*)<\/host>/i.exec(body) ?? /<host>([^<]*)<\/host>/i.exec(body);
       const hostUrl = hostBlock ? hostBlock[1].trim() : "";
 
       // Extract IP from host tag attribute: <host ip="192.168.1.1">...</host>
@@ -79,9 +79,7 @@ export function parseBurp(content: string): ScannerParseResult {
       const solution = solParts.join("\n\n") || undefined;
 
       // Compose full title including confidence if available.
-      const title = confidence
-        ? `${name} [${confidence}]`
-        : name || "Burp Suite Finding";
+      const title = confidence ? `${name} [${confidence}]` : name || "Burp Suite Finding";
 
       // Extract port from path/URL if available.
       let port: string | undefined;
@@ -89,7 +87,8 @@ export function parseBurp(content: string): ScannerParseResult {
       if (hostUrl) {
         try {
           const u = new URL(hostUrl);
-          port = u.port || (u.protocol === "https:" ? "443" : u.protocol === "http:" ? "80" : undefined);
+          port =
+            u.port || (u.protocol === "https:" ? "443" : u.protocol === "http:" ? "80" : undefined);
           protocol = u.protocol.replace(":", "") || undefined;
         } catch {
           // Not a valid URL — ignore.

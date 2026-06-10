@@ -11,32 +11,67 @@ vi.mock("next-intl", () => ({
 }));
 vi.mock("@/lib/actions/users", () => ({
   toggleUserLock: vi.fn().mockResolvedValue({ ok: true, disabled: true }),
-  deleteUser:     vi.fn().mockResolvedValue({ ok: true }),
+  deleteUser: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => vi.fn() }));
 vi.mock("./UserFormModal", () => ({
-  UserFormModal:  ({ open }: { open: boolean }) => open ? <div data-testid="modal" /> : null,
-  ROLE_OPTIONS:   [
+  UserFormModal: ({ open }: { open: boolean }) => (open ? <div data-testid="modal" /> : null),
+  ROLE_OPTIONS: [
     { code: "super", label: "Departament rahbari" },
-    { code: "head",  label: "Boʻlim boshligʻi" },
+    { code: "head", label: "Boʻlim boshligʻi" },
     { code: "chief", label: "Bosh mutaxassis" },
-    { code: "lead",  label: "Yetakchi mutaxassis" },
-    { code: "t1",    label: "1-toifa mutaxassis" },
+    { code: "lead", label: "Yetakchi mutaxassis" },
+    { code: "t1", label: "1-toifa mutaxassis" },
   ],
 }));
 
 const USERS: AdminUserView[] = [
-  { id: "u1", name: "Akmal Yoʻldoshev", role: "super", title: "Departament rahbari",
-    avatar: "AY", dept: "Markaziy apparat", email: "a@gov.uz", disabled: false, lastLogin: null },
-  { id: "u2", name: "Dilshoda Rasulova", role: "head", title: "Boʻlim boshligʻi",
-    avatar: "DR", dept: "Audit boʻlimi",   email: "d@gov.uz", disabled: true,  lastLogin: null },
+  {
+    id: "u1",
+    name: "Akmal Yoʻldoshev",
+    role: "super",
+    customRoleCode: null,
+    title: "Departament rahbari",
+    avatar: "AY",
+    dept: "Markaziy apparat",
+    email: "a@gov.uz",
+    disabled: false,
+    lastLogin: null,
+  },
+  {
+    id: "u2",
+    name: "Dilshoda Rasulova",
+    role: "head",
+    customRoleCode: "scanner_operator",
+    title: "Boʻlim boshligʻi",
+    avatar: "DR",
+    dept: "Audit boʻlimi",
+    email: "d@gov.uz",
+    disabled: true,
+    lastLogin: null,
+  },
 ];
 const KPI: KpiUser[] = [
   { user: "u1", audits: 3, tasks: 12, findings: 45, total: 280, delta: 15, sparkline: [] },
 ];
 
 function setup(canEdit = true) {
-  return render(<UsersScreen users={USERS} kpi={KPI} canEdit={canEdit} />);
+  return render(
+    <UsersScreen
+      users={USERS}
+      kpi={KPI}
+      canEdit={canEdit}
+      customRoles={[
+        {
+          name: "Scanner operator",
+          code: "scanner_operator",
+          baseRole: "t1",
+          permissions: ["scanner.import"],
+          tone: "tag--info",
+        },
+      ]}
+    />,
+  );
 }
 
 describe("UsersScreen", () => {
@@ -63,6 +98,11 @@ describe("UsersScreen", () => {
     setup();
     expect(screen.getByText("Bloklangan")).toBeInTheDocument();
     expect(screen.getByText("Faol")).toBeInTheDocument();
+  });
+
+  it("shows assigned custom role labels", () => {
+    setup();
+    expect(screen.getByText("Scanner operator")).toBeInTheDocument();
   });
 
   it("filters by search query", async () => {

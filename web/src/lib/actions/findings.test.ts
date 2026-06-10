@@ -24,6 +24,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/session", () => ({
   requireSession: vi.fn(async () => ({ userId: "u1", role: "lead", name: "" })),
 }));
+vi.mock("@/lib/rbac.server", () => ({ requirePermission: vi.fn(async () => true) }));
 vi.mock("@/lib/prisma", () => {
   const prisma = {
     finding: {
@@ -34,6 +35,8 @@ vi.mock("@/lib/prisma", () => {
     },
     audit: { findUnique: vi.fn(async () => h.audit), update: vi.fn(async () => ({})) },
     task: { findUnique: vi.fn(async () => h.task) },
+    fileStorage: { create: vi.fn(async () => ({ id: "file-1" })) },
+    findingEvidence: { create: vi.fn(async () => ({})) },
     approvalEvent: { create: vi.fn(async () => ({})) },
     auditLog: { create: vi.fn(async () => ({})) },
     kpiEvent: { create: vi.fn(async () => ({})) },
@@ -113,6 +116,12 @@ const validCreate = {
   type: "Konfiguratsiya kamchiligi",
   description: "Tavsif",
 };
+const validEvidenceImage = {
+  filename: "screenshot.png",
+  mimeType: "image/png" as const,
+  sizeBytes: Buffer.from("image-bytes").length,
+  dataBase64: Buffer.from("image-bytes").toString("base64"),
+};
 
 describe("createFinding", () => {
   it("creates the next code (status new) and revalidates", async () => {
@@ -121,9 +130,66 @@ describe("createFinding", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/findings");
   });
 
+  it("creates image evidence with the finding", async () => {
+    const res = await createFinding({ ...validCreate, evidenceImages: [validEvidenceImage] });
+    expect(res).toEqual({ ok: true, id: `F-${YEAR}-0351` });
+    expect(mockPrisma.finding.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ evidence: 1 }),
+      }),
+    );
+    expect(mockPrisma.fileStorage.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          filename: "screenshot.png",
+          mimeType: "image/png",
+          provider: "db",
+          uploadedById: "u1",
+        }),
+      }),
+    );
+    expect(mockPrisma.findingEvidence.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          findingId: `F-${YEAR}-0351`,
+          fileId: "file-1",
+          kind: "screenshot",
+        }),
+      }),
+    );
+  });
+
+  it("rejects invalid evidence images", async () => {
+    expect(
+      await createFinding({
+        ...validCreate,
+        evidenceImages: [{ ...validEvidenceImage, mimeType: "text/plain" as never }],
+      }),
+    ).toEqual({ ok: false, error: "invalid" });
+    expect(
+      await createFinding({
+        ...validCreate,
+        evidenceImages: [{ ...validEvidenceImage, sizeBytes: validEvidenceImage.sizeBytes + 1 }],
+      }),
+    ).toEqual({ ok: false, error: "invalid" });
+    expect(
+      await createFinding({
+        ...validCreate,
+        evidenceImages: Array.from({ length: 6 }, (_, i) => ({
+          ...validEvidenceImage,
+          filename: `screenshot-${i}.png`,
+        })),
+      }),
+    ).toEqual({ ok: false, error: "invalid" });
+  });
+
   it("rejects a task that belongs to another audit", async () => {
     h.task = { auditId: "AUD-OTHER", assigneeId: "u6" };
-    expect(await createFinding(validCreate)).toEqual({ ok: false, error: "task_mismatch" });
+    expect(await createFinding({ ...validCreate, evidenceImages: [validEvidenceImage] })).toEqual({
+      ok: false,
+      error: "task_mismatch",
+    });
+    expect(mockPrisma.fileStorage.create).not.toHaveBeenCalled();
   });
 
   it("rejects when the audit is missing", async () => {

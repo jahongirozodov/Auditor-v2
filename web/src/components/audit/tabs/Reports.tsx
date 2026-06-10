@@ -1,12 +1,31 @@
 import { useTranslations } from "next-intl";
 import { Download, Eye, FileText } from "lucide-react";
 import { Tag } from "@/components/ui/Tag";
-import { REPORTS } from "@/lib/fixtures";
-import type { Audit } from "@/lib/types/entities";
+import type { Report } from "@/lib/types/entities";
 
-export function Reports({ a }: { a: Audit }) {
+const STATUS_TONE: Record<string, "success" | "warning" | "info" | "danger"> = {
+  approved: "success",
+  review: "info",
+  returned: "danger",
+  draft: "warning",
+};
+const STATUS_LABEL: Record<string, string> = {
+  approved: "Tasdiqlangan",
+  review: "Tekshiruvda",
+  returned: "Qaytarilgan",
+  draft: "Qoralama",
+};
+
+export function Reports({ reports }: { reports: Report[] }) {
   const t = useTranslations("auditDetail");
-  const reports = REPORTS.filter((r) => r.audit === a.id);
+
+  if (reports.length === 0) {
+    return (
+      <p className="text-sm text-muted" style={{ padding: "24px 0", textAlign: "center" }}>
+        {t("reportsEmpty")}
+      </p>
+    );
+  }
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
@@ -28,19 +47,29 @@ export function Reports({ a }: { a: Audit }) {
                   {f}
                 </Tag>
               ))}
-              <Tag tone={r.status === "approved" ? "success" : "warning"}>
-                {r.status === "approved" ? "Tasdiqlangan" : "Qoralama"}
+              <Tag tone={STATUS_TONE[r.status] ?? "warning"}>
+                {STATUS_LABEL[r.status] ?? r.status}
               </Tag>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="button" className="btn btn--ghost btn--sm">
+              <a
+                className="btn btn--ghost btn--sm"
+                href={`/print/reports/${r.id}`}
+                target="_blank"
+                rel="noopener"
+              >
                 <Eye size={13} />
                 <span>{t("preview")}</span>
-              </button>
-              <button type="button" className="btn btn--secondary btn--sm">
+              </a>
+              <a
+                className="btn btn--secondary btn--sm"
+                href={`/print/reports/${r.id}`}
+                target="_blank"
+                rel="noopener"
+              >
                 <Download size={13} />
                 <span>{t("download")}</span>
-              </button>
+              </a>
             </div>
           </div>
         </div>

@@ -22,12 +22,12 @@ let saved: {
 } | null = null;
 
 test.describe.serial("edit project", () => {
-  // Capture the audit's project content; restore it in afterAll for net-zero.
+  // Capture the AuditProject content; restore it in afterAll for net-zero.
   test.beforeAll(async () => {
     const prisma = new PrismaClient();
     try {
-      saved = await prisma.audit.findUnique({
-        where: { id: AUDIT },
+      saved = await prisma.auditProject.findUnique({
+        where: { auditId: AUDIT },
         select: { goal: true, methodology: true, scope: true, tools: true },
       });
     } finally {
@@ -39,7 +39,7 @@ test.describe.serial("edit project", () => {
     if (!saved) return;
     const prisma = new PrismaClient();
     try {
-      await prisma.audit.update({ where: { id: AUDIT }, data: saved });
+      await prisma.auditProject.update({ where: { auditId: AUDIT }, data: saved });
     } finally {
       await prisma.$disconnect();
     }

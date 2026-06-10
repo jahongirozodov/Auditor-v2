@@ -2,10 +2,11 @@ import { test, expect, type Page } from "@playwright/test";
 
 const DEMO_EMAIL = "a.yoldoshev@gov.uz";
 const DEMO_PASSWORD = "Auditor!2026";
+const U6_EMAIL = "m.sodiqova@gov.uz";
 
-async function login(page: Page) {
+async function login(page: Page, email = DEMO_EMAIL) {
   await page.goto("/login");
-  await page.getByLabel("Login (domen hisobi)").fill(DEMO_EMAIL);
+  await page.getByLabel("Login (domen hisobi)").fill(email);
   await page.getByLabel("Parol", { exact: true }).fill(DEMO_PASSWORD);
   await page.getByRole("button", { name: /Kirish/ }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
@@ -41,6 +42,14 @@ test.describe("navigation", () => {
     await expect(page.getByRole("heading", { name: "Soliq qoʻmitasi" })).toBeVisible();
   });
 
+  test("organization audit row opens audit detail", async ({ page }) => {
+    await login(page);
+    await page.goto("/organizations/o2");
+    await page.getByRole("link", { name: /DBMS va loyiha auditi/ }).click();
+    await expect(page).toHaveURL(/\/audits\/AUD-2026-013$/);
+    await expect(page.getByRole("heading", { name: /DBMS va loyiha auditi/ })).toBeVisible();
+  });
+
   test("finding row opens the drawer", async ({ page }) => {
     await login(page);
     await page.goto("/findings");
@@ -62,11 +71,35 @@ test.describe("navigation", () => {
   });
 
   test("task card → task detail", async ({ page }) => {
-    await login(page);
+    await login(page, U6_EMAIL);
     await page.goto("/tasks");
     await page.getByRole("link", { name: /Firewall qoidalari/ }).click();
     await expect(page).toHaveURL(/\/tasks\/T-114$/);
     await expect(page.getByRole("heading", { name: /Firewall qoidalari/ })).toBeVisible();
+  });
+
+  test("task assignment table title opens task detail", async ({ page }) => {
+    await login(page);
+    await page.goto("/tasks/assign");
+    await page.getByRole("link", { name: /Firewall qoidalari/ }).click();
+    await expect(page).toHaveURL(/\/tasks\/T-114$/);
+    await expect(page.getByRole("heading", { name: /Firewall qoidalari/ })).toBeVisible();
+  });
+
+  test("audit task table title opens task detail", async ({ page }) => {
+    await login(page);
+    await page.goto("/audits/AUD-2026-014");
+    await page.getByRole("tab", { name: /Vazifalar/ }).click();
+    await page.getByRole("link", { name: /Web ilova OWASP ZAP/ }).click();
+    await expect(page).toHaveURL(/\/tasks\/T-123$/);
+    await expect(page.getByRole("heading", { name: /Web ilova OWASP ZAP/ })).toBeVisible();
+  });
+
+  test("my tasks only shows tasks assigned to the signed-in user", async ({ page }) => {
+    await login(page);
+    await page.goto("/tasks");
+    await expect(page.getByText("Vazifa yoʻq")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Firewall qoidalari/ })).toHaveCount(0);
   });
 
   test("⌘K command palette navigates", async ({ page }) => {

@@ -19,6 +19,7 @@ export interface CreateTaskModalProps {
   audits: Audit[];
   usersById: Record<string, User>;
   defaultAuditId: string;
+  defaultAssigneeId?: string;
 }
 
 export function CreateTaskModal({
@@ -27,6 +28,7 @@ export function CreateTaskModal({
   audits,
   usersById,
   defaultAuditId,
+  defaultAssigneeId,
 }: CreateTaskModalProps) {
   const t = useTranslations("assign");
   const toast = useToast();
@@ -38,7 +40,12 @@ export function CreateTaskModal({
   const [type, setType] = useState(TYPES[0]);
   const [priority, setPriority] = useState("Oʻrta");
   const [due, setDue] = useState("");
-  const [assigneeId, setAssigneeId] = useState("");
+  const initialAudit = audits.find((a) => a.id === defaultAuditId);
+  const pickAssignee = (audit?: Audit) =>
+    audit?.members.includes(defaultAssigneeId ?? "")
+      ? (defaultAssigneeId ?? "")
+      : (audit?.members[0] ?? "");
+  const [assigneeId, setAssigneeId] = useState(pickAssignee(initialAudit));
 
   const audit = audits.find((a) => a.id === auditId);
   const members = (audit?.members ?? []).map(
@@ -48,12 +55,23 @@ export function CreateTaskModal({
   const valid = title.trim().length >= 3 && Boolean(auditId) && Boolean(due) && Boolean(assigneeId);
 
   function changeAudit(id: string) {
+    const nextAudit = audits.find((a) => a.id === id);
     setAuditId(id);
-    setAssigneeId(""); // members differ per audit
+    setAssigneeId(pickAssignee(nextAudit));
   }
 
+  const ERROR_KEY: Record<string, string> = {
+    forbidden: "errForbidden",
+    illegal_status: "errIllegalStatus",
+    not_member: "errNotMember",
+    invalid: "requiredHint",
+  };
+
   function submit() {
-    if (!valid) return;
+    if (!valid) {
+      toast(t("requiredHint"), "danger");
+      return;
+    }
     startTransition(async () => {
       const res = await createTask({ auditId, title, type, priority, due, assigneeId });
       if (res.ok) {
@@ -61,7 +79,7 @@ export function CreateTaskModal({
         onClose();
         router.refresh();
       } else {
-        toast(t("failed"), "danger");
+        toast(t(ERROR_KEY[res.error ?? ""] ?? "failed"), "danger");
       }
     });
   }
@@ -176,6 +194,16 @@ export function CreateTaskModal({
             </select>
           </Field>
         </div>
+
+        {!valid ? (
+          <p
+            className="cell-sub"
+            role="note"
+            style={{ gridColumn: "span 2", color: "var(--text-tertiary)", margin: 0 }}
+          >
+            {t("requiredHint")}
+          </p>
+        ) : null}
       </div>
     </Modal>
   );

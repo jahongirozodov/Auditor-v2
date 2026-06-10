@@ -1,20 +1,34 @@
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
-import { canView } from "@/lib/rbac";
+import { requirePermission } from "@/lib/rbac.server";
 import { getAudits } from "@/lib/data/audits";
 import { getTasks } from "@/lib/data/tasks";
-import { getRecentScannerImports } from "@/lib/data/scanner";
+import {
+  getRecentScannerImports,
+  getLatestScannerUpload,
+  getLatestScannerNormalization,
+} from "@/lib/data/scanner";
 import { ScannerImportScreen } from "@/components/analysis/ScannerImportScreen";
 
 export default async function ScannerPage() {
-  const { role } = await requireSession();
-  if (!canView(role, "config")) redirect("/dashboard");
+  const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "scanner.import"))) redirect("/dashboard");
 
-  const [audits, tasks, imports] = await Promise.all([
+  const [audits, tasks, imports, latest] = await Promise.all([
     getAudits(),
     getTasks(),
     getRecentScannerImports(),
+    getLatestScannerUpload(),
   ]);
+  const latestAi = latest ? await getLatestScannerNormalization(latest.id) : null;
 
-  return <ScannerImportScreen audits={audits} tasks={tasks} imports={imports} />;
+  return (
+    <ScannerImportScreen
+      audits={audits}
+      tasks={tasks}
+      imports={imports}
+      latest={latest}
+      latestAi={latestAi}
+    />
+  );
 }

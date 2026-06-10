@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { ScannerUploadView, ScanImportRowView } from "@/lib/types/entities";
+import { parseScannerNormalization, type ScannerAiNormalization } from "@/lib/ai/prompts";
 
 type AggRow = { critical?: number; high?: number; medium?: number; low?: number; info?: number };
 
@@ -14,6 +15,7 @@ function toUploadView(u: {
   taskId: string;
   status: string;
   findingCount: number;
+  aiOk: boolean;
   createdAt: Date;
 }): ScannerUploadView {
   return {
@@ -25,6 +27,7 @@ function toUploadView(u: {
     taskId: u.taskId,
     status: u.status,
     findingCount: u.findingCount,
+    aiOk: u.aiOk,
     createdAt: u.createdAt.toISOString(),
   };
 }
@@ -67,3 +70,14 @@ export const getScannerUpload = cache(async (id: string): Promise<ScannerUploadV
   const u = await prisma.scannerUpload.findUnique({ where: { id } });
   return u ? toUploadView(u) : null;
 });
+
+/** Stored AI normalization for an upload — hydrates the screen on load. */
+export const getLatestScannerNormalization = cache(
+  async (id: string): Promise<ScannerAiNormalization | null> => {
+    const u = await prisma.scannerUpload.findUnique({
+      where: { id },
+      select: { aiResult: true, aiOk: true },
+    });
+    return u?.aiOk ? parseScannerNormalization(u.aiResult) : null;
+  },
+);

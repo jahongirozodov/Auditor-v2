@@ -47,6 +47,12 @@ Each transition is stored as an **immutable** record in `audit_project_approvals
 **UI:** a 3-step progress strip (group_lead → head → dept), a chronological timeline (who/when/what +
 comment), stage-aware buttons (Submit / Approve / Return), and a current-stage chip.
 
+Implementation mapping: project creation starts from the audit detail Project tab. A user has
+`group_lead` duty for this workflow only when `audit.leaderId` matches the active session user; `super`
+and `head` retain the documented administrative override. Project lifecycle transitions update
+`AuditProject.status/currentApprovalStage` and mirror the parent `Audit` status to
+`project_draft`, `project_pending`, or `assigning`.
+
 ## Tasks (TZ §8)
 
 - Tasks are normally created inside an **approved** project.

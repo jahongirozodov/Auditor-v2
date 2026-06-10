@@ -5,7 +5,6 @@ import { NextIntlClientProvider } from "next-intl";
 import messages from "@/../messages/uz.json";
 import { AuditsListScreen } from "./AuditsListScreen";
 import { AUDITS, ORGS, USERS } from "@/lib/fixtures";
-import type { RoleCode } from "@/lib/types/roles";
 
 // CreateAuditModal imports the create Server Action + useRouter — mock both for jsdom.
 vi.mock("@/lib/actions/audits", () => ({ createAudit: vi.fn() }));
@@ -15,7 +14,7 @@ const orgsById = Object.fromEntries(ORGS.map((o) => [o.id, o]));
 const usersById = Object.fromEntries(USERS.map((u) => [u.id, u]));
 const eligibleUsers = USERS.filter((u) => ["chief", "lead", "t1"].includes(u.role));
 
-function renderScreen(role: RoleCode = "super") {
+function renderScreen(canCreate = true) {
   return render(
     <NextIntlClientProvider locale="uz" messages={messages}>
       <AuditsListScreen
@@ -24,7 +23,7 @@ function renderScreen(role: RoleCode = "super") {
         usersById={usersById}
         orgs={ORGS}
         eligibleUsers={eligibleUsers}
-        role={role}
+        canCreate={canCreate}
       />
     </NextIntlClientProvider>,
   );
@@ -47,8 +46,8 @@ describe("AuditsListScreen", () => {
     expect(screen.queryByRole("link", { name: /yillik kompleks audit/ })).toBeNull();
   });
 
-  it("opens the create modal for a head/super and hides it for t1", async () => {
-    const { rerender } = renderScreen("super");
+  it("opens the create modal when creation is allowed and hides it otherwise", async () => {
+    const { rerender } = renderScreen(true);
     await userEvent.click(screen.getByRole("button", { name: /Yangi audit/ }));
     expect(screen.getByText(/Yangi audit yaratish/)).toBeInTheDocument();
 
@@ -60,7 +59,7 @@ describe("AuditsListScreen", () => {
           usersById={usersById}
           orgs={ORGS}
           eligibleUsers={eligibleUsers}
-          role="t1"
+          canCreate={false}
         />
       </NextIntlClientProvider>,
     );

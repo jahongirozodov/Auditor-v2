@@ -171,10 +171,18 @@ export function OrgDetailScreen({ org, det, orgAudits }: OrgDetailScreenProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {orgAudits.map((a) => (
+                    {orgAudits.map((a) => {
+                      const href = `/audits/${a.id}`;
+                      return (
                       <tr key={a.id}>
-                        <td className="cell-mono">{a.code}</td>
-                        <td className="text-primary font-semi">{a.title}</td>
+                        <td className="cell-mono">
+                          <Link href={href}>{a.code}</Link>
+                        </td>
+                        <td>
+                          <Link href={href} className="text-primary font-semi">
+                            {a.title}
+                          </Link>
+                        </td>
                         <td>
                           <Tag tone="outline">{a.type}</Tag>
                         </td>
@@ -195,7 +203,8 @@ export function OrgDetailScreen({ org, det, orgAudits }: OrgDetailScreenProps) {
                           )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

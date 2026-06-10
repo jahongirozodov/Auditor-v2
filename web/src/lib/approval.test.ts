@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { canActAt, currentOf, nextStage, projectCurrentOf } from "./approval";
+import { canActAt, currentOf, nextStage, projectCurrentOf, reportCurrentOf } from "./approval";
 
 describe("canActAt", () => {
   it("gates dept to super only", () => {
@@ -31,6 +31,16 @@ describe("currentOf", () => {
     expect(currentOf("review", null)).toBe("group_lead");
     expect(currentOf("approved", null)).toBeNull();
     expect(currentOf("fixing", null)).toBeNull();
+  });
+});
+
+describe("reportCurrentOf", () => {
+  it("maps the report status onto the approval strip (author submits a draft)", () => {
+    expect(reportCurrentOf("draft", null)).toBe("new");
+    expect(reportCurrentOf("returned", null)).toBe("returned");
+    expect(reportCurrentOf("review", null)).toBe("group_lead");
+    expect(reportCurrentOf("review", "head")).toBe("head");
+    expect(reportCurrentOf("approved", null)).toBeNull();
   });
 });
 

@@ -41,7 +41,7 @@ describe("emitKpiEvent", () => {
     });
     const call = (tx.kpiUser.upsert as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(call.update).toMatchObject({ tasks: { increment: 1 } });
-    expect(call.create).toMatchObject({ tasks: { increment: 1 } });
+    expect(call.create).toMatchObject({ tasks: 1 });
   });
 
   it("does NOT increment countField when omitted", async () => {

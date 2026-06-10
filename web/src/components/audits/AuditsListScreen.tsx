@@ -11,9 +11,7 @@ import { Progress } from "@/components/ui/Progress";
 import { StatusTag } from "@/components/ui/StatusTag";
 import { AvatarStack } from "@/components/ui/AvatarStack";
 import { CreateAuditModal } from "./CreateAuditModal";
-import { canManage } from "@/lib/rbac";
 import type { Audit, AuditStatus, Organization, User } from "@/lib/types/entities";
-import type { RoleCode } from "@/lib/types/roles";
 
 const GROUPS: Record<string, AuditStatus[]> = {
   active: [
@@ -34,7 +32,7 @@ export interface AuditsListScreenProps {
   usersById: Record<string, User>;
   orgs: Organization[];
   eligibleUsers: User[];
-  role: RoleCode;
+  canCreate: boolean;
 }
 
 export function AuditsListScreen({
@@ -43,12 +41,11 @@ export function AuditsListScreen({
   usersById,
   orgs,
   eligibleUsers,
-  role,
+  canCreate,
 }: AuditsListScreenProps) {
   const t = useTranslations("audits");
   const [tab, setTab] = useState("all");
   const [creating, setCreating] = useState(false);
-  const canCreate = canManage(role, "audit");
 
   const inGroup = (status: AuditStatus, g: string) => GROUPS[g]?.includes(status);
   const filtered = audits.filter((a) => tab === "all" || inGroup(a.status, tab));
@@ -170,12 +167,14 @@ export function AuditsListScreen({
         </div>
       </div>
 
-      <CreateAuditModal
-        open={creating}
-        onClose={() => setCreating(false)}
-        orgs={orgs}
-        eligibleUsers={eligibleUsers}
-      />
+      {canCreate ? (
+        <CreateAuditModal
+          open={creating}
+          onClose={() => setCreating(false)}
+          orgs={orgs}
+          eligibleUsers={eligibleUsers}
+        />
+      ) : null}
     </div>
   );
 }

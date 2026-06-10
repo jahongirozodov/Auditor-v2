@@ -6,11 +6,11 @@ import { parseTrafficUniversal } from "./parsers/universal";
 import type { TrafficFormat, TrafficParseResult } from "./types";
 
 const PARSERS: Record<TrafficFormat, (c: string) => TrafficParseResult> = {
-  pcap:          () => ({ format: "pcap", anomalies: [], totalPackets: 0, uniqueIps: 0, protocols: [] }),
-  suricata:      parseSuricata,
-  zeek:          parseZeek,
+  pcap: () => ({ format: "pcap", anomalies: [], totalPackets: 0, uniqueIps: 0, protocols: [] }),
+  suricata: parseSuricata,
+  zeek: parseZeek,
   wireshark_csv: parseWireshark,
-  universal:     parseTrafficUniversal,
+  universal: parseTrafficUniversal,
 };
 
 export function analyzeTraffic(filename: string, content: string): TrafficParseResult {

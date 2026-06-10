@@ -27,6 +27,8 @@ const SCREENS: { path: string; heading: string; file: string }[] = [
     file: "task-detail.png",
   },
   { path: "/analysis/config", heading: "Konfiguratsiya tahlili", file: "config.png" },
+  { path: "/settings", heading: "Sozlamalar", file: "settings.png" },
+  { path: "/permissions", heading: "Rollar va ruxsatlar matritsasi", file: "permissions.png" },
 ];
 
 test.describe("screens visual", () => {

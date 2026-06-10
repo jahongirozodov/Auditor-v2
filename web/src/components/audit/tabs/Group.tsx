@@ -2,12 +2,11 @@
 
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { FileText, Star, Trash2, UserPlus, Users } from "lucide-react";
+import { Star, Trash2, UserPlus, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { useToast } from "@/components/ui/Toast";
 import { canManage } from "@/lib/rbac";
-import { canActAt } from "@/lib/approval";
-import { addMember, promoteLead, removeMember, startProjectDraft } from "@/lib/actions/audits";
+import { addMember, promoteLead, removeMember } from "@/lib/actions/audits";
 import { findingsByAudit, tasksByAudit } from "@/lib/fixtures";
 import type { ActionResult } from "@/lib/actions/types";
 import type { Audit, User } from "@/lib/types/entities";
@@ -33,7 +32,6 @@ export function Group({
   const tasks = tasksByAudit(a.id);
   const findings = findingsByAudit(a.id);
   const canEdit = canManage(role, "audit");
-  const canDraft = a.status === "group_forming" && canActAt(role, "group_lead");
   const candidates = allUsers.filter((u) => ELIGIBLE.includes(u.role) && !a.members.includes(u.id));
   const pick = (id: string): Pick<User, "avatar" | "name" | "title"> =>
     usersById[id] ?? { avatar: "?", name: id, title: "" };
@@ -47,26 +45,6 @@ export function Group({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {canDraft ? (
-        <div className="panel">
-          <div className="panel__body" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <FileText size={16} style={{ color: "var(--brand)" }} />
-            <span className="cell-sub" style={{ flex: 1 }}>
-              {t("startDraftHint")}
-            </span>
-            <button
-              type="button"
-              className="btn btn--primary btn--sm"
-              disabled={pending}
-              onClick={() => act(() => startProjectDraft({ auditId: a.id }))}
-            >
-              <FileText size={14} />
-              <span>{t("startDraft")}</span>
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       <div
         style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.7fr) minmax(0, 1fr)", gap: 16 }}
       >

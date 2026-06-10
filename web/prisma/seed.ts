@@ -1,5 +1,5 @@
 /* Idempotent seed — upserts every fixture row so DB == fixtures. Run: npm run db:seed */
-import { PrismaClient } from "@prisma/client";
+import { AuditProjectStatus, PrismaClient } from "@prisma/client";
 import {
   AUDITS,
   FINDINGS,
@@ -19,6 +19,22 @@ const prisma = new PrismaClient();
 // Plain-JSON clone (typed any) for Prisma Json columns.
 const json = (v: unknown) => JSON.parse(JSON.stringify(v));
 
+function projectStateForAudit(
+  status: string,
+  hasProjectContent: boolean,
+): { status: AuditProjectStatus; currentApprovalStage: string | null } | null {
+  if (status === "group_forming" || (!hasProjectContent && status === "planning")) return null;
+  if (status === "project_pending") {
+    return { status: AuditProjectStatus.submitted, currentApprovalStage: "head" };
+  }
+  if (status === "returned")
+    return { status: AuditProjectStatus.returned, currentApprovalStage: null };
+  if (status === "project_draft" || status === "planning") {
+    return { status: AuditProjectStatus.draft, currentApprovalStage: null };
+  }
+  return { status: AuditProjectStatus.approved, currentApprovalStage: null };
+}
+
 async function main() {
   // Purge non-fixture create-spec rows so the DB converges to the fixtures — removes audits/tasks/
   // findings (and their dependents) created by E2E/dev runs whose afterAll cleanup was skipped,
@@ -32,6 +48,10 @@ async function main() {
   await prisma.aiAnalysisResult.deleteMany({});
   await prisma.analyzedDevice.deleteMany({});
   await prisma.configUpload.deleteMany({});
+  // System settings reset to defaults each seed (not fixtures) — keeps /settings deterministic.
+  await prisma.systemSetting.deleteMany({});
+  // Drop tokens issued at runtime (E2E/dev) so /tokens converges to the fixtures.
+  await prisma.auditToken.deleteMany({ where: { id: { notIn: TOKENS.map((t) => t.id) } } });
   await prisma.taskStatusHistory.deleteMany({ where: { taskId: { notIn: taskIds } } });
   await prisma.finding.deleteMany({ where: { id: { notIn: findingIds } } });
   await prisma.task.deleteMany({ where: { id: { notIn: taskIds } } });
@@ -129,16 +149,47 @@ async function main() {
     });
   }
 
-  // Project approval trail — for audits in project_pending, seed the group_lead
-  // "Submit" event (so the strip shows submitted → awaiting head). Idempotent.
+  // AuditProject is the docs-aligned aggregate. Backfill it from the legacy audit fields kept for
+  // migration compatibility, and move project approvals to the dedicated immutable timeline.
   await prisma.approvalEvent.deleteMany({ where: { entityType: "project" } });
+  await prisma.auditProjectApproval.deleteMany({});
   for (const a of AUDITS) {
+    const hasProjectContent = !!(
+      a.goal ||
+      a.methodology ||
+      a.scope.length > 0 ||
+      a.tools.length > 0
+    );
+    const state = projectStateForAudit(a.status, hasProjectContent);
+    if (!state) {
+      await prisma.auditProject.deleteMany({ where: { auditId: a.id } });
+      continue;
+    }
+    const project = await prisma.auditProject.upsert({
+      where: { auditId: a.id },
+      update: {
+        status: state.status,
+        currentApprovalStage: state.currentApprovalStage,
+        goal: a.goal ?? null,
+        methodology: a.methodology ?? null,
+        scope: a.scope,
+        tools: a.tools,
+      },
+      create: {
+        auditId: a.id,
+        status: state.status,
+        currentApprovalStage: state.currentApprovalStage,
+        goal: a.goal ?? null,
+        methodology: a.methodology ?? null,
+        scope: a.scope,
+        tools: a.tools,
+      },
+    });
     if (a.status === "project_pending") {
-      await prisma.approvalEvent.create({
+      await prisma.auditProjectApproval.create({
         data: {
-          entityType: "project",
-          entityId: a.id,
-          who: a.leader,
+          projectId: project.id,
+          actorId: a.leader,
           action: "Submit",
           stage: "group_lead",
           state: "done",
@@ -165,6 +216,9 @@ async function main() {
   }
 
   // Findings
+  // A few findings are marked as having arrived from the desktop agent (non-null
+  // idempotencyKey) so the /agent "synced findings" section + E2E have data.
+  const AGENT_SYNCED = new Set(FINDINGS.slice(0, 4).map((f) => f.id));
   for (const f of FINDINGS) {
     const base = {
       auditId: f.auditId,
@@ -182,6 +236,7 @@ async function main() {
       evidence: f.evidence,
       ai: f.ai,
       approvalStage: f.status === "review" ? "group_lead" : null,
+      idempotencyKey: AGENT_SYNCED.has(f.id) ? `seed-agent-${f.id}` : null,
     };
     await prisma.finding.upsert({
       where: { id: f.id },
@@ -236,6 +291,12 @@ async function main() {
   }
 
   // Tokens
+  // Active tokens get a future expiry relative to seed time so the desktop agent can
+  // actually validate + sync after a fresh seed (the prototype fixtures carry a fixed
+  // past date — an "active" token whose expiry is in the past is rejected at validate).
+  // Expired/revoked tokens keep their past fixture dates for display fidelity.
+  const futureStamp = (days: number) =>
+    new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 16).replace("T", " ");
   for (const tk of TOKENS) {
     const base = {
       auditId: tk.audit,
@@ -246,7 +307,7 @@ async function main() {
       agent: tk.agent,
       ip: tk.ip,
       issued: tk.issued,
-      expires: tk.expires,
+      expires: tk.status === "active" ? futureStamp(60) : tk.expires,
       status: tk.status,
       lastUsed: tk.lastUsed,
       tasks: tk.tasks,
@@ -276,6 +337,111 @@ async function main() {
       create: { id: r.id, ...base },
     });
   }
+
+  // Desktop agent — published build metadata (version endpoint returns the latest).
+  await prisma.desktopAgentVersion.upsert({
+    where: { version: "1.0.0" },
+    update: {},
+    create: { version: "1.0.0", notes: "Walking-skeleton release" },
+  });
+
+  // Agent monitoring data for /agent (sync history + token-usage feed). Never fixtures —
+  // reset each seed. Timestamps are relative to "now" so the dashboard always shows recent
+  // activity (a monitoring screen is inherently time-relative; E2E asserts presence, not counts).
+  const ago = (mins: number) => new Date(Date.now() - mins * 60_000);
+  await prisma.agentSyncSession.deleteMany({});
+  await prisma.auditTokenUsageLog.deleteMany({});
+  const SYNCS = [
+    {
+      id: "asy_seed_1",
+      tokenId: "tk_a91x...c47e",
+      auditId: "AUD-2026-014",
+      userId: "u6",
+      status: "completed",
+      findingCount: 3,
+      startedAt: ago(35),
+      completedAt: ago(34),
+    },
+    {
+      id: "asy_seed_2",
+      tokenId: "tk_c63m...d92b",
+      auditId: "AUD-2026-014",
+      userId: "u4",
+      status: "completed",
+      findingCount: 1,
+      startedAt: ago(180),
+      completedAt: ago(179),
+    },
+    {
+      id: "asy_seed_3",
+      tokenId: "tk_b27p...f10a",
+      auditId: "AUD-2026-014",
+      userId: "u7",
+      status: "failed",
+      findingCount: 0,
+      startedAt: ago(540),
+      completedAt: ago(539),
+    },
+    {
+      id: "asy_seed_4",
+      tokenId: "tk_d04q...e83c",
+      auditId: "AUD-2026-014",
+      userId: "u3",
+      status: "completed",
+      findingCount: 2,
+      startedAt: ago(1560),
+      completedAt: ago(1559),
+    },
+  ];
+  for (const s of SYNCS) {
+    await prisma.agentSyncSession.create({ data: s });
+  }
+  await prisma.auditTokenUsageLog.createMany({
+    data: [
+      {
+        tokenId: "tk_a91x...c47e",
+        action: "validate",
+        status: "ok",
+        ip: "10.10.40.21",
+        createdAt: ago(36),
+      },
+      {
+        tokenId: "tk_a91x...c47e",
+        action: "my_tasks",
+        status: "ok",
+        ip: "10.10.40.21",
+        createdAt: ago(35),
+      },
+      {
+        tokenId: "tk_a91x...c47e",
+        action: "sync.complete",
+        status: "completed",
+        ip: "10.10.40.21",
+        createdAt: ago(34),
+      },
+      {
+        tokenId: "tk_c63m...d92b",
+        action: "sync.complete",
+        status: "completed",
+        ip: "10.10.40.24",
+        createdAt: ago(179),
+      },
+      {
+        tokenId: "tk_b27p...f10a",
+        action: "sync.complete",
+        status: "failed",
+        ip: "10.10.40.27",
+        createdAt: ago(539),
+      },
+      {
+        tokenId: "tk_e88r...a15d",
+        action: "validate",
+        status: "expired",
+        ip: "10.10.99.9",
+        createdAt: ago(120),
+      },
+    ],
+  });
 
   const counts = {
     users: await prisma.user.count(),

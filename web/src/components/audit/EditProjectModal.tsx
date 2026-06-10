@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { editProject } from "@/lib/actions/projects";
-import type { Audit } from "@/lib/types/entities";
+import type { Audit, AuditProject } from "@/lib/types/entities";
 
 const toLines = (arr: string[]) => arr.join("\n");
 const toArray = (text: string) =>
@@ -21,18 +21,19 @@ export interface EditProjectModalProps {
   open: boolean;
   onClose: () => void;
   audit: Audit;
+  project: AuditProject;
 }
 
-export function EditProjectModal({ open, onClose, audit }: EditProjectModalProps) {
+export function EditProjectModal({ open, onClose, audit, project }: EditProjectModalProps) {
   const t = useTranslations("auditDetail");
   const toast = useToast();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const [goal, setGoal] = useState(audit.goal ?? "");
-  const [methodology, setMethodology] = useState(audit.methodology ?? "");
-  const [scope, setScope] = useState(toLines(audit.scope));
-  const [tools, setTools] = useState(toLines(audit.tools));
+  const [goal, setGoal] = useState(project.goal ?? "");
+  const [methodology, setMethodology] = useState(project.methodology ?? "");
+  const [scope, setScope] = useState(toLines(project.scope));
+  const [tools, setTools] = useState(toLines(project.tools));
 
   const valid = goal.trim().length > 0;
 

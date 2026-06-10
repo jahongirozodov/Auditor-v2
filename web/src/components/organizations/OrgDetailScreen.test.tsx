@@ -31,4 +31,16 @@ describe("OrgDetailScreen", () => {
     renderDetail("nope");
     expect(screen.getByRole("heading", { name: "Tashkilot topilmadi" })).toBeInTheDocument();
   });
+
+  it("links organization audit rows to the audit detail page", () => {
+    renderDetail("o2");
+    expect(screen.getByRole("link", { name: "AUD-2026-013" })).toHaveAttribute(
+      "href",
+      "/audits/AUD-2026-013",
+    );
+    expect(screen.getByRole("link", { name: /DBMS va loyiha auditi/ })).toHaveAttribute(
+      "href",
+      "/audits/AUD-2026-013",
+    );
+  });
 });

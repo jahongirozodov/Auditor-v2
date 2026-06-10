@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { canView } from "@/lib/rbac";
+import { requirePermission } from "@/lib/rbac.server";
 import { emitKpiEvent } from "@/lib/kpi-engine";
 import { analyzeScanner, scannerFindingToFindingInput } from "@/lib/analysis/scanner";
-import type { ScannerSeverity } from "@/lib/analysis/scanner";
+import { normalizedFindingToFindingInput } from "@/lib/analysis/scanner/to-finding";
+import { normalizeScannerAI } from "@/lib/analysis/scanner/ai";
+import type { ScannerSeverity, ScannerNormalization } from "@/lib/analysis/scanner";
+import { parseScannerNormalization } from "@/lib/ai/prompts";
 import { materializeFindings, type FindingRowInput } from "./findings";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
@@ -26,6 +29,8 @@ export interface UploadScannerResult {
   uploadId?: string;
   scanner?: string;
   findingCount?: number;
+  ai?: ScannerNormalization | null;
+  aiOk?: boolean;
 }
 
 export async function uploadScannerFile(
@@ -35,8 +40,8 @@ export async function uploadScannerFile(
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { filename, content, auditId, taskId } = parsed.data;
 
-  const { userId, role } = await requireSession();
-  if (!canView(role, "config")) return { ok: false, error: "forbidden" };
+  const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "scanner.import"))) return { ok: false, error: "forbidden" };
 
   const sizeBytes = Buffer.byteLength(content, "utf8");
   if (sizeBytes > MAX_BYTES) return { ok: false, error: "too_large" };
@@ -49,9 +54,16 @@ export async function uploadScannerFile(
 
   const result = analyzeScanner(filename, content);
   const sevAgg: Record<ScannerSeverity, number> = {
-    critical: 0, high: 0, medium: 0, low: 0, info: 0,
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    info: 0,
   };
   for (const f of result.findings) sevAgg[f.severity]++;
+
+  // AI normalization layer — graceful: a down model keeps the raw parsed findings.
+  const ai = await normalizeScannerAI(result.scanner, result.findings);
 
   let uploadId = "";
   await prisma.$transaction(async (tx) => {
@@ -63,6 +75,8 @@ export async function uploadScannerFile(
         sizeBytes,
         findingCount: result.findings.length,
         severityAgg: J(sevAgg),
+        aiResult: ai.ok && ai.normalization ? JSON.stringify(ai.normalization) : null,
+        aiOk: ai.ok,
         auditId,
         taskId,
         uploadedById: userId,
@@ -75,7 +89,14 @@ export async function uploadScannerFile(
         action: "scanner.import",
         entity: upload.id,
         level: "info",
-        payload: J({ filename, scanner: result.scanner, findingCount: result.findings.length, auditId, taskId }),
+        payload: J({
+          filename,
+          scanner: result.scanner,
+          findingCount: result.findings.length,
+          aiOk: ai.ok,
+          auditId,
+          taskId,
+        }),
       },
     });
     await emitKpiEvent(tx, {
@@ -88,7 +109,55 @@ export async function uploadScannerFile(
   });
 
   revalidatePath("/analysis/scanner");
-  return { ok: true, uploadId, scanner: result.scanner, findingCount: result.findings.length };
+  return {
+    ok: true,
+    uploadId,
+    scanner: result.scanner,
+    findingCount: result.findings.length,
+    ai: ai.ok ? (ai.normalization ?? null) : null,
+    aiOk: ai.ok,
+  };
+}
+
+export interface ReanalyzeScannerResult {
+  ok: boolean;
+  error?: string;
+  normalization?: ScannerNormalization;
+}
+
+/** Re-run the AI normalization on a stored upload, refresh aiResult, record it. */
+export async function reanalyzeScanner(input: {
+  uploadId: string;
+}): Promise<ReanalyzeScannerResult> {
+  const uploadId = z.string().min(1).safeParse(input?.uploadId);
+  if (!uploadId.success) return { ok: false, error: "invalid" };
+
+  const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "scanner.import"))) return { ok: false, error: "forbidden" };
+
+  const upload = await prisma.scannerUpload.findUnique({ where: { id: uploadId.data } });
+  if (!upload) return { ok: false, error: "not_found" };
+
+  const result = analyzeScanner(upload.filename, upload.content);
+  const ai = await normalizeScannerAI(result.scanner, result.findings);
+  if (!ai.ok || !ai.normalization) return { ok: false, error: "ai_unavailable" };
+
+  await prisma.scannerUpload.update({
+    where: { id: upload.id },
+    data: { aiResult: JSON.stringify(ai.normalization), aiOk: true },
+  });
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      action: "scanner.reanalyze",
+      entity: upload.id,
+      level: "info",
+      payload: J({ filename: upload.filename, normalizedCount: ai.normalization.normalizedCount }),
+    },
+  });
+
+  revalidatePath("/analysis/scanner");
+  return { ok: true, normalization: ai.normalization };
 }
 
 const DraftsInput = z.object({
@@ -109,21 +178,29 @@ export async function createScannerDrafts(
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { uploadId, findingIndices } = parsed.data;
 
-  const { userId, role } = await requireSession();
-  if (!canView(role, "config")) return { ok: false, error: "forbidden" };
+  const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "scanner.import"))) return { ok: false, error: "forbidden" };
 
   const upload = await prisma.scannerUpload.findUnique({ where: { id: uploadId } });
   if (!upload) return { ok: false, error: "not_found" };
 
-  const result = analyzeScanner(upload.filename, upload.content);
-  let findings = result.findings;
-  if (findingIndices?.length) findings = findingIndices.map((i) => findings[i]).filter(Boolean);
-  if (findings.length === 0) return { ok: false, error: "no_findings" };
-
   const asset = upload.filename.replace(/\.[^.]+$/, "") || upload.filename;
-  const inputs: FindingRowInput[] = findings.map((f) =>
-    scannerFindingToFindingInput(f, { auditId: upload.auditId, taskId: upload.taskId, asset }),
-  );
+  const ctx = { auditId: upload.auditId, taskId: upload.taskId, asset };
+
+  // Prefer the AI-normalized (deduped) findings; fall back to the raw parse.
+  const normalization = upload.aiOk ? parseScannerNormalization(upload.aiResult) : null;
+  let inputs: FindingRowInput[];
+  if (normalization) {
+    let findings = normalization.findings;
+    if (findingIndices?.length) findings = findingIndices.map((i) => findings[i]).filter(Boolean);
+    if (findings.length === 0) return { ok: false, error: "no_findings" };
+    inputs = findings.map((f) => normalizedFindingToFindingInput(f, ctx));
+  } else {
+    let findings = analyzeScanner(upload.filename, upload.content).findings;
+    if (findingIndices?.length) findings = findingIndices.map((i) => findings[i]).filter(Boolean);
+    if (findings.length === 0) return { ok: false, error: "no_findings" };
+    inputs = findings.map((f) => scannerFindingToFindingInput(f, ctx));
+  }
 
   const ids = await materializeFindings(userId, inputs, "scanner");
 

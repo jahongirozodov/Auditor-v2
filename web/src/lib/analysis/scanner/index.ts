@@ -7,7 +7,14 @@ import { parseBurp } from "./parsers/burp";
 import { parseUniversal } from "./parsers/universal";
 import type { ScannerParseResult, ScannerType } from "./types";
 
-export type { ScannerFinding, ScannerParseResult, ScannerSeverity, ScannerType } from "./types";
+export type {
+  ScannerFinding,
+  ScannerParseResult,
+  ScannerSeverity,
+  ScannerType,
+  NormalizedScannerFinding,
+  ScannerNormalization,
+} from "./types";
 export { SCANNER_LABELS } from "./types";
 export { scannerFindingToFindingInput, SCANNER_FINDING_TYPE } from "./to-finding";
 

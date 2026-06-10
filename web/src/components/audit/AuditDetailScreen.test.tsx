@@ -4,31 +4,63 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/../messages/uz.json";
 import { AuditDetailScreen } from "./AuditDetailScreen";
-import { AUDITS, USERS, KPI_USERS } from "@/lib/fixtures";
+import { AUDITS, USERS, KPI_USERS, TASKS, TOKENS, REPORTS } from "@/lib/fixtures";
 
 // Tabs pull in Server Actions (server-only chain). Mock so jsdom doesn't load next-auth.
 vi.mock("@/lib/actions/findings", () => ({ findingApproval: vi.fn() }));
-vi.mock("@/lib/actions/projects", () => ({ projectApproval: vi.fn() }));
+vi.mock("@/lib/actions/projects", () => ({
+  createAuditProject: vi.fn(async () => ({ ok: true })),
+  projectApproval: vi.fn(),
+}));
 vi.mock("@/lib/actions/audits", () => ({
   addMember: vi.fn(),
   removeMember: vi.fn(),
   promoteLead: vi.fn(),
-  startProjectDraft: vi.fn(),
 }));
+vi.mock("@/lib/actions/tasks", () => ({ createTask: vi.fn() }));
+vi.mock("@/lib/actions/tokens", () => ({ issueToken: vi.fn() }));
+vi.mock("@/lib/actions/audit-ai", () => ({ analyzeAudit: vi.fn(async () => ({ ok: false })) }));
+vi.mock("@/lib/actions/evidence", () => ({
+  addAuditEvidence: vi.fn(async () => ({ ok: true })),
+  deleteAuditEvidence: vi.fn(async () => ({ ok: true })),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const usersById = Object.fromEntries(USERS.map((u) => [u.id, u]));
 
 function renderDetail(id: string, role: "super" | "t1" = "super") {
   const audit = AUDITS.find((a) => a.id === id) ?? null;
+  const project = audit
+    ? {
+        id: `p-${audit.id}`,
+        auditId: audit.id,
+        status: "approved" as const,
+        currentApprovalStage: null,
+        goal: audit.goal ?? null,
+        methodology: audit.methodology ?? null,
+        scope: audit.scope,
+        tools: audit.tools,
+      }
+    : null;
   return render(
     <NextIntlClientProvider locale="uz" messages={messages}>
       <AuditDetailScreen
         role={role}
+        currentUserId="u1"
         audit={audit}
+        project={project}
         usersById={usersById}
         allUsers={USERS}
         projectApproval={null}
         kpiUsers={KPI_USERS}
+        tasks={TASKS.filter((tk) => tk.auditId === id)}
+        canCreateTasks={false}
+        evidence={[]}
+        canAddEvidence={false}
+        tokens={TOKENS.filter((tok) => tok.audit === id)}
+        canIssueTokens={false}
+        latestAuditAi={null}
+        reports={REPORTS.filter((r) => r.audit === id)}
       />
     </NextIntlClientProvider>,
   );
@@ -80,7 +112,7 @@ describe("AuditDetailScreen", () => {
 
   it("switches to a not-yet-built tab placeholder", async () => {
     renderDetail("AUD-2026-014");
-    await userEvent.click(screen.getByRole("tab", { name: /AI tahlil/ }));
+    await userEvent.click(screen.getByRole("tab", { name: /Audit log/ }));
     expect(screen.getByText(/keyingi bosqichda tayyor/)).toBeInTheDocument();
   });
 

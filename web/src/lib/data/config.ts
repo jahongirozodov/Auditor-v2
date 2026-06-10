@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { AnalyzedDeviceView, ConfigUploadView } from "@/lib/types/entities";
+import { parseConfigAnalysis, type ConfigAiAnalysis } from "@/lib/ai/prompts";
 
 type Agg3 = { critical?: number; high?: number; medium?: number };
 
@@ -55,3 +56,15 @@ export const getConfigUpload = cache(async (id: string): Promise<ConfigUploadVie
   const u = await prisma.configUpload.findUnique({ where: { id } });
   return u ? toUploadView(u) : null;
 });
+
+/** Latest successful structured AI analysis for an upload — hydrates the screen on load. */
+export const getLatestConfigAi = cache(
+  async (uploadId: string): Promise<ConfigAiAnalysis | null> => {
+    const row = await prisma.aiAnalysisResult.findFirst({
+      where: { uploadId, scope: "config", ok: true },
+      orderBy: { createdAt: "desc" },
+      select: { output: true },
+    });
+    return parseConfigAnalysis(row?.output);
+  },
+);

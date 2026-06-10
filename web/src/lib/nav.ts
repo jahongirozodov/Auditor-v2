@@ -22,13 +22,16 @@ import {
 } from "lucide-react";
 import type { RoleCode } from "@/lib/types/roles";
 
+export type NavCountKey = "audits" | "tasks" | "findings";
+export type NavCounts = Record<NavCountKey, number>;
+
 export interface NavItem {
   id: string;
   href: string;
   /** i18n key under the `nav` namespace. */
   labelKey: string;
   icon: LucideIcon;
-  count?: number;
+  countKey?: NavCountKey;
   /** Allowed roles (visibility allowlist). Omit = visible to all. */
   roles?: RoleCode[];
 }
@@ -40,9 +43,9 @@ export interface NavGroup {
 
 /**
  * Sidebar nav, ported from the prototype (chrome.jsx). Visibility uses an explicit
- * canonical-role allowlist that mirrors the prototype exactly — this is UI-level
+ * canonical-role allowlist that mirrors the prototype exactly; this is UI-level
  * navigation gating, distinct from action-level rbac.ts (used server-side).
- * Counts are static for now (prototype values) — derive from data in a later phase.
+ * Badge counts are injected from backend data by the app layout.
  */
 export const NAV: NavGroup[] = [
   {
@@ -50,10 +53,22 @@ export const NAV: NavGroup[] = [
     items: [
       { id: "dashboard", href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
       { id: "orgs", href: "/organizations", labelKey: "orgs", icon: Building2 },
-      { id: "audits", href: "/audits", labelKey: "audits", icon: FolderKanban, count: 6 },
-      { id: "tasks", href: "/tasks", labelKey: "tasks", icon: CheckSquare, count: 7 },
+      {
+        id: "audits",
+        href: "/audits",
+        labelKey: "audits",
+        icon: FolderKanban,
+        countKey: "audits",
+      },
+      { id: "tasks", href: "/tasks", labelKey: "tasks", icon: CheckSquare, countKey: "tasks" },
       { id: "assign", href: "/tasks/assign", labelKey: "assign", icon: Inbox },
-      { id: "findings", href: "/findings", labelKey: "findings", icon: AlertTriangle, count: 34 },
+      {
+        id: "findings",
+        href: "/findings",
+        labelKey: "findings",
+        icon: AlertTriangle,
+        countKey: "findings",
+      },
     ],
   },
   {
@@ -87,7 +102,13 @@ export const NAV: NavGroup[] = [
         roles: ["super"],
       },
       { id: "logs", href: "/logs", labelKey: "logs", icon: History },
-      { id: "agent", href: "/agent", labelKey: "agent", icon: Monitor },
+      {
+        id: "agent",
+        href: "/agent",
+        labelKey: "agent",
+        icon: Monitor,
+        roles: ["super", "head", "chief", "lead", "t1"],
+      },
       {
         id: "settings",
         href: "/settings",

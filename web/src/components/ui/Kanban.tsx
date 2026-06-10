@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { Avatar } from "./Avatar";
 import { Tag, type TagTone } from "./Tag";
-import { userById } from "@/lib/fixtures";
-import type { Task, TaskPriority } from "@/lib/types/entities";
+import type { Task, TaskPriority, User } from "@/lib/types/entities";
 
 const PRIORITY_TONE: Record<TaskPriority, TagTone> = {
   Yuqori: "danger",
@@ -24,11 +23,13 @@ export interface KanbanColumn {
 export function Kanban({
   columns,
   tasks,
+  usersById,
   statusOf,
   href,
 }: {
   columns: KanbanColumn[];
   tasks: Task[];
+  usersById: Record<string, User>;
   statusOf: (t: Task) => string;
   href: (t: Task) => string;
 }) {
@@ -44,7 +45,14 @@ export function Kanban({
             </div>
             <div className="kanban__list">
               {items.map((t) => {
-                const u = userById(t.assignee);
+                const u = usersById[t.assignee] ?? {
+                  id: t.assignee,
+                  name: t.assignee,
+                  role: "t1",
+                  title: "",
+                  avatar: "?",
+                  dept: "",
+                };
                 return (
                   <Link key={t.id} href={href(t)} className="k-card">
                     <div className="k-card__top">

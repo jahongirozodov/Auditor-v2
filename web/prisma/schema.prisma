@@ -35,6 +35,15 @@ enum AuditStatus {
   cancelled
 }
 
+enum AuditProjectStatus {
+  draft
+  submitted
+  approved
+  returned
+  executing
+  completed
+}
+
 enum FindingStatus {
   new
   review
@@ -68,12 +77,15 @@ enum RiskLevel {
 
 // ---------- Users + Auth ----------
 model User {
-  id     String   @id
-  name   String
-  role   RoleCode
-  title  String
-  avatar String
-  dept   String
+  id        String   @id
+  name      String
+  role      RoleCode
+  customRoleCode String?
+  title     String
+  avatar    String
+  dept      String
+  phone     String?
+  workPhone String?
 
   // Auth (DB-backed; LDAP/AD + TOTP deferred — columns reserved)
   email        String    @unique
@@ -83,11 +95,11 @@ model User {
   totpSecret   String?
   disabled     Boolean   @default(false)
 
-  ledAudits        Audit[]        @relation("AuditLeader")
+  ledAudits        Audit[]         @relation("AuditLeader")
   memberships      AuditMember[]
-  assignedTasks    Task[]         @relation("TaskAssignee")
-  reportedFindings Finding[]      @relation("FindingReporter")
-  authoredReports  Report[]       @relation("ReportAuthor")
+  assignedTasks    Task[]          @relation("TaskAssignee")
+  reportedFindings Finding[]       @relation("FindingReporter")
+  authoredReports  Report[]        @relation("ReportAuthor")
   tokens           AuditToken[]
   kpi              KpiUser?
   kpiEvents        KpiEvent[]
@@ -96,6 +108,9 @@ model User {
   configUploads    ConfigUpload[]  @relation("ConfigUploader")
   scannerUploads   ScannerUpload[] @relation("ScannerUploader")
   trafficUploads   TrafficUpload[] @relation("TrafficUploader")
+  projectApprovals AuditProjectApproval[] @relation("ProjectApprovalActor")
+  fileUploads      FileStorage[]   @relation("FileUploader")
+  evidenceUploads  FindingEvidence[] @relation("FindingEvidenceUploader")
 
   @@index([email])
 }
@@ -184,6 +199,8 @@ model Audit {
   configUploads  ConfigUpload[]
   scannerUploads ScannerUpload[]
   trafficUploads TrafficUpload[]
+  project        AuditProject?
+  evidences      AuditEvidence[]
 
   @@index([orgId])
   @@index([leaderId])
@@ -197,6 +214,41 @@ model AuditMember {
 
   @@id([auditId, userId])
   @@index([userId])
+}
+
+model AuditProject {
+  id                   String             @id @default(cuid())
+  audit                Audit              @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  auditId              String             @unique
+  status               AuditProjectStatus
+  currentApprovalStage String?
+  goal                 String?            @db.Text
+  methodology          String?            @db.Text
+  scope                String[]
+  tools                String[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  approvals AuditProjectApproval[]
+
+  @@index([status])
+  @@index([currentApprovalStage])
+}
+
+model AuditProjectApproval {
+  id        String       @id @default(cuid())
+  project   AuditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  actor     User         @relation("ProjectApprovalActor", fields: [actorId], references: [id])
+  actorId   String
+  action    String
+  stage     String
+  state     String
+  comment   String?
+  createdAt DateTime     @default(now())
+
+  @@index([projectId])
+  @@index([actorId])
 }
 
 // ---------- Tasks ----------
@@ -246,10 +298,65 @@ model Finding {
   ai            Boolean
   // Current approval stage while status="review" (group_lead|head|dept); null otherwise.
   approvalStage String?
+  // Set when a finding arrives from the desktop agent's offline queue. The unique
+  // constraint dedups re-synced findings (TZ §9.5); null for web-created findings.
+  idempotencyKey String? @unique
+  evidences      FindingEvidence[]
 
   @@index([auditId])
   @@index([taskId])
   @@index([reportedById])
+}
+
+model FileStorage {
+  id           String   @id @default(cuid())
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  sha256       String
+  provider     String   @default("db")
+  storageKey   String?
+  bytes        Bytes?
+  uploadedBy   User     @relation("FileUploader", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  findingEvidences FindingEvidence[]
+  auditEvidences   AuditEvidence[]
+
+  @@index([uploadedById])
+  @@index([sha256])
+}
+
+// Audit-level evidence (Fayllar & dalillar tab). One row per uploaded artifact,
+// with a mandatory comment. Bytes live in the linked FileStorage (provider "db").
+model AuditEvidence {
+  id        String      @id @default(cuid())
+  audit     Audit       @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  auditId   String
+  file      FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId    String
+  comment   String
+  createdAt DateTime    @default(now())
+
+  @@index([auditId])
+  @@index([fileId])
+}
+
+model FindingEvidence {
+  id           String      @id @default(cuid())
+  finding      Finding     @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  findingId    String
+  file         FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId       String
+  kind         String      @default("screenshot")
+  uploadedBy   User        @relation("FindingEvidenceUploader", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime    @default(now())
+
+  @@index([findingId])
+  @@index([fileId])
+  @@index([uploadedById])
 }
 
 // ---------- KPI ----------
@@ -306,19 +413,62 @@ model AuditToken {
   @@index([auditId])
 }
 
+// ---------- Desktop agent (TZ §16) ----------
+// Plain string FKs (no Prisma relations) — append-only-ish logs, mirrors the
+// TaskStatusHistory/ApprovalEvent pattern. See docs/07-audit-log-and-agent.md.
+
+// One sync session opened by an agent (sync/start) and closed (sync/complete).
+model AgentSyncSession {
+  id           String    @id @default(cuid())
+  tokenId      String
+  auditId      String
+  userId       String
+  status       String    @default("open") // open | completed | failed
+  findingCount Int       @default(0)
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([tokenId])
+  @@index([auditId])
+}
+
+// Every audit-token use logged server-side (TZ §16.3). Append-only.
+model AuditTokenUsageLog {
+  id        String   @id @default(cuid())
+  tokenId   String
+  action    String // "validate" | "my_tasks" | "sync.start" | "sync.complete" | ...
+  status    String   @default("ok") // ok | denied | expired | revoked
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([tokenId])
+}
+
+// Published desktop-agent build metadata; the version endpoint returns the latest row.
+model DesktopAgentVersion {
+  id        String   @id @default(cuid())
+  version   String   @unique
+  sha256    String?
+  signature String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
 // ---------- Reports ----------
 model Report {
-  id        String @id
-  audit     Audit  @relation(fields: [auditId], references: [id])
-  auditId   String
-  title     String
-  type      String
-  status    String // "draft" | "review" | "approved"
-  generated String
-  size      String
-  format    Json // string[]
-  author    User   @relation("ReportAuthor", fields: [authorId], references: [id])
-  authorId  String
+  id            String  @id
+  audit         Audit   @relation(fields: [auditId], references: [id])
+  auditId       String
+  title         String
+  type          String
+  status        String  // "draft" | "review" | "approved" | "returned"
+  approvalStage String? // "group_lead" | "head" | "dept" | null
+  generated     String
+  size          String
+  format        Json    // string[]
+  summary       String? // AI-enriched executive summary (rendered in print view)
+  author        User    @relation("ReportAuthor", fields: [authorId], references: [id])
+  authorId      String
 
   @@index([auditId])
 }
@@ -443,19 +593,23 @@ model AiAnalysisResult {
   @@index([scope])
 }
 
-
 // ---------- Traffic analysis ----------
 model TrafficUpload {
   id           String   @id @default(cuid())
   filename     String
-  format       String   // TrafficFormat: pcap | suricata | zeek | wireshark_csv | universal
+  format       String // TrafficFormat: pcap | suricata | zeek | wireshark_csv | universal
   content      String   @db.Text
   sizeBytes    Int
   anomalyCount Int      @default(0)
-  severityAgg  Json     // { critical, high, medium, low }
+  severityAgg  Json // { critical, high, medium, low }
   totalPackets Int      @default(0)
   uniqueIps    Int      @default(0)
   status       String   @default("analyzed")
+  // Pre-parsed TrafficParseResult JSON — set for binary formats (pcap) that the
+  // client can't re-derive from `content`; null for text formats (re-derived).
+  parsed       String?  @db.Text
+  aiResult     String?  @db.Text // structured TrafficAiAnalysis JSON (verbatim)
+  aiOk         Boolean  @default(false)
   audit        Audit    @relation(fields: [auditId], references: [id])
   auditId      String
   task         Task     @relation(fields: [taskId], references: [id])
@@ -468,16 +622,29 @@ model TrafficUpload {
   @@index([taskId])
   @@index([uploadedById])
 }
+
+// ---------- System settings ----------
+// Key-value store for admin system config. One row per logical group:
+//   key "system"       → general/ai/notif/security scalars + toggles (Json blob)
+//   key "custom_roles" → CustomRole[] (Json array). KPI rules live in KpiRule.
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
 // ---------- Scanner import ----------
 model ScannerUpload {
   id           String   @id @default(cuid())
   filename     String
-  scanner      String   // ScannerType: nessus | openvas | nmap | zap | burp | universal
+  scanner      String // ScannerType: nessus | openvas | nmap | zap | burp | universal
   content      String   @db.Text
   sizeBytes    Int
   findingCount Int      @default(0)
-  severityAgg  Json     // { critical, high, medium, low, info }
+  severityAgg  Json // { critical, high, medium, low, info }
   status       String   @default("analyzed") // analyzed | imported
+  aiResult     String?  @db.Text // ScannerNormalization JSON (AI normalization layer)
+  aiOk         Boolean  @default(false)
   audit        Audit    @relation(fields: [auditId], references: [id])
   auditId      String
   task         Task     @relation(fields: [taskId], references: [id])
@@ -489,4 +656,61 @@ model ScannerUpload {
   @@index([auditId])
   @@index([taskId])
   @@index([uploadedById])
+}
+
+// ---------- Topology AI analysis ----------
+model TopologyAiAnalysis {
+  id          String   @id @default(cuid())
+  auditId     String
+  model       String
+  input       String   @db.Text
+  output      String   @db.Text // TopologyAnalysis JSON
+  latencyMs   Int
+  tokens      Int      @default(0)
+  ok          Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([auditId])
+}
+
+// ---------- Audit-level AI analysis ----------
+model AuditAiAnalysis {
+  id          String   @id @default(cuid())
+  auditId     String
+  model       String
+  input       String   @db.Text
+  output      String   @db.Text // AuditAnalysis JSON
+  latencyMs   Int
+  tokens      Int      @default(0)
+  ok          Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([auditId])
+}
+
+// A saved AI-assistant chat thread on the /ai screen, scoped to one user + audit.
+// Messages auto-persist as the conversation proceeds; the History panel lists threads.
+model AiConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  auditId   String
+  title     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  AiMessage[]
+
+  @@index([userId, auditId])
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  role           String // "user" | "ai"
+  text           String         @db.Text
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId])
 }

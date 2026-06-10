@@ -51,14 +51,17 @@ describe("sniffScanner", () => {
 
   it("detects burp by <issues + <issue content markers", () => {
     expect(
-      sniffScanner("export.xml", '<issues burpVersion="2023.10"><issue><name>XSS</name></issue></issues>'),
+      sniffScanner(
+        "export.xml",
+        '<issues burpVersion="2023.10"><issue><name>XSS</name></issue></issues>',
+      ),
     ).toBe("burp");
   });
 
   it("detects nessus by Plugin ID content marker", () => {
-    expect(sniffScanner("report.csv", "Plugin ID,CVE,Risk,Host\n12345,CVE-2024-1,High,10.0.0.1")).toBe(
-      "nessus",
-    );
+    expect(
+      sniffScanner("report.csv", "Plugin ID,CVE,Risk,Host\n12345,CVE-2024-1,High,10.0.0.1"),
+    ).toBe("nessus");
   });
 
   it("detects nessus by NESSUS_ content marker", () => {

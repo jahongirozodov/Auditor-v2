@@ -26,17 +26,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { Sev } from "@/components/ui/Sev";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
-import {
-  analyzeConfig,
-  VENDOR_LABELS,
-  type ConfigGap,
-  type VendorKey,
-} from "@/lib/analysis/config";
-import { uploadConfig, createConfigDrafts } from "@/lib/actions/config";
+import { VENDOR_LABELS, type VendorKey } from "@/lib/analysis/config/types";
+import type { ConfigAiAnalysis } from "@/lib/ai/prompts";
+import { uploadConfig, createConfigDrafts, reanalyzeConfig } from "@/lib/actions/config";
+import { ConfigAiResult } from "./ConfigAiResult";
 import type { Audit, Task, AnalyzedDeviceView, ConfigUploadView } from "@/lib/types/entities";
 
 const VENDOR_ICON: Record<string, LucideIcon> = {
@@ -57,18 +53,10 @@ interface ActiveResult {
   uploadId: string;
   filename: string;
   content: string;
-  vendor: string;
-  gaps: ConfigGap[];
 }
 
 function fromUpload(u: ConfigUploadView): ActiveResult {
-  return {
-    uploadId: u.id,
-    filename: u.filename,
-    content: u.content,
-    vendor: u.vendor,
-    gaps: analyzeConfig(u.filename, u.content).gaps,
-  };
+  return { uploadId: u.id, filename: u.filename, content: u.content };
 }
 
 export interface ConfigAnalysisScreenProps {
@@ -76,6 +64,7 @@ export interface ConfigAnalysisScreenProps {
   tasks: Task[];
   devices: AnalyzedDeviceView[];
   latest: ConfigUploadView | null;
+  latestAi: ConfigAiAnalysis | null;
 }
 
 export function ConfigAnalysisScreen({
@@ -83,6 +72,7 @@ export function ConfigAnalysisScreen({
   tasks,
   devices,
   latest,
+  latestAi,
 }: ConfigAnalysisScreenProps) {
   const t = useTranslations("config");
   const tNav = useTranslations("nav");
@@ -93,7 +83,8 @@ export function ConfigAnalysisScreen({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [active, setActive] = useState<ActiveResult | null>(latest ? fromUpload(latest) : null);
-  const [ai, setAi] = useState<{ text: string; degraded: boolean } | null>(null);
+  const [ai, setAi] = useState<ConfigAiAnalysis | null>(latestAi);
+  const [aiDegraded, setAiDegraded] = useState(false);
   const [aiPending, setAiPending] = useState(false);
 
   // Upload target picker (audit + task), mirroring CreateFindingModal.
@@ -131,23 +122,23 @@ export function ConfigAnalysisScreen({
   function confirmUpload() {
     if (!pendingFile || !auditId || !taskId) return;
     const { name, text } = pendingFile;
+    setAiPending(true);
+    setAiDegraded(false);
     startTransition(async () => {
       const res = await uploadConfig({ filename: name, content: text, auditId, taskId });
       if (res.ok && res.uploadId) {
-        setActive({
-          uploadId: res.uploadId,
-          filename: name,
-          content: text,
-          vendor: res.vendor ?? "unknown",
-          gaps: analyzeConfig(name, text).gaps,
-        });
-        setAi(null);
+        setActive({ uploadId: res.uploadId, filename: name, content: text });
+        setAi(res.analysis ?? null);
+        setAiDegraded(false);
         setPendingFile(null);
         toast(t("uploaded"), "success");
         router.refresh();
+      } else if (res.error === "ai_unavailable") {
+        toast(t("aiUnreachable"), "danger");
       } else {
         toast(t("failed"), "danger");
       }
+      setAiPending(false);
     });
   }
 
@@ -167,23 +158,17 @@ export function ConfigAnalysisScreen({
   async function reanalyze() {
     if (!active) return;
     setAiPending(true);
+    setAiDegraded(false);
     try {
-      const prompt = [
-        `Qurilma: ${VENDOR_LABELS[active.vendor as VendorKey] ?? active.vendor} (${active.filename}).`,
-        `Aniqlangan kamchiliklar (${active.gaps.length}):`,
-        ...active.gaps.map((g, i) => `${i + 1}. [${g.severity}] ${g.title} — ${g.description}`),
-      ].join("\n");
-      const resp = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scope: "config", uploadId: active.uploadId, prompt }),
-      });
-      const data = (await resp.json()) as { ok?: boolean; text?: string };
-      setAi(data.ok ? { text: data.text ?? "", degraded: false } : { text: "", degraded: true });
-    } catch {
-      setAi({ text: "", degraded: true });
+      const res = await reanalyzeConfig({ uploadId: active.uploadId });
+      if (res.ok && res.analysis) {
+        setAi(res.analysis);
+      } else {
+        setAiDegraded(true);
+      }
     } finally {
       setAiPending(false);
+      router.refresh();
     }
   }
 
@@ -204,7 +189,8 @@ export function ConfigAnalysisScreen({
   }
 
   const lines = active ? active.content.split(/\r?\n/) : [];
-  const hlLines = new Set(active ? active.gaps.map((g) => g.line).filter((n) => n > 0) : []);
+  const hlLines = new Set(ai ? ai.gaps.map((g) => g.line).filter((n) => n > 0) : []);
+  const gapCount = ai?.gaps.length ?? 0;
 
   return (
     <div className="route-anim">
@@ -344,7 +330,7 @@ export function ConfigAnalysisScreen({
             footer={
               active ? (
                 <>
-                  <span>{t("gapsDetected", { n: active.gaps.length })}</span>
+                  <span>{t("gapsDetected", { n: gapCount })}</span>
                   <Button
                     size="xs"
                     variant="soft"
@@ -392,37 +378,7 @@ export function ConfigAnalysisScreen({
                   <span className="ai-card__title">{t("aiTitle")}</span>
                 </div>
 
-                {ai?.degraded ? (
-                  <p className="ai-card__body" style={{ color: "var(--status-danger-fg)" }}>
-                    {t("aiUnreachable")}
-                  </p>
-                ) : ai?.text ? (
-                  <p className="ai-card__body" style={{ whiteSpace: "pre-wrap" }}>
-                    {ai.text}
-                  </p>
-                ) : null}
-
-                <div
-                  className="ai-card__body"
-                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
-                >
-                  {active.gaps.length === 0 ? (
-                    <span className="text-sm text-muted">{t("noGaps")}</span>
-                  ) : (
-                    active.gaps.map((g, i) => (
-                      <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                        <Sev level={g.severity} />
-                        <div>
-                          <strong style={{ color: "var(--text-primary)" }}>
-                            {g.line > 0 ? `Satr ${g.line}: ` : ""}
-                            {g.title}
-                          </strong>
-                          <p style={{ marginTop: 4 }}>{g.description}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                <ConfigAiResult analysis={ai} loading={aiPending} degraded={aiDegraded} />
 
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                   <Button
@@ -430,9 +386,9 @@ export function ConfigAnalysisScreen({
                     variant="primary"
                     icon={<Plus size={13} />}
                     onClick={createDrafts}
-                    disabled={pending || active.gaps.length === 0}
+                    disabled={pending || aiPending || gapCount === 0}
                   >
-                    {t("aiCreateDrafts", { n: active.gaps.length })}
+                    {t("aiCreateDrafts", { n: gapCount })}
                   </Button>
                   <Button
                     size="sm"

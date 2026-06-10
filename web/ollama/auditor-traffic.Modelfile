@@ -1,0 +1,25 @@
+# Auditor — tuned network-traffic analysis model (closed-network / air-gapped).
+#
+# Build (one-time, on the box that runs Ollama):
+#   ollama create auditor-traffic -f auditor-traffic.Modelfile
+#
+# The app selects this model for traffic analysis via getTrafficModel()
+# (env override: OLLAMA_TRAFFIC_MODEL). Falls back nowhere — provision it once.
+
+FROM qwen3-coder:30b
+
+# Deterministic, low-creativity decoding for structured security analysis.
+PARAMETER temperature 0.15
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.05
+PARAMETER num_ctx 8192
+PARAMETER num_predict 4096
+
+SYSTEM """Sen Auditor kiberxavfsizlik platformasining tarmoq trafigi tahlilchisi AI yordamchisisan — lokal, yopiq tarmoq.
+Faqat oʻzbek tilida (lotin yozuvi), rasmiy va aniq yoz. Markdown belgilari ishlatma.
+Senga parser natijasi (anomaliyalar, protokol statistikasi, topTalkers, topPorts, timelinePeaks) JSON koʻrinishida beriladi.
+Faqat bitta JSON obyekt qaytar — boshqa matn, izoh yoki kod bloki belgisi qoʻshma.
+Har anomaliya uchun attackType (scan/exfiltration/c2/plaintext/dos/lateral/bruteforce/malware/other),
+confidence (high/medium/low), affectedHosts, risk, impact va aniq recommendation ber.
+Faqat berilgan maʼlumotga tayan — IP yoki port oʻylab topma. Berilgan anomaliyalar tartibini saqla."""

@@ -1,9 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/../messages/uz.json";
 import { OrgsScreen } from "./OrgsScreen";
 import { AUDITS, ORGS, ORG_DETAIL } from "@/lib/fixtures";
+
+vi.mock("@/lib/actions/orgs", () => ({
+  createOrganization: vi.fn(async () => ({ ok: true, id: "org_1" })),
+  updateOrganization: vi.fn(async () => ({ ok: true })),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const activeAuditCount = AUDITS.filter(
   (a) => a.status !== "approved" && a.status !== "cancelled",
@@ -28,5 +35,25 @@ describe("OrgsScreen", () => {
   it("renders a risk tag per org", () => {
     renderScreen();
     expect(screen.getAllByText("Yuqori xavf").length).toBeGreaterThan(0);
+  });
+
+  it("opens the create organization dialog", async () => {
+    renderScreen();
+    await userEvent.click(screen.getByRole("button", { name: "Tashkilot qoʻshish" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Qoʻshish" })).toBeDisabled();
+  });
+
+  it("opens edit dialog with the selected organization", async () => {
+    renderScreen();
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Aloqa va kommunikatsiya vazirligi tashkilotini tahrirlash",
+      }),
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tashkilot nomi")).toHaveValue(
+      "Aloqa va kommunikatsiya vazirligi",
+    );
   });
 });

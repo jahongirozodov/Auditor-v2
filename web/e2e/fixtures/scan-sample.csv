@@ -1,0 +1,5 @@
+title,severity,host,description,solution
+SQL Injection,high,10.0.0.5,Unsanitized user input reaches the query,Use parameterized queries
+SQL Injection,high,10.0.0.5,Unsanitized user input reaches the query,Use parameterized queries
+Outdated TLS,medium,10.0.0.6,TLS 1.0 still enabled,Disable TLS 1.0 and 1.1
+Open SSH port,low,10.0.0.5,Port 22 reachable from any network,Restrict management access

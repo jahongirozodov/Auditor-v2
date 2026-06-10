@@ -1,7 +1,12 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import type { Finding, FindingStatus, Severity } from "@/lib/types/entities";
+import type {
+  Finding,
+  FindingEvidenceView,
+  FindingStatus,
+  Severity,
+} from "@/lib/types/entities";
 
 type Row = {
   id: string;
@@ -56,3 +61,26 @@ export const getFindingsByTask = cache(
   async (taskId: string): Promise<Finding[]> =>
     (await prisma.finding.findMany({ where: { taskId } })).map(toFinding),
 );
+
+export const getFindingEvidenceMap = cache(async (): Promise<Record<string, FindingEvidenceView[]>> => {
+  const rows = await prisma.findingEvidence.findMany({
+    include: { file: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const map: Record<string, FindingEvidenceView[]> = {};
+  for (const row of rows) {
+    const bytes = row.file.bytes ? Buffer.from(row.file.bytes).toString("base64") : "";
+    const item: FindingEvidenceView = {
+      id: row.id,
+      findingId: row.findingId,
+      filename: row.file.filename,
+      mimeType: row.file.mimeType,
+      sizeBytes: row.file.sizeBytes,
+      dataUrl: `data:${row.file.mimeType};base64,${bytes}`,
+      kind: row.kind,
+      createdAt: row.createdAt.toISOString(),
+    };
+    map[row.findingId] = [...(map[row.findingId] ?? []), item];
+  }
+  return map;
+});

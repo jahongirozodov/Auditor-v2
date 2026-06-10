@@ -1,17 +1,33 @@
 ﻿import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { parseTrafficAnalysis, type TrafficAiAnalysis } from "@/lib/ai/prompts";
 import type { TrafficUploadView } from "@/lib/types/entities";
 
 function toView(u: {
-  id: string; filename: string; format: string; content: string;
-  auditId: string; taskId: string; anomalyCount: number;
-  totalPackets: number; uniqueIps: number; createdAt: Date;
+  id: string;
+  filename: string;
+  format: string;
+  content: string;
+  parsed: string | null;
+  auditId: string;
+  taskId: string;
+  anomalyCount: number;
+  totalPackets: number;
+  uniqueIps: number;
+  createdAt: Date;
 }): TrafficUploadView {
   return {
-    id: u.id, filename: u.filename, format: u.format, content: u.content,
-    auditId: u.auditId, taskId: u.taskId, anomalyCount: u.anomalyCount,
-    totalPackets: u.totalPackets, uniqueIps: u.uniqueIps,
+    id: u.id,
+    filename: u.filename,
+    format: u.format,
+    content: u.content,
+    parsed: u.parsed,
+    auditId: u.auditId,
+    taskId: u.taskId,
+    anomalyCount: u.anomalyCount,
+    totalPackets: u.totalPackets,
+    uniqueIps: u.uniqueIps,
     createdAt: u.createdAt.toISOString(),
   };
 }
@@ -27,3 +43,14 @@ export const getTrafficUpload = cache(async (id: string): Promise<TrafficUploadV
   const u = await prisma.trafficUpload.findUnique({ where: { id } });
   return u ? toView(u) : null;
 });
+
+/** Stored structured AI analysis for an upload — hydrates the screen on load. */
+export const getLatestTrafficAi = cache(
+  async (uploadId: string): Promise<TrafficAiAnalysis | null> => {
+    const u = await prisma.trafficUpload.findUnique({
+      where: { id: uploadId },
+      select: { aiResult: true, aiOk: true },
+    });
+    return u?.aiOk ? parseTrafficAnalysis(u.aiResult) : null;
+  },
+);

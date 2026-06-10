@@ -41,6 +41,7 @@ export async function emitKpiEvent(
     },
   });
   const countUpdate = countField ? { [countField]: { increment: 1 } } : {};
+  const countCreate = countField ? { [countField]: 1 } : {};
   await tx.kpiUser.upsert({
     where: { userId },
     update: { total: { increment: points }, ...countUpdate },
@@ -52,7 +53,7 @@ export async function emitKpiEvent(
       findings: 0,
       delta: points,
       sparkline: J([]),
-      ...countUpdate,
+      ...countCreate,
     },
   });
 }

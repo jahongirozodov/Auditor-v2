@@ -23,12 +23,14 @@ describe("parseSuricata", () => {
   });
 
   it("maps alert severity 2 to medium", () => {
-    const line = '{"timestamp":"2024-01-01T10:00:00Z","event_type":"alert","src_ip":"1.2.3.4","dest_ip":"5.6.7.8","dest_port":80,"proto":"TCP","alert":{"severity":2,"signature":"Medium alert"}}';
+    const line =
+      '{"timestamp":"2024-01-01T10:00:00Z","event_type":"alert","src_ip":"1.2.3.4","dest_ip":"5.6.7.8","dest_port":80,"proto":"TCP","alert":{"severity":2,"signature":"Medium alert"}}';
     expect(parseSuricata(line).anomalies[0]!.severity).toBe("medium");
   });
 
   it("maps alert severity 3 to low", () => {
-    const line = '{"timestamp":"2024-01-01T10:00:00Z","event_type":"alert","src_ip":"1.2.3.4","dest_ip":"5.6.7.8","dest_port":80,"proto":"TCP","alert":{"severity":3,"signature":"Low alert"}}';
+    const line =
+      '{"timestamp":"2024-01-01T10:00:00Z","event_type":"alert","src_ip":"1.2.3.4","dest_ip":"5.6.7.8","dest_port":80,"proto":"TCP","alert":{"severity":3,"signature":"Low alert"}}';
     expect(parseSuricata(line).anomalies[0]!.severity).toBe("low");
   });
 
@@ -46,7 +48,7 @@ describe("parseSuricata", () => {
 
   it("includes protocol stats", () => {
     const r = parseSuricata(EVE);
-    expect(r.protocols.some(p => p.protocol === "UDP")).toBe(true);
+    expect(r.protocols.some((p) => p.protocol === "UDP")).toBe(true);
   });
 
   it("never throws on empty input", () => {

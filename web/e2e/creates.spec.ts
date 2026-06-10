@@ -62,6 +62,8 @@ test.describe.serial("creates", () => {
           },
         });
       }
+      await prisma.auditProjectApproval.deleteMany({ where: { project: { auditId: NEW_ID } } });
+      await prisma.auditProject.deleteMany({ where: { auditId: NEW_ID } });
       await prisma.approvalEvent.deleteMany({ where: { entityId: NEW_ID } });
       await prisma.auditLog.deleteMany({ where: { entity: NEW_ID } });
       await prisma.auditMember.deleteMany({ where: { auditId: NEW_ID } });
@@ -71,7 +73,7 @@ test.describe.serial("creates", () => {
     }
   });
 
-  test("create audit → form team → start project draft → submit", async ({ page }) => {
+  test("create audit → create project draft → submit", async ({ page }) => {
     await login(page);
     await page.goto("/audits");
 
@@ -88,13 +90,10 @@ test.describe.serial("creates", () => {
     await expect(page).toHaveURL(new RegExp(`/audits/${NEW_ID}$`));
     await expect(page.getByRole("heading", { name: "E2E sinov auditi" })).toBeVisible();
 
-    // Group tab: start-draft CTA is present (proves group_forming) → start the draft.
-    await page.getByRole("tab", { name: /Audit guruhi/ }).click();
-    await page.getByRole("button", { name: /Loyiha qoralamasini boshlash/ }).click();
-    await expect(page.getByRole("button", { name: /Loyiha qoralamasini boshlash/ })).toHaveCount(0);
-
-    // Project tab: draft → submit → project_pending (awaiting head).
+    // Project tab: create draft → submit → project_pending (awaiting head).
     await page.getByRole("tab", { name: /Audit loyihasi/ }).click();
+    await page.getByRole("button", { name: /Loyiha yaratish/ }).click();
+    await expect(page.getByRole("button", { name: /Loyiha yaratish/ })).toHaveCount(0);
     const apf = page.locator(".apf");
     await expect(apf.getByText("Qoralama")).toBeVisible();
     await apf.getByRole("button", { name: "Tasdiqqa yuborish" }).click();
@@ -153,10 +152,10 @@ test.describe.serial("create task", () => {
   test("create + assign a task → it appears in the DB-backed assign table", async ({ page }) => {
     await login(page);
     await page.goto("/tasks/assign");
-    await page.getByLabel("Audit:").selectOption(TASK_AUDIT);
 
     // Open the create modal + fill the required fields (type/priority keep defaults).
     await page.getByRole("button", { name: /Yangi vazifa/ }).click();
+    await page.locator("#ct-audit").selectOption(TASK_AUDIT);
     await page.locator("#ct-title").fill("E2E sinov vazifasi");
     await page.locator("#ct-due").fill("2026-06-15");
     await page.locator("#ct-assignee").selectOption("u6");

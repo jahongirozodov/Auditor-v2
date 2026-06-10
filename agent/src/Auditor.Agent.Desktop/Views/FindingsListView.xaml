@@ -1,0 +1,105 @@
+<UserControl x:Class="Auditor.Agent.Desktop.Views.FindingsListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+        <DockPanel Margin="0,0,0,14">
+            <StackPanel DockPanel.Dock="Left">
+                <TextBlock Text="Lokal findinglar" Style="{StaticResource H1}" />
+                <TextBlock Text="Oflayn yaratilgan topilmalar — sinxronlash kutilmoqda" Style="{StaticResource Meta}" Margin="0,4,0,0" />
+            </StackPanel>
+            <Button DockPanel.Dock="Right" HorizontalAlignment="Right" Content="+ Yangi finding"
+                    Style="{StaticResource BtnPrimary}" Command="{Binding NewFindingCommand}" />
+        </DockPanel>
+
+        <!-- Status filter chips -->
+        <WrapPanel Margin="0,0,0,12">
+            <RadioButton GroupName="ffilter" Style="{StaticResource ChipFilter}" Command="{Binding SetFilterCommand}" CommandParameter="all"
+                         IsChecked="{Binding ActiveFilter, Converter={StaticResource StrEq}, ConverterParameter=all, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Hammasi" /><TextBlock Text="{Binding CountAll}" Margin="6,0,0,0" Foreground="{StaticResource TextMuted}" />
+                </StackPanel>
+            </RadioButton>
+            <RadioButton GroupName="ffilter" Style="{StaticResource ChipFilter}" Command="{Binding SetFilterCommand}" CommandParameter="draft"
+                         IsChecked="{Binding ActiveFilter, Converter={StaticResource StrEq}, ConverterParameter=draft, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Qoralama" /><TextBlock Text="{Binding CountDraft}" Margin="6,0,0,0" Foreground="{StaticResource TextMuted}" />
+                </StackPanel>
+            </RadioButton>
+            <RadioButton GroupName="ffilter" Style="{StaticResource ChipFilter}" Command="{Binding SetFilterCommand}" CommandParameter="syncing"
+                         IsChecked="{Binding ActiveFilter, Converter={StaticResource StrEq}, ConverterParameter=syncing, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Yuborilmoqda" /><TextBlock Text="{Binding CountSyncing}" Margin="6,0,0,0" Foreground="{StaticResource TextMuted}" />
+                </StackPanel>
+            </RadioButton>
+            <RadioButton GroupName="ffilter" Style="{StaticResource ChipFilter}" Command="{Binding SetFilterCommand}" CommandParameter="sent"
+                         IsChecked="{Binding ActiveFilter, Converter={StaticResource StrEq}, ConverterParameter=sent, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Yuborilgan" /><TextBlock Text="{Binding CountSent}" Margin="6,0,0,0" Foreground="{StaticResource TextMuted}" />
+                </StackPanel>
+            </RadioButton>
+            <RadioButton GroupName="ffilter" Style="{StaticResource ChipFilter}" Command="{Binding SetFilterCommand}" CommandParameter="error"
+                         IsChecked="{Binding ActiveFilter, Converter={StaticResource StrEq}, ConverterParameter=error, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Xato" /><TextBlock Text="{Binding CountError}" Margin="6,0,0,0" Foreground="{StaticResource TextMuted}" />
+                </StackPanel>
+            </RadioButton>
+        </WrapPanel>
+
+        <!-- Search -->
+        <Grid Margin="0,0,0,12">
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Text="Qidirish: sarlavha, asset yoki CWE" Foreground="{StaticResource TextMuted}" FontSize="13"
+                       Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                       Visibility="{Binding SearchText, Converter={StaticResource EmptyToVis}}" />
+        </Grid>
+
+        <!-- Rows -->
+        <ItemsControl ItemsSource="{Binding Findings}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource LRow}" Margin="0,0,0,8">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Left" Width="10" Height="10" CornerRadius="5" VerticalAlignment="Top"
+                                    Margin="0,4,12,0" Background="{Binding SeverityCode, Converter={StaticResource SeverityToBrush}}" />
+                            <Border DockPanel.Dock="Right" VerticalAlignment="Top" Style="{StaticResource Tag}"
+                                    Background="{Binding StateKind, Converter={StaticResource KindToBrush}}" Margin="12,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding StateGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                               Foreground="{Binding StateKind, Converter={StaticResource KindToFg}}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding StateLabel}" FontSize="11" Margin="5,0,0,0"
+                                               Foreground="{Binding StateKind, Converter={StaticResource KindToFg}}" />
+                                </StackPanel>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding SeverityLabel}" Style="{StaticResource MetaLabel}" />
+                                    <TextBlock Text="·" Style="{StaticResource MetaLabel}" Margin="6,0" />
+                                    <TextBlock Style="{StaticResource MetaLabel}"><Run Text="CVSS " /><Run Text="{Binding CvssText, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock Text="·" Style="{StaticResource MetaLabel}" Margin="6,0" />
+                                    <TextBlock Text="{Binding TaskId}" Style="{StaticResource MetaLabel}" FontFamily="{StaticResource FontMono}" />
+                                    <TextBlock Text="·" Style="{StaticResource MetaLabel}" Margin="6,0" Visibility="{Binding HasEvidence, Converter={StaticResource BoolToVis}}" />
+                                    <TextBlock Text="{Binding EvidenceText}" Style="{StaticResource MetaLabel}" Visibility="{Binding HasEvidence, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Empty state -->
+        <StackPanel Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center" Margin="0,48,0,0">
+            <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource BgSurface2Brush}" HorizontalAlignment="Center">
+                <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="24" Foreground="{StaticResource TextTertiary}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="Finding topilmadi" FontFamily="{StaticResource FontDisplay}" FontSize="15" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Margin="0,12,0,0" />
+            <TextBlock Text="Yangi topilma qoʻshing — lokal saqlanadi va keyin sinxronlanadi" Style="{StaticResource Meta}"
+                       HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0" />
+            <Button Content="+ Yangi finding" Style="{StaticResource BtnSoft}" Command="{Binding NewFindingCommand}"
+                    HorizontalAlignment="Center" Margin="0,12,0,0" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>
