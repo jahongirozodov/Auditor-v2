@@ -85,6 +85,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/audit-access", () => ({ isAuditMember: vi.fn(async () => true) }));
 vi.mock("@/lib/session", () => ({
   requireSession: vi.fn(async () => ({ userId: "u6", role: "lead", name: "" })),
 }));

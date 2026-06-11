@@ -13,8 +13,6 @@ import type { ScannerSeverity, ScannerNormalization } from "@/lib/analysis/scann
 import { parseScannerNormalization } from "@/lib/ai/prompts";
 import { isAuditMember } from "@/lib/audit-access";
 import { materializeFindings, type FindingRowInput } from "./findings";
-import { after } from "next/server";
-import { runTopologyEnrichment } from "@/lib/analysis/topology/enrich-bg";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -113,11 +111,6 @@ export async function uploadScannerFile(
   });
 
   revalidatePath("/analysis/scanner");
-  const _auditId = auditId;
-  const _userId = userId;
-  after(async () => {
-    try { await runTopologyEnrichment(_auditId, _userId); } catch {}
-  });
   return {
     ok: true,
     uploadId,

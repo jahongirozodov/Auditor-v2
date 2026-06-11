@@ -139,6 +139,13 @@ describe("reanalyzeScanner — membership gate", () => {
   });
 });
 
+describe("createScannerDrafts — membership gate", () => {
+  it("returns forbidden when user is not audit member", async () => {
+    const r = await createScannerDrafts({ uploadId: "UP-1", findingIndices: [] });
+    expect(r).toEqual({ ok: false, error: "forbidden" });
+  });
+});
+
 describe("uploadTrafficFile — membership gate", () => {
   it("returns forbidden when user is not audit member", async () => {
     const r = await uploadTrafficFile({ filename: "f.pcap", content: "x", auditId: "AUD-1", taskId: "T-1" });
@@ -149,6 +156,13 @@ describe("uploadTrafficFile — membership gate", () => {
 describe("reanalyzeTraffic — membership gate", () => {
   it("returns forbidden when user is not audit member", async () => {
     const r = await reanalyzeTraffic({ uploadId: "UP-1" });
+    expect(r).toEqual({ ok: false, error: "forbidden" });
+  });
+});
+
+describe("createTrafficDrafts — membership gate", () => {
+  it("returns forbidden when user is not audit member", async () => {
+    const r = await createTrafficDrafts({ uploadId: "UP-1" });
     expect(r).toEqual({ ok: false, error: "forbidden" });
   });
 });

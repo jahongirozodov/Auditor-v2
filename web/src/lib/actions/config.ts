@@ -13,8 +13,6 @@ import { getOllamaConfig } from "@/lib/ai/ollama";
 import { parseConfigAnalysis } from "@/lib/ai/prompts";
 import { isAuditMember } from "@/lib/audit-access";
 import { materializeFindings, type FindingRowInput } from "./findings";
-import { after } from "next/server";
-import { runTopologyEnrichment } from "@/lib/analysis/topology/enrich-bg";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB — configs are small text files
@@ -139,11 +137,6 @@ export async function uploadConfig(
   });
 
   revalidatePath("/analysis/config");
-  const _auditId = auditId;
-  const _userId = userId;
-  after(async () => {
-    try { await runTopologyEnrichment(_auditId, _userId); } catch {}
-  });
   return {
     ok: true,
     uploadId,

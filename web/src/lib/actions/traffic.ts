@@ -13,8 +13,6 @@ import { analyzeTrafficAI } from "@/lib/analysis/traffic/ai";
 import { parseTrafficAnalysis, type TrafficAiAnalysis } from "@/lib/ai/prompts";
 import { isAuditMember } from "@/lib/audit-access";
 import { materializeFindings, type FindingRowInput } from "./findings";
-import { after } from "next/server";
-import { runTopologyEnrichment } from "@/lib/analysis/topology/enrich-bg";
 
 const isPcapName = (name: string): boolean => /\.(pcap|pcapng)$/i.test(name);
 
@@ -159,11 +157,6 @@ export async function uploadTrafficFile(
   });
 
   revalidatePath("/analysis/traffic");
-  const _auditId = auditId;
-  const _userId = userId;
-  after(async () => {
-    try { await runTopologyEnrichment(_auditId, _userId); } catch {}
-  });
   return {
     ok: true,
     uploadId,
