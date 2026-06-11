@@ -32,6 +32,7 @@ export interface FindingDrawerProps {
   usersById: Record<string, User>;
   userId: string;
   role: RoleCode;
+  canCreate: boolean;
   onClose: () => void;
 }
 
@@ -44,6 +45,7 @@ export function FindingDrawer({
   usersById,
   userId,
   role,
+  canCreate,
   onClose,
 }: FindingDrawerProps) {
   const t = useTranslations("findings");
@@ -57,7 +59,7 @@ export function FindingDrawer({
     timeline: [],
     current: currentOf(finding.status, null),
   };
-  const canSubmit = userId === finding.reportedBy || canActAt(role, "group_lead");
+  const canSubmit = canCreate && (userId === finding.reportedBy || canActAt(role, "group_lead"));
   const reporter = usersById[finding.reportedBy] ?? { name: finding.reportedBy };
   // Remediation actor = the assignee of the finding's linked task (or a lead, server-checked).
   const task = tasks.find((tk) => tk.id === finding.taskId);

@@ -50,6 +50,8 @@ function renderScreen() {
         evidenceByFindingId={evidenceByFindingId}
         audits={AUDITS}
         tasks={TASKS}
+        orgsById={{}}
+        canCreate={true}
         userId="u1"
         role="super"
       />

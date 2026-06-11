@@ -26,6 +26,7 @@ export function FindingsTab({ a, role }: { a: Audit; role: RoleCode }) {
         usersById={usersById}
         userId=""
         role={role}
+        canCreate={true}
         onClose={() => setOpenId(null)}
       />
     </>
