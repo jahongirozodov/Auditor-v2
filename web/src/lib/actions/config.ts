@@ -11,7 +11,10 @@ import { gapToFindingInput } from "@/lib/analysis/config/to-finding";
 import type { ConfigAnalysis, GapSeverity } from "@/lib/analysis/config";
 import { getOllamaConfig } from "@/lib/ai/ollama";
 import { parseConfigAnalysis } from "@/lib/ai/prompts";
+import { isAuditMember } from "@/lib/audit-access";
 import { materializeFindings, type FindingRowInput } from "./findings";
+import { after } from "next/server";
+import { runTopologyEnrichment } from "@/lib/analysis/topology/enrich-bg";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB — configs are small text files
@@ -61,6 +64,7 @@ export async function uploadConfig(
 
   const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { id: true } });
   if (!audit) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(auditId, userId))) return { ok: false, error: "forbidden" };
   const task = await prisma.task.findUnique({ where: { id: taskId }, select: { auditId: true } });
   if (!task) return { ok: false, error: "not_found" };
   if (task.auditId !== auditId) return { ok: false, error: "task_mismatch" };
@@ -135,6 +139,11 @@ export async function uploadConfig(
   });
 
   revalidatePath("/analysis/config");
+  const _auditId = auditId;
+  const _userId = userId;
+  after(async () => {
+    try { await runTopologyEnrichment(_auditId, _userId); } catch {}
+  });
   return {
     ok: true,
     uploadId,
@@ -161,6 +170,7 @@ export async function reanalyzeConfig(input: { uploadId: string }): Promise<Rean
 
   const upload = await prisma.configUpload.findUnique({ where: { id: uploadId.data } });
   if (!upload) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(upload.auditId, userId))) return { ok: false, error: "forbidden" };
 
   const r = await analyzeConfigAI(upload.filename, upload.content);
   if (!r.ok || !r.analysis) return { ok: false, error: "ai_unavailable" };
@@ -243,6 +253,7 @@ export async function createConfigDrafts(
 
   const upload = await prisma.configUpload.findUnique({ where: { id: uploadId } });
   if (!upload) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(upload.auditId, userId))) return { ok: false, error: "forbidden" };
 
   const ai = await prisma.aiAnalysisResult.findFirst({
     where: { uploadId, scope: "config", ok: true },

@@ -11,7 +11,10 @@ import type { AnomalySeverity, TrafficParseResult } from "@/lib/analysis/traffic
 import { parsePcap } from "@/lib/analysis/traffic/parsers/pcap";
 import { analyzeTrafficAI } from "@/lib/analysis/traffic/ai";
 import { parseTrafficAnalysis, type TrafficAiAnalysis } from "@/lib/ai/prompts";
+import { isAuditMember } from "@/lib/audit-access";
 import { materializeFindings, type FindingRowInput } from "./findings";
+import { after } from "next/server";
+import { runTopologyEnrichment } from "@/lib/analysis/topology/enrich-bg";
 
 const isPcapName = (name: string): boolean => /\.(pcap|pcapng)$/i.test(name);
 
@@ -92,6 +95,7 @@ export async function uploadTrafficFile(
 
   const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { id: true } });
   if (!audit) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(auditId, userId))) return { ok: false, error: "forbidden" };
   const task = await prisma.task.findUnique({ where: { id: taskId }, select: { auditId: true } });
   if (!task) return { ok: false, error: "not_found" };
   if (task.auditId !== auditId) return { ok: false, error: "task_mismatch" };
@@ -155,6 +159,11 @@ export async function uploadTrafficFile(
   });
 
   revalidatePath("/analysis/traffic");
+  const _auditId = auditId;
+  const _userId = userId;
+  after(async () => {
+    try { await runTopologyEnrichment(_auditId, _userId); } catch {}
+  });
   return {
     ok: true,
     uploadId,
@@ -183,6 +192,7 @@ export async function reanalyzeTraffic(input: {
 
   const upload = await prisma.trafficUpload.findUnique({ where: { id: parsed.data } });
   if (!upload) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(upload.auditId, userId))) return { ok: false, error: "forbidden" };
 
   const result = resultFromStored(upload);
   const ai = await analyzeTrafficAI(upload.filename, result);
@@ -226,6 +236,7 @@ export async function createTrafficDrafts(
 
   const upload = await prisma.trafficUpload.findUnique({ where: { id: uploadId } });
   if (!upload) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(upload.auditId, userId))) return { ok: false, error: "forbidden" };
 
   const result = resultFromStored(upload);
   if (result.anomalies.length === 0) return { ok: false, error: "no_anomalies" };

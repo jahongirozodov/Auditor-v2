@@ -11,7 +11,10 @@ import { normalizedFindingToFindingInput } from "@/lib/analysis/scanner/to-findi
 import { normalizeScannerAI } from "@/lib/analysis/scanner/ai";
 import type { ScannerSeverity, ScannerNormalization } from "@/lib/analysis/scanner";
 import { parseScannerNormalization } from "@/lib/ai/prompts";
+import { isAuditMember } from "@/lib/audit-access";
 import { materializeFindings, type FindingRowInput } from "./findings";
+import { after } from "next/server";
+import { runTopologyEnrichment } from "@/lib/analysis/topology/enrich-bg";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -48,6 +51,7 @@ export async function uploadScannerFile(
 
   const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { id: true } });
   if (!audit) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(auditId, userId))) return { ok: false, error: "forbidden" };
   const task = await prisma.task.findUnique({ where: { id: taskId }, select: { auditId: true } });
   if (!task) return { ok: false, error: "not_found" };
   if (task.auditId !== auditId) return { ok: false, error: "task_mismatch" };
@@ -109,6 +113,11 @@ export async function uploadScannerFile(
   });
 
   revalidatePath("/analysis/scanner");
+  const _auditId = auditId;
+  const _userId = userId;
+  after(async () => {
+    try { await runTopologyEnrichment(_auditId, _userId); } catch {}
+  });
   return {
     ok: true,
     uploadId,
@@ -137,6 +146,7 @@ export async function reanalyzeScanner(input: {
 
   const upload = await prisma.scannerUpload.findUnique({ where: { id: uploadId.data } });
   if (!upload) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(upload.auditId, userId))) return { ok: false, error: "forbidden" };
 
   const result = analyzeScanner(upload.filename, upload.content);
   const ai = await normalizeScannerAI(result.scanner, result.findings);
@@ -183,6 +193,7 @@ export async function createScannerDrafts(
 
   const upload = await prisma.scannerUpload.findUnique({ where: { id: uploadId } });
   if (!upload) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(upload.auditId, userId))) return { ok: false, error: "forbidden" };
 
   const asset = upload.filename.replace(/\.[^.]+$/, "") || upload.filename;
   const ctx = { auditId: upload.auditId, taskId: upload.taskId, asset };
