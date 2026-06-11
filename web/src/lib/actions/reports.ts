@@ -9,6 +9,7 @@ import { canActAt, nextStage, reportCurrentOf } from "@/lib/approval";
 import { isAuditMember, isAuditLeader } from "@/lib/audit-access";
 import { generate, getOllamaConfig, isAiEnabled } from "@/lib/ai/ollama";
 import { SYSTEM } from "@/lib/ai/prompts";
+import { emitNotification } from "@/lib/notifications/emit";
 import type { ApprovalStageKey, ReportStatus } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 import type { GenerateReportInput } from "@/lib/reports/constants";
@@ -166,6 +167,27 @@ export async function reportApproval(
         }),
       },
     });
+    if (action === "return") {
+      await emitNotification(tx, {
+        type: "report_returned",
+        recipients: [report.authorId].filter(Boolean) as string[],
+        actorId: userId,
+        params: { title: report.title },
+        href: `/reports/${report.id}`,
+        entityType: "report",
+        entityId: report.id,
+      });
+    } else if (action === "approve" && nextStatus === "approved") {
+      await emitNotification(tx, {
+        type: "report_approved",
+        recipients: [report.authorId].filter(Boolean) as string[],
+        actorId: userId,
+        params: { title: report.title },
+        href: `/reports/${report.id}`,
+        entityType: "report",
+        entityId: report.id,
+      });
+    }
   });
 
   revalidatePath("/reports");
@@ -233,6 +255,15 @@ export async function regenerateReportSummary(reportId: string): Promise<ActionR
   await prisma.report.update({
     where: { id: reportId },
     data: { summary: reply.text, generated: now(), size: `${kb} KB` },
+  });
+  await emitNotification(prisma, {
+    type: "report_ready",
+    recipients: [report.authorId].filter(Boolean) as string[],
+    actorId: userId,
+    params: { title: report.title },
+    href: `/reports/${report.id}`,
+    entityType: "report",
+    entityId: report.id,
   });
   revalidatePath("/reports");
   return { ok: true };
