@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
     auditId: "AUD-1",
     status: "draft",
     currentApprovalStage: null as string | null,
-    audit: { status: "project_draft", leaderId: "u3" },
+    audit: { status: "project_draft", leaderId: "u3", title: "Test Audit" },
   },
   kpiFound: null as { id: string } | null,
 }));
@@ -41,6 +41,8 @@ vi.mock("@/lib/prisma", () => {
       create: vi.fn(async () => ({})),
     },
     kpiUser: { upsert: vi.fn(async () => ({})) },
+    systemSetting: { findUnique: vi.fn(async () => null) },
+    notification: { createMany: vi.fn(async () => ({})) },
     $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation(async (arg: unknown) =>
@@ -80,7 +82,7 @@ beforeEach(() => {
     auditId: "AUD-1",
     status: "draft",
     currentApprovalStage: null,
-    audit: { status: "project_draft", leaderId: "u3" },
+    audit: { status: "project_draft", leaderId: "u3", title: "Test Audit" },
   };
   h.kpiFound = null;
 });
@@ -136,12 +138,12 @@ describe("projectApproval", () => {
     });
   });
 
-  it("head approve advances to dept", async () => {
+  it("head approve advances to dept and sets audit head_approved", async () => {
     h.project = {
       ...h.project,
       status: "submitted",
       currentApprovalStage: "head",
-      audit: { status: "project_pending", leaderId: "u3" },
+      audit: { status: "project_pending", leaderId: "u3", title: "Test Audit" },
     };
     vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u2", role: "head", name: "" });
     expect(await projectApproval({ auditId: "AUD-1", action: "approve" })).toEqual({ ok: true });
@@ -149,14 +151,18 @@ describe("projectApproval", () => {
       where: { id: "p1" },
       data: { status: "submitted", currentApprovalStage: "dept" },
     });
+    expect(mockPrisma.audit.update).toHaveBeenCalledWith({
+      where: { id: "AUD-1" },
+      data: { status: "head_approved", stage: 4 },
+    });
   });
 
-  it("dept approve sets project approved and audit assigning", async () => {
+  it("dept approve sets project approved and audit approved (Tasdiqlangan)", async () => {
     h.project = {
       ...h.project,
       status: "submitted",
       currentApprovalStage: "dept",
-      audit: { status: "project_pending", leaderId: "u3" },
+      audit: { status: "head_approved", leaderId: "u3", title: "Test Audit" },
     };
     vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u1", role: "super", name: "" });
     expect(await projectApproval({ auditId: "AUD-1", action: "approve" })).toEqual({ ok: true });
@@ -166,7 +172,7 @@ describe("projectApproval", () => {
     });
     expect(mockPrisma.audit.update).toHaveBeenCalledWith({
       where: { id: "AUD-1" },
-      data: { status: "assigning", stage: 5 },
+      data: { status: "approved", stage: 5 },
     });
   });
 
@@ -175,7 +181,7 @@ describe("projectApproval", () => {
       ...h.project,
       status: "submitted",
       currentApprovalStage: "head",
-      audit: { status: "project_pending", leaderId: "u3" },
+      audit: { status: "project_pending", leaderId: "u3", title: "Test Audit" },
     };
     vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u2", role: "head", name: "" });
     expect(await projectApproval({ auditId: "AUD-1", action: "return" })).toEqual({
@@ -189,7 +195,7 @@ describe("projectApproval", () => {
       ...h.project,
       status: "submitted",
       currentApprovalStage: "head",
-      audit: { status: "project_pending", leaderId: "u3" },
+      audit: { status: "project_pending", leaderId: "u3", title: "Test Audit" },
     };
     vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u2", role: "head", name: "" });
     expect(

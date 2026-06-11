@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { canActAt, auditProjectCurrentOf, nextStage } from "@/lib/approval";
 import { emitKpiEvent } from "@/lib/kpi-engine";
+import { emitNotification } from "@/lib/notifications/emit";
 import type { ApprovalStageKey, AuditProjectStatus, AuditStatus } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 import type { ActionResult } from "./types";
@@ -95,7 +96,7 @@ export async function projectApproval(
   const { userId, role } = await requireSession();
   const project = await prisma.auditProject.findUnique({
     where: { auditId },
-    include: { audit: { select: { status: true, leaderId: true } } },
+    include: { audit: { select: { status: true, leaderId: true, title: true } } },
   });
   if (!project) return { ok: false, error: "not_found" };
 
@@ -130,7 +131,7 @@ export async function projectApproval(
     const nxt = nextStage(cur);
     nextProjectStatus = nxt ? "submitted" : "approved";
     nextProjectStage = nxt;
-    nextAuditStatus = nxt ? "project_pending" : "assigning";
+    nextAuditStatus = nxt ? "head_approved" : "approved";
     nextAuditStage = nxt ? 4 : 5;
     evAction = "Approve";
     evStage = cur;
@@ -203,6 +204,29 @@ export async function projectApproval(
           payload: { projectId: project.id },
         });
       }
+    }
+    if (action === "return") {
+      await emitNotification(tx, {
+        type: "project_returned",
+        recipients: [project.audit.leaderId].filter(Boolean) as string[],
+        actorId: userId,
+        params: { audit: project.audit.title },
+        href: `/audits/${project.auditId}`,
+        auditId: project.auditId,
+        entityType: "audit",
+        entityId: project.auditId,
+      });
+    } else if (nextAuditStatus === "approved") {
+      await emitNotification(tx, {
+        type: "project_approved",
+        recipients: [project.audit.leaderId].filter(Boolean) as string[],
+        actorId: userId,
+        params: { audit: project.audit.title },
+        href: `/audits/${project.auditId}`,
+        auditId: project.auditId,
+        entityType: "audit",
+        entityId: project.auditId,
+      });
     }
   });
 

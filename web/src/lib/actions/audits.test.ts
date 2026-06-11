@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 
 const h = vi.hoisted(() => ({
   canManage: true,
-  audit: { status: "group_forming", leaderId: "u3" } as { status: string; leaderId: string },
+  audit: { status: "group_forming", leaderId: "u3", title: "Test Audit" } as { status: string; leaderId: string; title: string },
   codes: [{ code: "AUD-2026-015" }] as { code: string }[],
 }));
 
@@ -30,6 +30,8 @@ vi.mock("@/lib/prisma", () => {
     auditLog: { create: vi.fn(async () => ({})) },
     kpiEvent: { create: vi.fn(async () => ({})) },
     kpiUser: { upsert: vi.fn(async () => ({})) },
+    systemSetting: { findUnique: vi.fn(async () => null) },
+    notification: { createMany: vi.fn(async () => ({})) },
     $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation(async (arg: unknown) =>
@@ -59,7 +61,7 @@ const validCreate = {
 beforeEach(() => {
   vi.clearAllMocks();
   h.canManage = true;
-  h.audit = { status: "group_forming", leaderId: "u3" };
+  h.audit = { status: "group_forming", leaderId: "u3", title: "Test Audit" };
   h.codes = [{ code: "AUD-2026-015" }];
 });
 
@@ -96,7 +98,7 @@ describe("team edits", () => {
     expect(await promoteLead({ auditId: "AUD-1", userId: "u6" })).toEqual({ ok: true });
   });
   it("blocks team edits once past forming", async () => {
-    h.audit = { status: "in_progress", leaderId: "u3" };
+    h.audit = { status: "in_progress", leaderId: "u3", title: "Test Audit" };
     expect(await addMember({ auditId: "AUD-1", userId: "u6" })).toEqual({
       ok: false,
       error: "illegal_status",

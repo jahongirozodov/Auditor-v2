@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAgent } from "@/lib/agent/auth";
 import { json, clientIp } from "@/lib/agent/util";
+import { emitNotification } from "@/lib/notifications/emit";
 
 const Body = z.object({
   sessionId: z.string().min(1),
@@ -26,15 +27,20 @@ export async function POST(req: Request) {
   if (!session || session.tokenId !== tokenId) return json({ ok: false, error: "not_found" }, 404);
   if (session.status !== "open") return json({ ok: false, error: "already_closed" }, 409);
 
-  await prisma.$transaction([
-    prisma.agentSyncSession.update({
+  const audit = await prisma.audit.findUnique({
+    where: { id: auditId },
+    select: { leaderId: true, title: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.agentSyncSession.update({
       where: { id: sessionId },
       data: { status, findingCount, completedAt: new Date() },
-    }),
-    prisma.auditTokenUsageLog.create({
+    });
+    await tx.auditTokenUsageLog.create({
       data: { tokenId, action: "sync.complete", status, ip: clientIp(req) },
-    }),
-    prisma.auditLog.create({
+    });
+    await tx.auditLog.create({
       data: {
         userId,
         action: "agent.sync.complete",
@@ -42,8 +48,20 @@ export async function POST(req: Request) {
         level: status === "failed" ? "warn" : "info",
         payload: JSON.parse(JSON.stringify({ auditId, findingCount, status })),
       },
-    }),
-  ]);
+    });
+    if (status === "completed" && audit) {
+      await emitNotification(tx, {
+        type: "sync_complete",
+        recipients: [audit.leaderId].filter(Boolean) as string[],
+        actorId: userId,
+        params: { audit: audit.title, count: findingCount },
+        href: `/audits/${auditId}`,
+        auditId,
+        entityType: "audit",
+        entityId: auditId,
+      });
+    }
+  });
 
   return json({ ok: true });
 }

@@ -8,6 +8,7 @@ import { requireSession } from "@/lib/session";
 import { requirePermission } from "@/lib/rbac.server";
 import { nextAuditCode } from "@/lib/audit-code";
 import { emitKpiEvent } from "@/lib/kpi-engine";
+import { emitNotification } from "@/lib/notifications/emit";
 import type { ActionResult, CreateResult } from "./types";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
@@ -113,7 +114,7 @@ const TeamInput = z.object({ auditId: z.string().min(1), userId: z.string().min(
 async function loadAudit(auditId: string) {
   return prisma.audit.findUnique({
     where: { id: auditId },
-    select: { status: true, leaderId: true },
+    select: { status: true, leaderId: true, title: true },
   });
 }
 
@@ -152,6 +153,16 @@ export async function addMember(input: z.input<typeof TeamInput>): Promise<Actio
       points: 5,
       auditId,
       countField: "audits",
+    });
+    await emitNotification(tx, {
+      type: "audit_member_added",
+      recipients: [userId],
+      actorId: actorId,
+      params: { audit: a.title },
+      href: `/audits/${auditId}`,
+      auditId,
+      entityType: "audit",
+      entityId: auditId,
     });
   });
   revalidatePath(`/audits/${auditId}`);
@@ -206,14 +217,14 @@ export async function promoteLead(input: z.input<typeof TeamInput>): Promise<Act
   if (role !== "super" && role !== "head" && a.leaderId !== actorId)
     return { ok: false, error: "forbidden" };
 
-  await prisma.$transaction([
-    prisma.auditMember.upsert({
+  await prisma.$transaction(async (tx) => {
+    await tx.auditMember.upsert({
       where: { auditId_userId: { auditId, userId } },
       create: { auditId, userId },
       update: {},
-    }),
-    prisma.audit.update({ where: { id: auditId }, data: { leaderId: userId } }),
-    prisma.auditLog.create({
+    });
+    await tx.audit.update({ where: { id: auditId }, data: { leaderId: userId } });
+    await tx.auditLog.create({
       data: {
         userId: actorId,
         action: "audit.team.promote",
@@ -221,8 +232,18 @@ export async function promoteLead(input: z.input<typeof TeamInput>): Promise<Act
         level: "info",
         payload: J({ userId }),
       },
-    }),
-  ]);
+    });
+    await emitNotification(tx, {
+      type: "audit_promoted",
+      recipients: [userId],
+      actorId: actorId,
+      params: { audit: a.title },
+      href: `/audits/${auditId}`,
+      auditId,
+      entityType: "audit",
+      entityId: auditId,
+    });
+  });
   revalidatePath(`/audits/${auditId}`);
   revalidatePath("/audits");
   return { ok: true };
