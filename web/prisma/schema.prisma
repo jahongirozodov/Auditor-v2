@@ -26,6 +26,7 @@ enum AuditStatus {
   group_forming
   project_draft
   project_pending
+  head_approved
   assigning
   in_progress
   review
@@ -111,6 +112,7 @@ model User {
   projectApprovals AuditProjectApproval[] @relation("ProjectApprovalActor")
   fileUploads      FileStorage[]   @relation("FileUploader")
   evidenceUploads  FindingEvidence[] @relation("FindingEvidenceUploader")
+  notifications    Notification[]
 
   @@index([email])
 }
@@ -323,6 +325,7 @@ model FileStorage {
 
   findingEvidences FindingEvidence[]
   auditEvidences   AuditEvidence[]
+  taskSubmissions  TaskSubmissionFile[]
 
   @@index([uploadedById])
   @@index([sha256])
@@ -390,6 +393,25 @@ model KpiEvent {
 
   @@index([userId])
   @@index([ruleCode])
+}
+
+// ---------- Notifications ----------
+model Notification {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String
+  params     Json
+  href       String?
+  auditId    String?
+  entityType String?
+  entityId   String?
+  actorId    String?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 // ---------- Tokens ----------
@@ -530,7 +552,23 @@ model TaskStatusHistory {
   comment    String?
   createdAt  DateTime @default(now())
 
+  submissionFiles TaskSubmissionFile[]
+
   @@index([taskId])
+}
+
+// Files attached when a task is submitted for review (in_progress → review).
+// One row per file per submission. historyId points to the TaskStatusHistory row
+// that recorded the status change; bytes live in FileStorage (provider "db").
+model TaskSubmissionFile {
+  id        String            @id @default(cuid())
+  history   TaskStatusHistory @relation(fields: [historyId], references: [id], onDelete: Cascade)
+  historyId String
+  file      FileStorage       @relation(fields: [fileId], references: [id])
+  fileId    String
+  createdAt DateTime          @default(now())
+
+  @@index([historyId])
 }
 
 // ---------- Configuration analysis ----------
@@ -672,6 +710,21 @@ model TopologyAiAnalysis {
   createdAt   DateTime @default(now())
 
   @@index([auditId])
+}
+
+// ---------- Topology enrichment (AI node reclassification) ----------
+model TopologyEnrichment {
+  id          String   @id @default(cuid())
+  auditId     String
+  output      String   @db.Text // JSON: { nodes: EnrichedNodePatch[] }
+  model       String
+  latencyMs   Int      @default(0)
+  tokens      Int      @default(0)
+  ok          Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([auditId, createdAt(sort: Desc)])
 }
 
 // ---------- Audit-level AI analysis ----------
