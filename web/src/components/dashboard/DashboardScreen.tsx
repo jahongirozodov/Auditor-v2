@@ -62,6 +62,29 @@ export function DashboardScreen({
   const medium = audits.reduce((s, a) => s + a.findings.medium, 0);
   const low = audits.reduce((s, a) => s + a.findings.low, 0);
 
+  const completedAudits = audits.filter(
+    (a) => a.status === "approved" || a.status === "completed",
+  ).length;
+  const totalTasks = audits.reduce((s, a) => s + a.tasks.total, 0);
+  const doneTasks = audits.reduce((s, a) => s + a.tasks.done, 0);
+  const taskBarPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  const closedFindings = findings.filter(
+    (f) => f.status === "fixed" || f.status === "closed",
+  ).length;
+  const remediationPct =
+    findings.length > 0 ? Math.round((closedFindings / findings.length) * 100) : 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const avgCvss =
+    findings.length > 0
+      ? (findings.reduce((s, f) => s + f.cvss, 0) / findings.length).toFixed(1)
+      : "0.0";
+  const auditCompletionPct =
+    audits.length > 0 ? Math.round((completedAudits / audits.length) * 100) : 0;
+  const topKpi = kpiUsers[0];
+  const kpiScore = topKpi?.total ?? 0;
+  const kpiSpark = topKpi?.sparkline ?? [];
+  const kpiDelta = topKpi?.delta ?? 0;
+
   const attention = findings
     .filter((f) => f.severity === "critical" || (f.severity === "high" && f.status === "review"))
     .slice(0, 4);
@@ -89,17 +112,17 @@ export function DashboardScreen({
 
       {isLeader ? (
         <HeroBand
-          score={Math.round(100 - critical * 1.5 - high * 0.4)}
+          score={taskBarPct}
           eyebrow={t("heroEyebrow")}
           title={t("heroTitle")}
           caption={t("heroCaption")}
-          gauge={89}
+          gauge={auditCompletionPct}
           gaugeCap={t("gaugeCap")}
           metrics={[
             { label: t("mActiveAudit"), value: myAudits.length },
+            { label: t("mFindings"), value: findings.length },
+            { label: t("mRemediated"), value: `${remediationPct}%`, tone: "good" },
             { label: t("mCritical"), value: critical, tone: "danger" },
-            { label: t("mRemediated"), value: "68%", tone: "good" },
-            { label: t("mAvgCvss"), value: "6.4" },
           ]}
         />
       ) : null}
@@ -116,34 +139,28 @@ export function DashboardScreen({
           icon={<FolderKanban size={15} />}
           label={t("statActiveAudits")}
           value={myAudits.length}
-          meta="23 yakunlangan"
-          delta={12}
-          spark={[2, 3, 3, 4, 4, 4]}
+          meta={`${completedAudits} yakunlangan`}
         />
         <Stat
           icon={<AlertTriangle size={15} />}
           label={t("statCritical")}
           value={critical}
-          meta="Bu hafta +5"
-          delta={25}
-          deltaNeg
-          spark={[3, 4, 6, 7, 9, critical]}
+          meta={`${high} ta yuqori darajali`}
         />
         <Stat
           icon={<CheckSquare size={15} />}
           label={t("statTasks")}
-          value="118/142"
-          meta="Muddatida 89%"
-          delta={4}
-          bar={83}
+          value={`${doneTasks}/${totalTasks}`}
+          meta={`${taskBarPct}% bajarilgan`}
+          bar={taskBarPct}
         />
         <Stat
           icon={<Trophy size={15} />}
           label={t("statKpi")}
-          value={1483}
-          meta="May oyi, 8 mutaxassis"
-          delta={18}
-          spark={[820, 940, 1080, 1190, 1320, 1483]}
+          value={kpiScore}
+          meta={`${kpiUsers.length} ta mutaxassis`}
+          delta={kpiDelta}
+          spark={kpiSpark}
         />
       </div>
 

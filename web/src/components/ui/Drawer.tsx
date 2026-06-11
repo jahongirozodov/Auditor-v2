@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 /** Right-side drawer over the `.drawer` classes. Closes on backdrop click + Escape. */
@@ -19,6 +20,10 @@ export function Drawer({
   wide?: boolean;
   children?: ReactNode;
 }) {
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -28,9 +33,9 @@ export function Drawer({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className="drawer-bg" onClick={onClose}>
       <div
         className={`drawer${wide ? " drawer--wide" : ""}`}
@@ -47,6 +52,7 @@ export function Drawer({
         <div className="drawer__body">{children}</div>
         {footer ? <div className="drawer__foot">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

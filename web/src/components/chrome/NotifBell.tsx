@@ -63,15 +63,15 @@ export function NotifBell() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void poll();
-    const id = setInterval(() => { void poll(); }, POLL_MS);
+    const id = setInterval(() => {
+      void poll();
+    }, POLL_MS);
     return () => clearInterval(id);
   }, [poll]);
 
   async function handleRowClick(item: NotifRow) {
     await markNotificationRead(item.id);
-    setItems((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, readAt: new Date() } : n)),
-    );
+    setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, readAt: new Date() } : n)));
     setUnread((c) => Math.max(0, c - 1));
     if (item.href) router.push(item.href);
     setOpen(false);
