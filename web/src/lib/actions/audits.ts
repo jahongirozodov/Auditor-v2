@@ -122,11 +122,13 @@ export async function addMember(input: z.input<typeof TeamInput>): Promise<Actio
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, userId } = parsed.data;
 
-  const { userId: actorId } = await requireSession();
+  const { userId: actorId, role } = await requireSession();
   if (!(await requirePermission(actorId, "group.edit"))) return { ok: false, error: "forbidden" };
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
+  if (role !== "super" && role !== "head" && a.leaderId !== actorId)
+    return { ok: false, error: "forbidden" };
 
   await prisma.$transaction(async (tx) => {
     await tx.auditMember.upsert({
@@ -162,11 +164,13 @@ export async function removeMember(input: z.input<typeof TeamInput>): Promise<Ac
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, userId } = parsed.data;
 
-  const { userId: actorId } = await requireSession();
+  const { userId: actorId, role } = await requireSession();
   if (!(await requirePermission(actorId, "group.edit"))) return { ok: false, error: "forbidden" };
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
+  if (role !== "super" && role !== "head" && a.leaderId !== actorId)
+    return { ok: false, error: "forbidden" };
   if (userId === a.leaderId) return { ok: false, error: "cannot_remove_lead" };
 
   await prisma.$transaction([
@@ -191,11 +195,13 @@ export async function promoteLead(input: z.input<typeof TeamInput>): Promise<Act
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, userId } = parsed.data;
 
-  const { userId: actorId } = await requireSession();
+  const { userId: actorId, role } = await requireSession();
   if (!(await requirePermission(actorId, "group.edit"))) return { ok: false, error: "forbidden" };
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
+  if (role !== "super" && role !== "head" && a.leaderId !== actorId)
+    return { ok: false, error: "forbidden" };
 
   await prisma.$transaction([
     prisma.auditMember.upsert({
