@@ -52,7 +52,7 @@ export async function deleteReport(id: string) {
   if (!report) throw new Error("Topilmadi");
   if (
     report.authorId !== userId &&
-    !(await isAuditLeader(report.auditId, userId, role as RoleCode))
+    !(await isAuditLeader(report.auditId, userId, role))
   )
     throw new Error("Ruxsat yoʻq");
   await prisma.report.delete({ where: { id } });

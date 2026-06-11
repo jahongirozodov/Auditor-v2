@@ -127,6 +127,7 @@ export async function addMember(input: z.input<typeof TeamInput>): Promise<Actio
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
+  // Inlined: a.leaderId already fetched — matches isAuditLeader semantics
   if (role !== "super" && role !== "head" && a.leaderId !== actorId)
     return { ok: false, error: "forbidden" };
 
@@ -169,6 +170,7 @@ export async function removeMember(input: z.input<typeof TeamInput>): Promise<Ac
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
+  // Inlined: a.leaderId already fetched — matches isAuditLeader semantics
   if (role !== "super" && role !== "head" && a.leaderId !== actorId)
     return { ok: false, error: "forbidden" };
   if (userId === a.leaderId) return { ok: false, error: "cannot_remove_lead" };
@@ -200,6 +202,7 @@ export async function promoteLead(input: z.input<typeof TeamInput>): Promise<Act
   const a = await loadAudit(auditId);
   if (!a) return { ok: false, error: "not_found" };
   if (!EDITABLE.includes(a.status)) return { ok: false, error: "illegal_status" };
+  // Inlined: a.leaderId already fetched — matches isAuditLeader semantics
   if (role !== "super" && role !== "head" && a.leaderId !== actorId)
     return { ok: false, error: "forbidden" };
 
