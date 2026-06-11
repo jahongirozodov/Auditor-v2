@@ -7,7 +7,7 @@ const h = vi.hoisted(() => ({
   role: "chief" as RoleCode,
   permission: true,
   isLeader: false,
-  audit: { id: "AUD-1" } as { id: string } | null,
+  audit: { id: "AUD-1", leaderId: "u0" } as { id: string; leaderId: string } | null,
   token: { id: "TOK-1", auditId: "AUD-1" } as Record<string, unknown> | null,
 }));
 
@@ -41,7 +41,8 @@ import { issueToken, revokeToken, rotateToken } from "./tokens";
 
 beforeEach(() => {
   h.isLeader = false;
-  h.audit = { id: "AUD-1" };
+  h.permission = true;
+  h.audit = { id: "AUD-1", leaderId: "u0" };
   h.token = { id: "TOK-1", auditId: "AUD-1" };
 });
 
@@ -51,9 +52,14 @@ describe("issueToken — leader gate", () => {
     expect(r).toEqual({ ok: false, error: "forbidden" });
   });
   it("allows when caller is audit leader", async () => {
-    h.isLeader = true;
+    h.audit = { id: "AUD-1", leaderId: "u1" };
     const r = await issueToken({ auditId: "AUD-1", userId: "u2", expires: "2027-01-01" });
     expect(r.ok).toBe(true);
+  });
+  it("returns not_found when audit does not exist", async () => {
+    h.audit = null;
+    const r = await issueToken({ auditId: "AUD-x", userId: "u2", expires: "2027-01-01" });
+    expect(r).toEqual({ ok: false, error: "not_found" });
   });
 });
 

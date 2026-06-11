@@ -31,9 +31,12 @@ export async function issueToken(input: z.input<typeof IssueInput>): Promise<Cre
   const { userId: actor, role } = await requireSession();
   if (!(await requirePermission(actor, "agent.token"))) return { ok: false, error: "forbidden" };
 
-  const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { id: true } });
+  const audit = await prisma.audit.findUnique({
+    where: { id: auditId },
+    select: { id: true, leaderId: true },
+  });
   if (!audit) return { ok: false, error: "not_found" };
-  if (!(await isAuditLeader(auditId, actor, role))) return { ok: false, error: "forbidden" };
+  if (role !== "super" && role !== "head" && audit.leaderId !== actor) return { ok: false, error: "forbidden" };
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) return { ok: false, error: "not_found" };
 
