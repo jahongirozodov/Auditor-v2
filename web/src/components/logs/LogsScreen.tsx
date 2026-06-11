@@ -7,8 +7,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { fetchAuditLogs } from "@/lib/actions/logs";
-import type { AuditLogFilters, AuditLogPage, AuditLogView, LogCategory, User } from "@/lib/types/entities";
+import type {
+  AuditLogFilters,
+  AuditLogPage,
+  AuditLogView,
+  LogCategory,
+  User,
+} from "@/lib/types/entities";
 
 function levelTag(level: string): { cls: string; label: string } {
   if (level === "danger") return { cls: "tag--danger", label: "DANGER" };
@@ -110,7 +117,15 @@ export function LogsScreen({
         }
       />
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 12,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
         {chips.map((c) => (
           <button
             key={c.id}
@@ -124,33 +139,43 @@ export function LogsScreen({
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <label className="cell-sub" style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          {t("dateFrom")}
-          <input
-            type="date"
-            className="input"
-            aria-label={t("dateFrom")}
-            value={filters.from ?? ""}
-            onChange={(e) => change({ from: e.target.value || undefined })}
-          />
-        </label>
-        <label className="cell-sub" style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          {t("dateTo")}
-          <input
-            type="date"
-            className="input"
-            aria-label={t("dateTo")}
-            value={filters.to ?? ""}
-            onChange={(e) => change({ to: e.target.value || undefined })}
-          />
-        </label>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          marginBottom: 16,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span className="cell-sub">{t("dateFrom")}</span>
+          <div style={{ width: 160 }}>
+            <DatePicker
+              value={filters.from ?? ""}
+              onChange={(v) => change({ from: v || undefined })}
+              max={filters.to || undefined}
+            />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span className="cell-sub">{t("dateTo")}</span>
+          <div style={{ width: 160 }}>
+            <DatePicker
+              value={filters.to ?? ""}
+              onChange={(v) => change({ to: v || undefined })}
+              min={filters.from || undefined}
+            />
+          </div>
+        </div>
         <select
           className="select"
           aria-label={t("filterLevel")}
           style={{ width: 180 }}
           value={filters.level ?? ""}
-          onChange={(e) => change({ level: (e.target.value || undefined) as AuditLogFilters["level"] })}
+          onChange={(e) =>
+            change({ level: (e.target.value || undefined) as AuditLogFilters["level"] })
+          }
         >
           <option value="">{t("levelAll")}</option>
           <option value="info">{t("levelInfo")}</option>
@@ -218,7 +243,10 @@ export function LogsScreen({
                       </td>
                       <td className="font-mono cell-sub">{l.entity}</td>
                       <td>
-                        <div className="font-mono" style={{ fontSize: 12.5, color: "var(--text-primary)" }}>
+                        <div
+                          className="font-mono"
+                          style={{ fontSize: 12.5, color: "var(--text-primary)" }}
+                        >
                           {l.ip}
                         </div>
                         <div className="cell-sub font-mono">{l.device}</div>
@@ -232,10 +260,25 @@ export function LogsScreen({
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 16 }}>
-        <span className="cell-sub">{t("showing", { shown: page.rows.length, total: page.total })}</span>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 12,
+          marginTop: 16,
+        }}
+      >
+        <span className="cell-sub">
+          {t("showing", { shown: page.rows.length, total: page.total })}
+        </span>
         {page.nextCursor && (
-          <Button size="sm" variant="ghost" disabled={pending} onClick={() => run(filters, page.nextCursor!)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={pending}
+            onClick={() => run(filters, page.nextCursor!)}
+          >
             {t("loadMore")}
           </Button>
         )}
@@ -251,7 +294,9 @@ export function LogsScreen({
               </div>
               <div className="field">
                 <span className="field__label">{t("colLevel")}</span>
-                <span className={`tag ${levelTag(detail.level).cls}`}>{levelTag(detail.level).label}</span>
+                <span className={`tag ${levelTag(detail.level).cls}`}>
+                  {levelTag(detail.level).label}
+                </span>
               </div>
               <div className="field">
                 <span className="field__label">{t("detailTime")}</span>

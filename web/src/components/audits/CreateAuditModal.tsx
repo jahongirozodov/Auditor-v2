@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useToast } from "@/components/ui/Toast";
 import { createAudit } from "@/lib/actions/audits";
 import type { Organization, User } from "@/lib/types/entities";
@@ -138,20 +139,20 @@ export function CreateAuditModal({ open, onClose, orgs, eligibleUsers }: CreateA
         </Field>
 
         <Field label={t("fStart")} htmlFor="ca-start">
-          <Input
+          <DatePicker
             id="ca-start"
-            type="date"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={setStartDate}
+            max={endDate || undefined}
           />
         </Field>
 
         <Field label={t("fEnd")} htmlFor="ca-end">
-          <Input
+          <DatePicker
             id="ca-end"
-            type="date"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={setEndDate}
+            min={startDate || undefined}
           />
         </Field>
 

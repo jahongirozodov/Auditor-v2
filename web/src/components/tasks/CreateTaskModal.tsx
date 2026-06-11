@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Check, Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useToast } from "@/components/ui/Toast";
 import { createTask } from "@/lib/actions/tasks";
 import type { Audit, User } from "@/lib/types/entities";
@@ -174,7 +175,7 @@ export function CreateTaskModal({
         </Field>
 
         <Field label={t("fDue")} htmlFor="ct-due">
-          <Input id="ct-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+          <DatePicker id="ct-due" value={due} onChange={setDue} />
         </Field>
 
         <div style={{ gridColumn: "span 2" }}>
