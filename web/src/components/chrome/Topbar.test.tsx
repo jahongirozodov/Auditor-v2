@@ -7,6 +7,7 @@ import { Topbar } from "./Topbar";
 import type { ShellUser } from "./AppShell";
 
 vi.mock("@/app/(app)/actions", () => ({ logoutAction: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const USER: ShellUser = {
   id: "u1",
