@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { requirePermission } from "@/lib/rbac.server";
+import { isAuditLeader } from "@/lib/audit-access";
 import { newTokenId } from "@/lib/token-code";
 import type { ActionResult, CreateResult } from "./types";
 
@@ -27,11 +28,12 @@ export async function issueToken(input: z.input<typeof IssueInput>): Promise<Cre
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { auditId, userId, expires, device } = parsed.data;
 
-  const { userId: actor } = await requireSession();
+  const { userId: actor, role } = await requireSession();
   if (!(await requirePermission(actor, "agent.token"))) return { ok: false, error: "forbidden" };
 
   const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { id: true } });
   if (!audit) return { ok: false, error: "not_found" };
+  if (!(await isAuditLeader(auditId, actor, role))) return { ok: false, error: "forbidden" };
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) return { ok: false, error: "not_found" };
 
@@ -73,11 +75,12 @@ export async function revokeToken(input: { id: string }): Promise<ActionResult> 
   const id = String(input?.id ?? "");
   if (!id) return { ok: false, error: "invalid" };
 
-  const { userId } = await requireSession();
+  const { userId, role } = await requireSession();
   if (!(await requirePermission(userId, "agent.revoke"))) return { ok: false, error: "forbidden" };
 
-  const tok = await prisma.auditToken.findUnique({ where: { id }, select: { id: true } });
+  const tok = await prisma.auditToken.findUnique({ where: { id }, select: { id: true, auditId: true } });
   if (!tok) return { ok: false, error: "not_found" };
+  if (!(await isAuditLeader(tok.auditId, userId, role))) return { ok: false, error: "forbidden" };
 
   await prisma.$transaction([
     prisma.auditToken.update({ where: { id }, data: { status: "revoked" } }),
@@ -95,11 +98,12 @@ export async function rotateToken(input: { id: string }): Promise<CreateResult> 
   const id = String(input?.id ?? "");
   if (!id) return { ok: false, error: "invalid" };
 
-  const { userId: actor } = await requireSession();
+  const { userId: actor, role } = await requireSession();
   if (!(await requirePermission(actor, "agent.revoke"))) return { ok: false, error: "forbidden" };
 
   const old = await prisma.auditToken.findUnique({ where: { id } });
   if (!old) return { ok: false, error: "not_found" };
+  if (!(await isAuditLeader(old.auditId, actor, role))) return { ok: false, error: "forbidden" };
 
   const newId = newTokenId();
   await prisma.$transaction([
