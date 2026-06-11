@@ -23,6 +23,7 @@ public sealed class LocalApiHost
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
+    private static readonly HashSet<string> _allowedTaskStatuses = ["in_progress", "review"];
 
     public LocalApiHost(AgentService svc) => _svc = svc;
 
@@ -131,6 +132,7 @@ public sealed class LocalApiHost
         {
             var b = await ctx.Request.ReadFromJsonAsync<TaskStatusBody>(Json);
             if (b is null || string.IsNullOrWhiteSpace(b.ToStatus)) return Results.BadRequest();
+            if (!_allowedTaskStatuses.Contains(b.ToStatus)) return Results.BadRequest();
             var online = await _svc.PingAsync();
             if (!online) return Results.Json(new { ok = false, error = "offline" }, Json);
             _svc.ToggleTaskStatus(id, b.ToStatus);

@@ -763,6 +763,11 @@ async function loadTasks() {
     return;
   }
   cachedTasks = tasks;
+  renderTaskList();
+}
+
+function renderTaskList() {
+  const tasks = cachedTasks;
 
   const ACTIVE   = new Set(['new', 'assigned', 'in_progress', 'inprogress', 'review', 'returned', 'blocked']);
   const DONE     = new Set(['done', 'approved']);
@@ -790,7 +795,7 @@ async function loadTasks() {
       filterBtn('cancelled', `Bekor qilingan (${counts.cancelled})`, activeTaskFilter),
     ].join('');
     bar.querySelectorAll('.filter-btn').forEach(b => {
-      b.addEventListener('click', () => { activeTaskFilter = b.dataset.filter; loadTasks(); });
+      b.addEventListener('click', () => { activeTaskFilter = b.dataset.filter; renderTaskList(); });
     });
   }
 
