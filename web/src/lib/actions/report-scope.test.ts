@@ -116,6 +116,10 @@ describe("deleteReport — authorship + leader gate", () => {
     const r = await deleteReport("R-1");
     expect(r.ok).toBe(true);
   });
+  it("throws when report does not exist", async () => {
+    h.report = null;
+    await expect(deleteReport("R-missing")).rejects.toThrow();
+  });
 });
 
 describe("regenerateReportSummary — membership gate", () => {
@@ -127,6 +131,6 @@ describe("regenerateReportSummary — membership gate", () => {
     h.isMember = true;
     const r = await regenerateReportSummary("R-1");
     // AI is disabled so it degrades, but it must pass the membership gate (not return forbidden)
-    expect(r).not.toEqual({ ok: false, error: "forbidden" });
+    expect(r.error).not.toBe("forbidden");
   });
 });

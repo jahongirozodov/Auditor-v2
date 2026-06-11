@@ -20,9 +20,9 @@ const now = () => new Date().toISOString().slice(0, 16).replace("T", " ");
 export async function generateReport(input: GenerateReportInput) {
   const { userId } = await requireSession();
   if (!(await requirePermission(userId, "report.create"))) throw new Error("Ruxsat yoʻq");
+  if (!(await isAuditMember(input.auditId, userId))) throw new Error("Ruxsat yoʻq");
   if (!input.title.trim() || !input.auditId || !input.formats.length)
     return { ok: false, error: "Maydonlar toʻldirilishi shart" };
-  if (!(await isAuditMember(input.auditId, userId))) throw new Error("Ruxsat yoʻq");
 
   const id = `R-${Date.now()}`;
   await prisma.report.create({
