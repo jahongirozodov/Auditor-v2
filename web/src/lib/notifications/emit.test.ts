@@ -16,6 +16,7 @@ function fakeTx(notifEnabled = true) {
         return { count: data.length };
       }),
     },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 }
 
@@ -30,6 +31,7 @@ describe("emitNotification", () => {
       href: "/tasks/1",
     });
     expect(tx.created).toHaveLength(2);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(tx.created.map((r: any) => r.userId).sort()).toEqual(["u1", "u2"]);
   });
 

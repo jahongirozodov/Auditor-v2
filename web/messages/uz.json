@@ -148,7 +148,9 @@
     "draftsCreated": "{n} ta finding qoralama yaratildi",
     "noGaps": "Kamchilik aniqlanmadi",
     "failed": "Amalni bajarib boʻlmadi",
-    "fileTooLarge": "Fayl 2 MB dan oshmasligi kerak"
+    "fileTooLarge": "Fayl 2 MB dan oshmasligi kerak",
+    "recentTitle": "Oxirgi tahlillar",
+    "recentEmpty": "Hali tahlil oʻtkazilmagan"
   },
   "ai": {
     "title": "AI tahlil va hisobot quruvchi",
@@ -361,7 +363,13 @@
     "kindWeb": "Web server",
     "kindDb": "Maʼlumotlar bazasi",
     "kindWifi": "Wi-Fi controller",
-    "kindEndpoint": "Endpoint"
+    "kindEndpoint": "Endpoint",
+    "aiEnrichedLabel": "AI tavsif",
+    "aiEnrichedReason": "AI sababi",
+    "aiEnrich": "AI boyitish",
+    "aiEnriching": "AI boyitmoqda...",
+    "aiEnrichDone": "AI boyitish tugadi",
+    "aiEnrichFailed": "AI boyitish amalga oshmadi"
   },
   "permissions": {
     "title": "Rollar va ruxsatlar matritsasi",
@@ -566,7 +574,7 @@
     "aiAnalyzing": "AI normallashtirmoqda...",
     "aiUnreachable": "AI normalizatsiya hozircha mavjud emas. Findinglar xom holicha import qilindi. Ollama ishga tushgach qayta urinib koʻring."
   },
-        "reports": {
+  "reports": {
     "title": "Hisobotlar",
     "crumb": "Hisobotlar",
     "sub": "{total} ta hisobot · {drafts} qoralama · {approved} tasdiqlangan",
@@ -640,7 +648,14 @@
     "heroFindings": "Findinglar",
     "kpiDynamics": "KPI dinamikasi",
     "kpiDelta": "{delta}% (oxirgi oy)",
-    "kpiMonths": ["Yan", "Fev", "Mar", "Apr", "May", "Iyun"],
+    "kpiMonths": [
+      "Yan",
+      "Fev",
+      "Mar",
+      "Apr",
+      "May",
+      "Iyun"
+    ],
     "kpiAudits": "Bajarilgan auditlar",
     "kpiTasks": "Vazifalar bajarilishi",
     "kpiFindings": "Aniqlangan findinglar",
@@ -756,7 +771,8 @@
     "deleteConfirm": "{name} hisobini oʻchirishni tasdiqlaysizmi? Bu amalni qaytarib boʻlmaydi.",
     "failed": "Amalni bajarib boʻlmadi",
     "empty": "Foydalanuvchi topilmadi."
-  },"traffic": {
+  },
+  "traffic": {
     "title": "Trafik tahlili",
     "crumb": "Trafik tahlili",
     "sub": "PCAP / Suricata / Zeek / Wireshark trafik fayllarini anomaliyalar boʻyicha tahlil qiling.",
@@ -811,8 +827,11 @@
     "uploaded": "Trafik fayli tahlil qilindi",
     "draftsCreated": "{n} ta finding qoralama yaratildi",
     "failed": "Amalni bajarib boʻlmadi",
-    "fileTooLarge": "Fayl 10 MB dan oshmasligi kerak"
-  },"dashboard": {
+    "fileTooLarge": "Fayl 10 MB dan oshmasligi kerak",
+    "recentTitle": "Oxirgi yuklamalar",
+    "recentEmpty": "Hali trafik fayli yuklanmagan"
+  },
+  "dashboard": {
     "greeting": "Yaxshi kun, {name}.",
     "subLeader": "Bugun auditlar jarayonda, kritik findinglar koʻrib chiqishni kutmoqda.",
     "subMember": "Sizga vazifalar biriktirilgan. Bir nechtasi muddati bilan yopiladi.",
@@ -834,14 +853,14 @@
     "thLeader": "Guruh rahbari",
     "thProgress": "Progres",
     "thFindings": "Findinglar",
-    "heroEyebrow": "Live · Xavfsizlik holati markazi",
-    "heroTitle": "Tashkilot xavfsizlik koʻrsatkichi",
-    "heroCaption": "Joriy holat barqaror. Auditlar faol, kritik findinglar nazoratda.",
-    "gaugeCap": "Vazifa bajarildi",
+    "heroEyebrow": "Live · Audit jarayoni holati",
+    "heroTitle": "Auditlar va topilmalar — umumiy holat",
+    "heroCaption": "Faol auditlar kuzatilmoqda. Topilmalar nazoratda. Muhim zaifliklar bartaraf etilmoqda.",
+    "gaugeCap": "Auditlar yakunlandi",
     "mActiveAudit": "Faol audit",
-    "mCritical": "Critical",
-    "mRemediated": "Bartaraf",
-    "mAvgCvss": "Oʻrtacha CVSS"
+    "mCritical": "Critical findings",
+    "mRemediated": "Bartaraf etilgan",
+    "mFindings": "Jami topilmalar"
   },
   "approval": {
     "title": "3-bosqichli tasdiqlash",
@@ -1026,7 +1045,13 @@
     "remFail": "Test oʻtmadi",
     "remReason": "Qaytarish sababi",
     "remSend": "Yuborish",
-    "remCancel": "Bekor qilish"
+    "remCancel": "Bekor qilish",
+    "filterSearch": "Qidirish...",
+    "filterAudit": "Audit bo'yicha",
+    "filterUser": "Foydalanuvchi bo'yicha",
+    "filterOrg": "Tashkilot bo'yicha",
+    "filterAll": "Barchasi",
+    "filterClear": "Filtrlarni tozalash"
   },
   "cmdk": {
     "placeholder": "Audit, topilma, vazifa, tashkilot yoki sahifa qidirish...",
@@ -1174,6 +1199,7 @@
     "due": "Muddat",
     "kpi": "KPI",
     "findingsTitle": "Topilmalar",
+    "addFinding": "Topilma qoʻshish",
     "noFindings": "Bu vazifa boʻyicha hali topilma kiritilmagan.",
     "filesTitle": "Fayllar va dalillar",
     "assignTitle": "Masʼul va tafsilotlar",
@@ -1187,13 +1213,14 @@
     "fNew": "Yangi",
     "fAssigned": "Biriktirilgan",
     "fInProgress": "Jarayonda",
-    "fReview": "Tekshiruvda",
+    "fReview": "Guruh rahbari tekshiruvida",
+    "fReviewHead": "Rahbar tekshiruvida",
     "fDone": "Bajarilgan",
     "aAssign": "Biriktirish",
     "aStart": "Ishni boshlash",
     "aSubmit": "Tekshiruvga yuborish",
-    "aComplete": "Bajarildi",
     "aApprove": "Maʼqullash",
+    "aApproveHead": "Tasdiqlash",
     "aReturn": "Qaytarish",
     "aRestart": "Qayta boshlash",
     "aUnblock": "Blokni ochish",
@@ -1202,7 +1229,25 @@
     "reassigned": "Qayta biriktirildi",
     "returnReason": "Qaytarish sababi",
     "send": "Yuborish",
-    "cancel": "Bekor qilish"
+    "cancel": "Bekor qilish",
+    "editTitle": "Vazifani tahrirlash",
+    "editTitleLabel": "Sarlavha",
+    "editSave": "Saqlash",
+    "editDone": "Oʻzgartirishlar saqlandi",
+    "editFailed": "Saqlash mümkin boʻlmadi",
+    "editForbidden": "Bu vazifani tahrirlash taqiqlangan",
+    "submitModal": {
+      "title": "Tekshiruvga yuborish",
+      "commentLabel": "Bajarilgan ishlar haqida",
+      "commentPlaceholder": "Nima qilindi, qanday natijalar olindi (kamida 10 ta belgi)",
+      "filesLabel": "Dalil fayllar (ixtiyoriy, max 5 ta, 20 MB)",
+      "filesBtn": "Fayl tanlash",
+      "submit": "Yuborish",
+      "cancel": "Bekor qilish",
+      "errorTooMany": "Maksimal 5 ta fayl yuklash mumkin",
+      "errorTooLarge": "Fayl hajmi 20 MB dan oshmasligi kerak",
+      "errorComment": "Izoh kamida 10 ta belgi boʻlishi kerak"
+    }
   },
   "assign": {
     "title": "Vazifalarni taqsimlash",
@@ -1261,5 +1306,31 @@
     "ownOnly": "Faqat oʻz reytingingiz koʻrsatilmoqda",
     "positive": "+{n} ball",
     "negative": "{n} ball"
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "markAllRead": "Hammasini oʻqilgan deb belgilash",
+    "all": "Barcha bildirishnomalar",
+    "empty": "Bildirishnomalar yoʻq",
+    "filterAll": "Hammasi",
+    "filterUnread": "Oʻqilmagan",
+    "types": {
+      "task_assigned": "Sizga yangi vazifa biriktirildi: {title}",
+      "task_reassigned": "Vazifa sizga qayta biriktirildi: {title}",
+      "task_returned": "Vazifangiz qaytarildi: {title}",
+      "task_review": "Vazifa koʻrib chiqishga yuborildi: {title}",
+      "finding_critical": "Jiddiy topilma aniqlandi: {title}",
+      "finding_returned": "Topilmangiz qaytarildi: {title}",
+      "finding_approved": "Topilmangiz tasdiqlandi: {title}",
+      "finding_retest_failed": "Qayta tekshiruv oʻtmadi: {title}",
+      "report_ready": "Hisobot tayyor: {title}",
+      "report_approved": "Hisobotingiz tasdiqlandi: {title}",
+      "report_returned": "Hisobotingiz qaytarildi: {title}",
+      "sync_complete": "Agent sinxronlandi: {audit}",
+      "audit_member_added": "Siz auditga qoʻshildingiz: {audit}",
+      "audit_promoted": "Siz yetakchi etib tayinlandingiz: {audit}",
+      "project_approved": "Audit loyihasi tasdiqlandi: {audit}",
+      "project_returned": "Audit loyihasi qaytarildi: {audit}"
+    }
   }
 }

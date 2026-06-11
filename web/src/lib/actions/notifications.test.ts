@@ -18,7 +18,9 @@ import { prisma } from "@/lib/prisma";
 import { markNotificationRead, markAllNotificationsRead } from "./notifications";
 
 beforeEach(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(requireSession).mockResolvedValue({ userId: "me" } as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(prisma.notification.updateMany).mockResolvedValue({ count: 1 } as any);
 });
 
