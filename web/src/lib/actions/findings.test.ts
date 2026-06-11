@@ -41,6 +41,8 @@ vi.mock("@/lib/prisma", () => {
     auditLog: { create: vi.fn(async () => ({})) },
     kpiEvent: { create: vi.fn(async () => ({})) },
     kpiUser: { upsert: vi.fn(async () => ({})) },
+    systemSetting: { findUnique: vi.fn(async () => null) },
+    notification: { createMany: vi.fn(async () => ({})) },
     $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation(async (arg: unknown) =>

@@ -11,6 +11,7 @@ import { canActAt, currentOf, nextStage } from "@/lib/approval";
 import { nextFindingCode } from "@/lib/finding-code";
 import { canDoRemediation } from "@/lib/findings-machine";
 import { emitKpiEvent, SEVERITY_BONUS, BONUS_PTS } from "@/lib/kpi-engine";
+import { emitNotification } from "@/lib/notifications/emit";
 import type { ApprovalStageKey, FindingStatus, Severity } from "@/lib/types/entities";
 import type { ActionResult, CreateResult } from "./types";
 
@@ -91,6 +92,21 @@ async function createFindingTx(
       }),
     },
   });
+  if (["critical", "high"].includes(d.severity)) {
+    const audit = await tx.audit.findUnique({ where: { id: d.auditId }, select: { leaderId: true } });
+    if (audit?.leaderId) {
+      await emitNotification(tx, {
+        type: "finding_critical",
+        recipients: [audit.leaderId],
+        actorId: userId,
+        params: { title: d.title, severity: d.severity },
+        href: `/findings/${id}`,
+        auditId: d.auditId,
+        entityType: "finding",
+        entityId: id,
+      });
+    }
+  }
 }
 
 /**
@@ -258,6 +274,29 @@ export async function findingApproval(
           auditId: finding.auditId,
         });
       }
+    }
+    if (action === "return") {
+      await emitNotification(tx, {
+        type: "finding_returned",
+        recipients: [finding.reportedById].filter(Boolean) as string[],
+        actorId: userId,
+        params: { title: finding.title },
+        href: `/findings/${findingId}`,
+        auditId: finding.auditId,
+        entityType: "finding",
+        entityId: findingId,
+      });
+    } else if (action === "approve" && nextStatus === "approved") {
+      await emitNotification(tx, {
+        type: "finding_approved",
+        recipients: [finding.reportedById].filter(Boolean) as string[],
+        actorId: userId,
+        params: { title: finding.title },
+        href: `/findings/${findingId}`,
+        auditId: finding.auditId,
+        entityType: "finding",
+        entityId: findingId,
+      });
     }
   });
 
@@ -440,7 +479,7 @@ export async function findingRemediation(
   const { userId, role } = await requireSession();
   const finding = await prisma.finding.findUnique({
     where: { id: findingId },
-    select: { status: true, taskId: true, auditId: true },
+    select: { status: true, taskId: true, auditId: true, title: true, reportedById: true },
   });
   if (!finding) return { ok: false, error: "not_found" };
   const task = await prisma.task.findUnique({
@@ -458,9 +497,9 @@ export async function findingRemediation(
   if (!guard.ok) return { ok: false, error: guard.reason };
   const to = guard.to as FindingStatus;
 
-  await prisma.$transaction([
-    prisma.finding.update({ where: { id: findingId }, data: { status: to } }),
-    prisma.approvalEvent.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.finding.update({ where: { id: findingId }, data: { status: to } });
+    await tx.approvalEvent.create({
       data: {
         entityType: "finding_remediation",
         entityId: findingId,
@@ -470,8 +509,8 @@ export async function findingRemediation(
         state: action === "failRetest" ? "returned" : "done",
         comment: comment?.trim() ? comment.trim() : null,
       },
-    }),
-    prisma.auditLog.create({
+    });
+    await tx.auditLog.create({
       data: {
         userId,
         action: `finding.remediation.${action}`,
@@ -479,8 +518,26 @@ export async function findingRemediation(
         level: action === "failRetest" ? "warn" : "info",
         payload: J({ from: finding.status, to, comment: comment ?? null }),
       },
-    }),
-  ]);
+    });
+    if (action === "failRetest" && finding.taskId) {
+      const retestTask = await tx.task.findUnique({
+        where: { id: finding.taskId },
+        select: { assigneeId: true },
+      });
+      if (retestTask?.assigneeId) {
+        await emitNotification(tx, {
+          type: "finding_retest_failed",
+          recipients: [retestTask.assigneeId],
+          actorId: userId,
+          params: { title: finding.title },
+          href: `/findings/${findingId}`,
+          auditId: finding.auditId,
+          entityType: "finding",
+          entityId: findingId,
+        });
+      }
+    }
+  });
 
   revalidatePath("/findings");
   revalidatePath("/dashboard");
