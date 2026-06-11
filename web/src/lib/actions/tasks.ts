@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createHash } from "crypto";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,7 @@ import { requirePermission } from "@/lib/rbac.server";
 import { canDoTask, type TaskAction } from "@/lib/tasks-machine";
 import { nextTaskCode } from "@/lib/task-code";
 import { emitKpiEvent } from "@/lib/kpi-engine";
+import { emitNotification } from "@/lib/notifications/emit";
 import type { TaskStatus } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 import type { ActionResult, CreateResult } from "./types";
@@ -39,9 +41,8 @@ const TaskTransitionInput = z.object({
   action: z.enum([
     "assign",
     "start",
-    "submit",
-    "complete",
     "approve",
+    "approve_head",
     "return",
     "restart",
     "unblock",
@@ -53,8 +54,8 @@ const AUDIT_ACTION: Record<TaskAction, string> = {
   assign: "task.assign",
   start: "task.update_status",
   submit: "task.update_status",
-  complete: "task.approve",
   approve: "task.approve",
+  approve_head: "task.approve",
   return: "task.return",
   restart: "task.update_status",
   unblock: "task.update_status",
@@ -110,6 +111,18 @@ export async function taskTransition(
         payload: J({ from: task.status, to, comment: comment ?? null }),
       },
     });
+    if (action === "return") {
+      await emitNotification(tx, {
+        type: "task_returned",
+        recipients: [task.assigneeId].filter(Boolean) as string[],
+        actorId: userId,
+        params: { title: task.title },
+        href: `/tasks/${task.id}`,
+        auditId: task.auditId,
+        entityType: "task",
+        entityId: task.id,
+      });
+    }
     await recountTasksAgg(tx, task.auditId);
     if (to === "done") {
       const today = new Date().toISOString().slice(0, 10);
@@ -155,20 +168,21 @@ export async function reassignTask(input: z.input<typeof ReassignInput>): Promis
 
   const { userId, role } = await requireSession();
   if (!(await requirePermission(userId, "task.assign"))) return { ok: false, error: "forbidden" };
-  if (!["chief", "lead", "head", "super"].includes(role)) return { ok: false, error: "forbidden" };
 
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    include: { audit: { select: { members: true } } },
+    include: { audit: { select: { leaderId: true, members: { select: { userId: true } } } } },
   });
   if (!task) return { ok: false, error: "not_found" };
+  // Only the audit's own leader or super may reassign tasks in that audit.
+  if (role !== "super" && task.audit.leaderId !== userId) return { ok: false, error: "forbidden" };
   const memberIds = task.audit.members.map((m) => m.userId);
   if (!memberIds.includes(assigneeId)) return { ok: false, error: "not_member" };
   if (assigneeId === task.assigneeId) return { ok: true };
 
-  await prisma.$transaction([
-    prisma.task.update({ where: { id: taskId }, data: { assigneeId } }),
-    prisma.auditLog.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.task.update({ where: { id: taskId }, data: { assigneeId } });
+    await tx.auditLog.create({
       data: {
         userId,
         action: "task.assign",
@@ -176,8 +190,18 @@ export async function reassignTask(input: z.input<typeof ReassignInput>): Promis
         level: "info",
         payload: J({ from: task.assigneeId, to: assigneeId }),
       },
-    }),
-  ]);
+    });
+    await emitNotification(tx, {
+      type: "task_reassigned",
+      recipients: [assigneeId].filter(Boolean) as string[],
+      actorId: userId,
+      params: { title: task.title },
+      href: `/tasks/${task.id}`,
+      auditId: task.auditId,
+      entityType: "task",
+      entityId: task.id,
+    });
+  });
 
   revalidatePath(`/tasks/${taskId}`);
   revalidatePath("/tasks");
@@ -185,7 +209,7 @@ export async function reassignTask(input: z.input<typeof ReassignInput>): Promis
 }
 
 // Statuses where the group lead assigns/creates tasks (during fieldwork).
-const TASK_CREATE_STATUSES = ["assigning", "in_progress"];
+const TASK_CREATE_STATUSES = ["approved", "assigning", "in_progress"];
 
 const CreateTaskInput = z.object({
   auditId: z.string().min(1),
@@ -257,6 +281,16 @@ export async function createTask(input: z.input<typeof CreateTaskInput>): Promis
           payload: J({ auditId, title, assigneeId }),
         },
       });
+      await emitNotification(tx, {
+        type: "task_assigned",
+        recipients: [assigneeId].filter(Boolean) as string[],
+        actorId: userId,
+        params: { title },
+        href: `/tasks/${id}`,
+        auditId,
+        entityType: "task",
+        entityId: id,
+      });
       await recountTasksAgg(tx, auditId);
       await emitKpiEvent(tx, {
         userId,
@@ -279,4 +313,147 @@ export async function createTask(input: z.input<typeof CreateTaskInput>): Promis
   revalidatePath("/kpi");
   revalidatePath(`/audits/${auditId}`);
   return { ok: true, id };
+}
+
+const EDITABLE_STATUSES = ["new", "assigned"] as const;
+
+const UpdateTaskInput = z.object({
+  taskId: z.string().min(1),
+  title: z.string().min(1).max(200),
+  priority: z.enum(["Yuqori", "Oʻrta", "Past"]),
+  due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export async function updateTask(input: z.input<typeof UpdateTaskInput>): Promise<ActionResult> {
+  const parsed = UpdateTaskInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const { taskId, title, priority, due } = parsed.data;
+
+  const { userId } = await requireSession();
+  if (!(await requirePermission(userId, "task.assign"))) return { ok: false, error: "forbidden" };
+
+  const task = await prisma.task.findUnique({ where: { id: taskId }, select: { status: true, auditId: true } });
+  if (!task) return { ok: false, error: "not_found" };
+  if (!(EDITABLE_STATUSES as readonly string[]).includes(task.status)) {
+    return { ok: false, error: "illegal_status" };
+  }
+
+  await prisma.$transaction([
+    prisma.task.update({ where: { id: taskId }, data: { title, priority, due } }),
+    prisma.auditLog.create({
+      data: {
+        userId,
+        action: "task.update",
+        entity: taskId,
+        level: "info",
+        payload: J({ title, priority, due }),
+      },
+    }),
+  ]);
+
+  revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/tasks");
+  revalidatePath(`/audits/${task.auditId}`);
+  return { ok: true };
+}
+
+const MAX_SUBMIT_FILES = 5;
+const MAX_SUBMIT_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
+
+export async function submitTaskForReview(formData: FormData): Promise<ActionResult> {
+  const { userId, role } = await requireSession();
+
+  const taskId = String(formData.get("taskId") ?? "").trim();
+  const comment = String(formData.get("comment") ?? "").trim();
+  const rawFiles = formData.getAll("files");
+  const files = rawFiles.filter((f): f is File => f instanceof File && f.size > 0);
+
+  if (!taskId) return { ok: false, error: "invalid" };
+  if (comment.length < 10) return { ok: false, error: "comment_required" };
+  if (files.length > MAX_SUBMIT_FILES) return { ok: false, error: "too_many_files" };
+  for (const f of files) {
+    if (f.size > MAX_SUBMIT_FILE_BYTES) return { ok: false, error: "too_large" };
+  }
+
+  if (!(await requirePermission(userId, "task.update_status"))) {
+    return { ok: false, error: "forbidden" };
+  }
+
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: { audit: { select: { leaderId: true } } },
+  });
+  if (!task) return { ok: false, error: "not_found" };
+
+  const guard = canDoTask(
+    "submit",
+    task.status as TaskStatus,
+    {
+      role,
+      isAssignee: task.assigneeId === userId,
+      isAuditLeader: task.audit.leaderId === userId,
+      isSuper: role === "super",
+    },
+    comment,
+  );
+  if (!guard.ok) return { ok: false, error: guard.reason };
+
+  await prisma.$transaction(async (tx) => {
+    const fileIds: string[] = [];
+    for (const f of files) {
+      const buf = Buffer.from(await f.arrayBuffer());
+      const sha256 = createHash("sha256").update(buf).digest("hex");
+      const stored = await tx.fileStorage.create({
+        data: {
+          filename: f.name,
+          mimeType: f.type || "application/octet-stream",
+          sizeBytes: buf.length,
+          sha256,
+          provider: "db",
+          bytes: buf,
+          uploadedById: userId,
+        },
+      });
+      fileIds.push(stored.id);
+    }
+
+    await tx.task.update({ where: { id: taskId }, data: { status: "review" } });
+
+    const history = await tx.taskStatusHistory.create({
+      data: { taskId, fromStatus: task.status, toStatus: "review", changedBy: userId, comment },
+    });
+
+    for (const fileId of fileIds) {
+      await tx.taskSubmissionFile.create({ data: { historyId: history.id, fileId } });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        action: "task.update_status",
+        entity: taskId,
+        level: "info",
+        payload: J({ from: task.status, to: "review", files: fileIds.length }),
+      },
+    });
+
+    await emitNotification(tx, {
+      type: "task_review",
+      recipients: [task.audit.leaderId].filter(Boolean) as string[],
+      actorId: userId,
+      params: { title: task.title },
+      href: `/tasks/${taskId}`,
+      auditId: task.auditId,
+      entityType: "task",
+      entityId: taskId,
+    });
+
+    await recountTasksAgg(tx, task.auditId);
+  });
+
+  revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath(`/audits/${task.auditId}`);
+  return { ok: true };
 }

@@ -27,11 +27,15 @@ vi.mock("@/lib/prisma", () => {
       create: vi.fn(async () => ({})),
       findMany: vi.fn(async () => h.tasks),
     },
-    taskStatusHistory: { create: vi.fn(async () => ({})) },
+    taskStatusHistory: { create: vi.fn(async () => ({ id: "h-1" })) },
     auditLog: { create: vi.fn(async () => ({})) },
     audit: { findUnique: vi.fn(async () => h.audit), update: vi.fn(async () => ({})) },
     kpiEvent: { create: vi.fn(async () => ({})) },
     kpiUser: { upsert: vi.fn(async () => ({})) },
+    fileStorage: { create: vi.fn(async () => ({ id: "fs-1" })) },
+    taskSubmissionFile: { create: vi.fn(async () => ({})) },
+    systemSetting: { findUnique: vi.fn(async () => null) },
+    notification: { createMany: vi.fn(async () => ({})) },
     $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation(async (arg: unknown) =>
@@ -44,7 +48,7 @@ vi.mock("@/lib/prisma", () => {
   return { prisma };
 });
 
-import { createTask, taskTransition } from "./tasks";
+import { createTask, taskTransition, submitTaskForReview } from "./tasks";
 import { prisma } from "@/lib/prisma";
 // kpiEvent is added by the schema migration; cast until `prisma db push` regenerates the client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -167,10 +171,17 @@ describe("createTask", () => {
 });
 
 describe("taskTransition KPI emission", () => {
-  it("emits task_completed and task_on_time when completed before due date", async () => {
-    h.task = { id: "T-1", status: "review", assigneeId: "u6", auditId: "AUD-1", due: "2099-12-31" };
-    h.audit = { status: "in_progress", leaderId: "u1", members: [{ userId: "u6" }] };
-    await taskTransition({ taskId: "T-1", action: "approve" });
+  it("emits task_completed and task_on_time when head approves before due date", async () => {
+    h.task = {
+      id: "T-1",
+      status: "review_head",
+      assigneeId: "u6",
+      auditId: "AUD-1",
+      due: "2099-12-31",
+    };
+    h.audit = { status: "in_progress", leaderId: "u3", members: [{ userId: "u6" }] };
+    vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u2", role: "head", name: "" });
+    await taskTransition({ taskId: "T-1", action: "approve_head" });
     const codes = mockPrisma.kpiEvent.create.mock.calls.map(
       (c: [{ data: { ruleCode: string } }]) => c[0].data.ruleCode,
     );
@@ -179,10 +190,17 @@ describe("taskTransition KPI emission", () => {
     expect(codes).not.toContain("task_overdue");
   });
 
-  it("emits task_overdue (not task_on_time) when completed past due date", async () => {
-    h.task = { id: "T-1", status: "review", assigneeId: "u6", auditId: "AUD-1", due: "2020-01-01" };
-    h.audit = { status: "in_progress", leaderId: "u1", members: [{ userId: "u6" }] };
-    await taskTransition({ taskId: "T-1", action: "approve" });
+  it("emits task_overdue (not task_on_time) when head approves past due date", async () => {
+    h.task = {
+      id: "T-1",
+      status: "review_head",
+      assigneeId: "u6",
+      auditId: "AUD-1",
+      due: "2020-01-01",
+    };
+    h.audit = { status: "in_progress", leaderId: "u3", members: [{ userId: "u6" }] };
+    vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u2", role: "head", name: "" });
+    await taskTransition({ taskId: "T-1", action: "approve_head" });
     const codes = mockPrisma.kpiEvent.create.mock.calls.map(
       (c: [{ data: { ruleCode: string } }]) => c[0].data.ruleCode,
     );
@@ -201,5 +219,75 @@ describe("taskTransition KPI emission", () => {
     };
     await taskTransition({ taskId: "T-1", action: "start" });
     expect(mockPrisma.kpiEvent.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("submitTaskForReview", () => {
+  const makeForm = (
+    overrides: Partial<{ taskId: string; comment: string; files: File[] }> = {},
+  ): FormData => {
+    const fd = new FormData();
+    fd.set("taskId", overrides.taskId ?? "T-1");
+    fd.set("comment", overrides.comment ?? "Vazifa bajarildi, barcha tekshiruvlar o'tdi");
+    for (const f of overrides.files ?? []) fd.append("files", f);
+    return fd;
+  };
+
+  beforeEach(() => {
+    h.task = { id: "T-1", status: "in_progress", assigneeId: "u1", auditId: "AUD-1", due: "2099-12-31" };
+    h.audit = { status: "in_progress", leaderId: "u3", members: [{ userId: "u1" }] };
+  });
+
+  it("rejects a missing comment", async () => {
+    expect(await submitTaskForReview(makeForm({ comment: "" }))).toEqual({
+      ok: false,
+      error: "comment_required",
+    });
+  });
+
+  it("rejects a comment shorter than 10 chars", async () => {
+    expect(await submitTaskForReview(makeForm({ comment: "qisqa" }))).toEqual({
+      ok: false,
+      error: "comment_required",
+    });
+  });
+
+  it("rejects more than 5 files", async () => {
+    const files = Array.from({ length: 6 }, (_, i) => new File(["x"], `f${i}.txt`));
+    expect(await submitTaskForReview(makeForm({ files }))).toEqual({
+      ok: false,
+      error: "too_many_files",
+    });
+  });
+
+  it("rejects a file exceeding 20 MB", async () => {
+    const big = new File([new ArrayBuffer(21 * 1024 * 1024)], "big.bin");
+    expect(await submitTaskForReview(makeForm({ files: [big] }))).toEqual({
+      ok: false,
+      error: "too_large",
+    });
+  });
+
+  it("submits task with comment and no files → task status review", async () => {
+    const res = await submitTaskForReview(makeForm());
+    expect(res).toEqual({ ok: true });
+    expect(mockPrisma.task.update).toHaveBeenCalledWith({
+      where: { id: "T-1" },
+      data: { status: "review" },
+    });
+    expect(mockPrisma.taskStatusHistory.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          fromStatus: "in_progress",
+          toStatus: "review",
+          comment: "Vazifa bajarildi, barcha tekshiruvlar o'tdi",
+        }),
+      }),
+    );
+  });
+
+  it("forbids a non-assignee non-lead from submitting", async () => {
+    vi.mocked(requireSession).mockResolvedValueOnce({ userId: "u9", role: "t1", name: "" });
+    expect(await submitTaskForReview(makeForm())).toEqual({ ok: false, error: "forbidden" });
   });
 });
