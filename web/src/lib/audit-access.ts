@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac.server";
+import type { RoleCode } from "@/lib/types/roles";
 
 /** True if the user is the audit leader or a group member. */
 export async function isAuditMember(auditId: string, userId: string): Promise<boolean> {
@@ -19,4 +20,21 @@ export async function isAuditMember(auditId: string, userId: string): Promise<bo
 export async function canManageEvidence(auditId: string, userId: string): Promise<boolean> {
   if (await requirePermission(userId, "audit.update")) return true;
   return isAuditMember(auditId, userId);
+}
+
+/**
+ * Check if a user has audit leader access: either they hold super/head role,
+ * or they are the audit's designated leader.
+ */
+export async function isAuditLeader(
+  auditId: string,
+  userId: string,
+  role: RoleCode,
+): Promise<boolean> {
+  if (role === "super" || role === "head") return true;
+  const audit = await prisma.audit.findUnique({
+    where: { id: auditId },
+    select: { leaderId: true },
+  });
+  return audit?.leaderId === userId;
 }
