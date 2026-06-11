@@ -28,8 +28,17 @@ describe("NotificationsScreen", () => {
     render(
       <NextIntlClientProvider locale="uz" messages={messages}>
         <NotificationsScreen
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          items={[{ id: "n1", type: "task_returned", params: { title: "T1" }, href: "/tasks/1", readAt: null, createdAt: new Date().toISOString() } as any]}
+          items={[
+            {
+              id: "n1",
+              type: "task_returned",
+              params: { title: "T1" },
+              href: "/tasks/1",
+              readAt: null,
+              createdAt: new Date().toISOString(),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any,
+          ]}
         />
       </NextIntlClientProvider>,
     );
