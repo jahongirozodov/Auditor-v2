@@ -1026,6 +1026,8 @@
     "evidenceEmpty": "Rasm biriktirilmagan",
     "removeEvidence": "Rasmni olib tashlash",
     "invalidEvidence": "Rasm formati yoki hajmi mos emas",
+    "evidenceDrop": "Rasmlarni bu yerga tashlang yoki",
+    "evidenceSelectBtn": "rasm tanlang",
     "create": "Yaratish",
     "cancel": "Bekor qilish",
     "created": "Topilma qoʻshildi",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ImagePlus, Plus, X } from "lucide-react";
@@ -54,6 +54,9 @@ export interface CreateFindingModalProps {
   audits: Audit[];
   tasks: Task[];
   defaultAuditId: string;
+  /** When set, audit/task selects are hidden and values are locked. */
+  lockedAuditId?: string;
+  lockedTaskId?: string;
 }
 
 export function CreateFindingModal({
@@ -62,16 +65,19 @@ export function CreateFindingModal({
   audits,
   tasks,
   defaultAuditId,
+  lockedAuditId,
+  lockedTaskId,
 }: CreateFindingModalProps) {
   const t = useTranslations("findings");
   const toast = useToast();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const [auditId, setAuditId] = useState(defaultAuditId);
+  const locked = Boolean(lockedAuditId && lockedTaskId);
+  const [auditId, setAuditId] = useState(lockedAuditId ?? defaultAuditId);
   const auditTasks = tasks.filter((tk) => tk.auditId === auditId);
   const [title, setTitle] = useState("");
-  const [taskId, setTaskId] = useState(auditTasks[0]?.id ?? "");
+  const [taskId, setTaskId] = useState(lockedTaskId ?? auditTasks[0]?.id ?? "");
   const [severity, setSeverity] = useState<Severity>("high");
   const [cvss, setCvss] = useState(SEV_CVSS.high);
   const [cwe, setCwe] = useState("CWE-284");
@@ -79,6 +85,9 @@ export function CreateFindingModal({
   const [type, setType] = useState(TYPES[0]);
   const [description, setDescription] = useState("");
   const [evidenceImages, setEvidenceImages] = useState<SelectedEvidenceImage[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounter = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const valid =
     title.trim().length >= 3 && Boolean(auditId) && Boolean(taskId) && cvss >= 0 && cvss <= 10;
@@ -101,7 +110,10 @@ export function CreateFindingModal({
         toast(t("invalidEvidence"), "danger");
         break;
       }
-      if (!ALLOWED_IMAGE_TYPES.includes(file.type as EvidenceMimeType) || file.size > MAX_IMAGE_BYTES) {
+      if (
+        !ALLOWED_IMAGE_TYPES.includes(file.type as EvidenceMimeType) ||
+        file.size > MAX_IMAGE_BYTES
+      ) {
         toast(t("invalidEvidence"), "danger");
         continue;
       }
@@ -120,6 +132,28 @@ export function CreateFindingModal({
 
   function removeEvidenceImage(id: string) {
     setEvidenceImages((items) => items.filter((item) => item.id !== id));
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    dragCounter.current++;
+    setIsDragOver(true);
+  }
+
+  function handleDragLeave() {
+    dragCounter.current--;
+    if (dragCounter.current === 0) setIsDragOver(false);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setIsDragOver(false);
+    void addEvidenceImages(e.dataTransfer.files);
   }
 
   function submit() {
@@ -191,36 +225,40 @@ export function CreateFindingModal({
           </Field>
         </div>
 
-        <Field label={t("fAudit")} htmlFor="cf-audit">
-          <select
-            id="cf-audit"
-            className="select"
-            value={auditId}
-            onChange={(e) => changeAudit(e.target.value)}
-          >
-            {audits.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.code} — {a.title}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {!locked ? (
+          <Field label={t("fAudit")} htmlFor="cf-audit">
+            <select
+              id="cf-audit"
+              className="select"
+              value={auditId}
+              onChange={(e) => changeAudit(e.target.value)}
+            >
+              {audits.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.code} — {a.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
 
-        <Field label={t("fTask")} htmlFor="cf-task">
-          <select
-            id="cf-task"
-            className="select"
-            value={taskId}
-            onChange={(e) => setTaskId(e.target.value)}
-          >
-            {auditTasks.length === 0 ? <option value="">{t("noTasks")}</option> : null}
-            {auditTasks.map((tk) => (
-              <option key={tk.id} value={tk.id}>
-                {tk.id} — {tk.title}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {!locked ? (
+          <Field label={t("fTask")} htmlFor="cf-task">
+            <select
+              id="cf-task"
+              className="select"
+              value={taskId}
+              onChange={(e) => setTaskId(e.target.value)}
+            >
+              {auditTasks.length === 0 ? <option value="">{t("noTasks")}</option> : null}
+              {auditTasks.map((tk) => (
+                <option key={tk.id} value={tk.id}>
+                  {tk.id} — {tk.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
 
         <Field label={t("fSeverity")} htmlFor="cf-severity">
           <select
@@ -295,20 +333,69 @@ export function CreateFindingModal({
         <div style={{ gridColumn: "span 2" }}>
           <Field label={t("fEvidenceImages")} htmlFor="cf-evidence">
             <input
+              ref={fileInputRef}
               id="cf-evidence"
-              className="input"
               type="file"
               accept="image/png,image/jpeg,image/webp"
               multiple
+              style={{ display: "none" }}
               onChange={(e) => {
                 void addEvidenceImages(e.target.files);
                 e.currentTarget.value = "";
               }}
             />
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={t("fEvidenceImages")}
+              className="card"
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+              }}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              style={{
+                background: isDragOver ? "var(--bg-surface-3)" : "var(--bg-surface-2)",
+                borderStyle: "dashed",
+                borderColor: isDragOver ? "var(--accent)" : "var(--border)",
+                cursor: "pointer",
+                transition: "border-color 0.15s, background 0.15s",
+                userSelect: "none",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                }}
+              >
+                <ImagePlus
+                  size={28}
+                  style={{
+                    color: isDragOver ? "var(--accent)" : "var(--text-tertiary)",
+                    transition: "color 0.15s",
+                  }}
+                />
+                <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+                  {t("evidenceDrop")}{" "}
+                  <span style={{ color: "var(--accent)", fontWeight: 500 }}>
+                    {t("evidenceSelectBtn")}
+                  </span>
+                </div>
+                <div style={{ color: "var(--text-tertiary)", fontSize: 12 }}>
+                  {t("evidenceHint")}
+                </div>
+              </div>
+            </div>
           </Field>
-          <div style={{ marginTop: 6, color: "var(--text-tertiary)", fontSize: 12.5 }}>
-            {t("evidenceHint")}
-          </div>
           {evidenceImages.length > 0 ? (
             <div className="tile-grid" style={{ marginTop: 10 }}>
               {evidenceImages.map((image) => (
@@ -339,24 +426,7 @@ export function CreateFindingModal({
                 </div>
               ))}
             </div>
-          ) : (
-            <div
-              className="card"
-              style={{
-                marginTop: 10,
-                background: "var(--bg-surface-2)",
-                borderStyle: "dashed",
-              }}
-            >
-              <div
-                className="card__pad-sm"
-                style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-tertiary)" }}
-              >
-                <ImagePlus size={15} />
-                <span style={{ fontSize: 12.5 }}>{t("evidenceEmpty")}</span>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </Modal>
