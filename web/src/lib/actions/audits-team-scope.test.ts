@@ -21,7 +21,9 @@ vi.mock("@/lib/prisma", () => {
       deleteMany: vi.fn(async () => ({})),
     },
     auditLog: { create: vi.fn(async () => ({})) },
-    audit: { update: vi.fn(async () => ({})) },
+    audit: { update: vi.fn(async () => ({})), findUnique: vi.fn(async () => ({ name: "Audit" })) },
+    systemSetting: { findUnique: vi.fn(async () => null) },
+    notification: { createMany: vi.fn(async () => ({})) },
   };
   return {
     prisma: {
