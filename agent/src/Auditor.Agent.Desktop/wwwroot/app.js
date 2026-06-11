@@ -17,6 +17,7 @@ const S = {
 
 let cachedTasks = [];
 let prevOnline  = null;
+let activeTaskFilter = 'all';
 
 // ── DOM helpers ────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -347,11 +348,13 @@ const SCREENS = {
   },
 
   async tasks() {
+    activeTaskFilter = 'all';
     $('content').innerHTML = `
       <div class="page-header">
         <div><h1 class="h1">Mening vazifalarim</h1><p class="meta" id="t-sum"></p></div>
         <button id="t-sync" class="btn btn-soft">${icon('refresh')} Sinxronlash</button>
       </div>
+      <div class="filter-bar" id="t-bar"></div>
       <div class="panel stagger" id="t-list"><div class="loading">Yuklanmoqda…</div></div>
     `;
     $('t-sync').addEventListener('click', async () => {
@@ -760,18 +763,67 @@ async function loadTasks() {
     return;
   }
   cachedTasks = tasks;
+
+  const ACTIVE   = new Set(['new', 'assigned', 'in_progress', 'inprogress', 'review', 'returned', 'blocked']);
+  const DONE     = new Set(['done', 'approved']);
+  const TERMINAL = new Set(['done', 'approved', 'cancelled']);
+  const STATUS_NEXT = {
+    assigned:    { toStatus: 'in_progress', label: 'Boshlash' },
+    in_progress: { toStatus: 'review',      label: 'Tekshiruvga' },
+    inprogress:  { toStatus: 'review',      label: 'Tekshiruvga' },
+    returned:    { toStatus: 'in_progress', label: 'Qayta boshlash' },
+  };
+
+  const counts = {
+    all:       tasks.length,
+    active:    tasks.filter(t => ACTIVE.has(t.status)).length,
+    done:      tasks.filter(t => DONE.has(t.status)).length,
+    cancelled: tasks.filter(t => t.status === 'cancelled').length,
+  };
+
+  const bar = $('t-bar');
+  if (bar) {
+    bar.innerHTML = [
+      filterBtn('all',       `Hammasi (${counts.all})`,              activeTaskFilter),
+      filterBtn('active',    `Faol (${counts.active})`,              activeTaskFilter),
+      filterBtn('done',      `Bajarilgan (${counts.done})`,          activeTaskFilter),
+      filterBtn('cancelled', `Bekor qilingan (${counts.cancelled})`, activeTaskFilter),
+    ].join('');
+    bar.querySelectorAll('.filter-btn').forEach(b => {
+      b.addEventListener('click', () => { activeTaskFilter = b.dataset.filter; loadTasks(); });
+    });
+  }
+
   const sumEl = $('t-sum');
   if (sumEl) {
-    const ip = tasks.filter(t=>t.status==='in_progress').length;
-    const fr = tasks.filter(t=>t.status==='new').length;
+    const ip = tasks.filter(t => ACTIVE.has(t.status) && t.status !== 'new' && t.status !== 'assigned').length;
+    const fr = tasks.filter(t => t.status === 'new').length;
     sumEl.textContent = `${tasks.length} ta vazifa · ${ip} jarayonda · ${fr} yangi`;
   }
+
+  let visible = tasks;
+  if (activeTaskFilter === 'active')    visible = tasks.filter(t => ACTIVE.has(t.status));
+  if (activeTaskFilter === 'done')      visible = tasks.filter(t => DONE.has(t.status));
+  if (activeTaskFilter === 'cancelled') visible = tasks.filter(t => t.status === 'cancelled');
+
   const list = $('t-list'); if (!list) return;
-  if (!tasks.length) { list.innerHTML=`<div class="empty-state">Vazifalar topilmadi</div>`; return; }
-  list.innerHTML = tasks.map(t => {
-    const st = statusOf(t.status);
+  if (!visible.length) { list.innerHTML = `<div class="empty-state">Vazifalar topilmadi</div>`; return; }
+
+  list.innerHTML = visible.map(t => {
+    const st      = statusOf(t.status);
+    const nextStep = STATUS_NEXT[t.status];
+    const findingBtn = TERMINAL.has(t.status) ? '' : `
+      <button class="btn btn-soft" style="font-size:11px;padding:4px 10px"
+              data-tid="${esc(t.id)}" data-ttitle="${esc(t.title)}">
+        ${icon('plus')} Finding
+      </button>`;
+    const statusBtn = nextStep ? `
+      <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+              data-sid="${esc(t.id)}" data-snext="${esc(nextStep.toStatus)}">
+        ${nextStep.label}
+      </button>` : '';
     return `
-      <div class="list-item" data-sev="${t.findings>0?'high':''}">
+      <div class="list-item" data-sev="${t.findings > 0 ? 'high' : ''}">
         <div class="list-item-main">
           <div class="list-item-info">
             <div class="list-item-title">${esc(t.title)}</div>
@@ -779,21 +831,41 @@ async function loadTasks() {
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-          ${t.findings>0?`<span class="meta">${t.findings} finding</span>`:''}
+          ${t.findings > 0 ? `<span class="meta">${t.findings} finding</span>` : ''}
           <span class="tag tag-${esc(st.kind)}">${esc(st.label)}</span>
           <div class="quick-actions">
-            <button class="btn btn-soft" style="font-size:11px;padding:4px 10px" data-tid="${esc(t.id)}" data-ttitle="${esc(t.title)}">
-              ${icon('plus')} Finding
-            </button>
+            ${statusBtn}
+            ${findingBtn}
           </div>
         </div>
       </div>
     `;
   }).join('');
+
   list.querySelectorAll('[data-tid]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      nav('new-finding', { taskId:btn.dataset.tid, taskTitle:btn.dataset.ttitle });
+      nav('new-finding', { taskId: btn.dataset.tid, taskTitle: btn.dataset.ttitle });
+    });
+  });
+
+  list.querySelectorAll('[data-sid]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!S.online) {
+        toast('Oflayn rejimda holat o\'zgartirib bo\'lmaydi');
+        return;
+      }
+      btn.disabled = true;
+      const r = await api.post(`/api/tasks/${btn.dataset.sid}/status`, { toStatus: btn.dataset.snext });
+      if (r.ok) {
+        toast('Vazifa holati yangilandi');
+        await loadTasks();
+      } else {
+        const msgs = { offline: 'Oflayn rejimda holat o\'zgartirib bo\'lmaydi' };
+        toast(msgs[r.error] ?? 'Holat yangilanmadi');
+        btn.disabled = false;
+      }
     });
   });
 }
