@@ -24,6 +24,10 @@ vi.mock("@/lib/session", () => ({
   requireSession: vi.fn(async () => ({ userId: "u1", role: "lead", name: "" })),
 }));
 vi.mock("@/lib/rbac.server", () => ({ requirePermission: vi.fn(async () => true) }));
+vi.mock("@/lib/audit-access", () => ({
+  isAuditMember: vi.fn(async () => true),
+  isAuditLeader: vi.fn(async () => true),
+}));
 vi.mock("@/lib/ai/ollama", () => ({
   isAiEnabled: vi.fn(() => h.aiEnabled),
   getOllamaConfig: vi.fn(() => ({ model: "test-model" })),

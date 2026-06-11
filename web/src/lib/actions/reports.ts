@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { requirePermission } from "@/lib/rbac.server";
 import { canActAt, nextStage, reportCurrentOf } from "@/lib/approval";
+import { isAuditMember, isAuditLeader } from "@/lib/audit-access";
 import { generate, getOllamaConfig, isAiEnabled } from "@/lib/ai/ollama";
 import { SYSTEM } from "@/lib/ai/prompts";
 import type { ApprovalStageKey, ReportStatus } from "@/lib/types/entities";
@@ -21,6 +22,7 @@ export async function generateReport(input: GenerateReportInput) {
   if (!(await requirePermission(userId, "report.create"))) throw new Error("Ruxsat yoʻq");
   if (!input.title.trim() || !input.auditId || !input.formats.length)
     return { ok: false, error: "Maydonlar toʻldirilishi shart" };
+  if (!(await isAuditMember(input.auditId, userId))) throw new Error("Ruxsat yoʻq");
 
   const id = `R-${Date.now()}`;
   await prisma.report.create({
@@ -41,8 +43,18 @@ export async function generateReport(input: GenerateReportInput) {
 }
 
 export async function deleteReport(id: string) {
-  const { userId } = await requireSession();
+  const { userId, role } = await requireSession();
   if (!(await requirePermission(userId, "report.create"))) throw new Error("Ruxsat yoʻq");
+  const report = await prisma.report.findUnique({
+    where: { id },
+    select: { id: true, authorId: true, auditId: true },
+  });
+  if (!report) throw new Error("Topilmadi");
+  if (
+    report.authorId !== userId &&
+    !(await isAuditLeader(report.auditId, userId, role as RoleCode))
+  )
+    throw new Error("Ruxsat yoʻq");
   await prisma.report.delete({ where: { id } });
   revalidatePath("/reports");
   return { ok: true };
@@ -172,6 +184,7 @@ export async function regenerateReportSummary(reportId: string): Promise<ActionR
 
   const report = await prisma.report.findUnique({ where: { id: reportId } });
   if (!report) return { ok: false, error: "not_found" };
+  if (!(await isAuditMember(report.auditId, userId))) return { ok: false, error: "forbidden" };
   if (!isAiEnabled()) return { ok: false, error: "degraded" };
 
   const audit = await prisma.audit.findUnique({
