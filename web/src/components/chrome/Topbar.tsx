@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
-  Bell,
   CheckSquare,
   ChevronDown,
   LogOut,
@@ -17,6 +16,7 @@ import {
   Sun,
   User,
 } from "lucide-react";
+import { NotifBell } from "./NotifBell";
 import { logoutAction } from "@/app/(app)/actions";
 import type { ShellUser } from "./AppShell";
 
@@ -66,14 +66,9 @@ export function Topbar({
   const theme = useSyncExternalStore(subscribeTheme, getTheme, () => "dark" as Theme);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const menuRef = useDismiss(
     menuOpen,
     useCallback(() => setMenuOpen(false), []),
-  );
-  const notifRef = useDismiss(
-    notifOpen,
-    useCallback(() => setNotifOpen(false), []),
   );
 
   const toggleTheme = useCallback(() => {
@@ -128,41 +123,7 @@ export function Topbar({
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <div className="notif-menu" ref={notifRef}>
-          <button
-            type="button"
-            className={`iconbtn${notifOpen ? " is-active" : ""}`}
-            aria-haspopup="menu"
-            aria-expanded={notifOpen}
-            aria-label={t("notifications")}
-            onClick={() => setNotifOpen((o) => !o)}
-            style={{ position: "relative" }}
-          >
-            <Bell size={18} />
-            <span className="dot" />
-          </button>
-          {notifOpen ? (
-            <div className="notif-menu__pop" role="menu">
-              <div className="notif-menu__head">
-                <div className="notif-menu__title">
-                  <span>{t("notifications")}</span>
-                </div>
-                <button
-                  type="button"
-                  className="notif-menu__mark"
-                  onClick={() => setNotifOpen(false)}
-                >
-                  {t("markAllRead")}
-                </button>
-              </div>
-              <div className="notif-menu__foot">
-                <button type="button" className="notif-menu__all">
-                  <span>{t("allNotifications")}</span>
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <NotifBell />
 
         <Link href="/ai" className="iconbtn" aria-label="AI">
           <Sparkles size={18} />
