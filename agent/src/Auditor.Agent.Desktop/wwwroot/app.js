@@ -357,7 +357,8 @@ const SCREENS = {
     $('t-sync').addEventListener('click', async () => {
       $('t-sync').disabled = true;
       const r = await api.post('/api/sync');
-      $('t-sync').disabled = false;
+      const tsyncBtn = $('t-sync');
+      if (tsyncBtn) tsyncBtn.disabled = false;
       if (r.requiresReauth) { toast('Audit tokeni yaroqsiz. Qayta kiriting.'); await nav('token'); return; }
       toast(r.online ? `Sync: ${r.created} yuborildi` : 'Server oflayn');
       await syncState(); renderShell(); await loadTasks();
@@ -385,6 +386,11 @@ const SCREENS = {
 
     async function loadFindings() {
       const list = await api.get('/api/findings');
+      if (!Array.isArray(list)) {
+        const fl = $('f-list');
+        if (fl) fl.innerHTML = `<div class="empty-state">Ma'lumot yuklanmadi</div>`;
+        return;
+      }
       const counts = {
         all:     list.length,
         draft:   list.filter(f => f.state === 'draft').length,
@@ -599,7 +605,7 @@ const SCREENS = {
       const list = await api.get('/api/evidence');
       const grid = $('files-grid'); if (!grid) return;
       if (!list.length) { grid.innerHTML = `<div class="empty-state">Fayl topilmadi</div>`; return; }
-      const fileIcon = ext => /png|jpg|jpeg|gif/.test(ext)?'🖼':/pcap/.test(ext)?'📡':/csv/.test(ext)?'📊':'📄';
+      const fileIcon = ext => /png|jpg|jpeg|gif/.test(ext)?icon('files'):/pcap/.test(ext)?icon('sync'):/csv/.test(ext)?icon('log'):icon('files');
       grid.innerHTML = list.map(f => {
         const ext = (f.filename||'').split('.').pop()?.toLowerCase()||'';
         return `
@@ -634,26 +640,30 @@ const SCREENS = {
         api.get('/api/ping'), api.get('/api/findings'),
         api.get('/api/evidence'), api.get('/api/logs'),
       ]);
+      const safeFindings = Array.isArray(findings) ? findings : [];
+      const safeEvidence = Array.isArray(evidence) ? evidence : [];
+      const safeLogs     = Array.isArray(logs)     ? logs     : [];
       const online = ping.ok ?? false;
       const banner = $('s-banner');
       if (banner) banner.innerHTML = online
         ? `<div class="banner-success">${icon('check')} Onlayn · server bilan aloqada</div>`
         : `<div class="banner-warning">${icon('wifiOff')} Oflayn · server bilan aloqa yoʿq</div>`;
       const queue = [
-        ...findings.filter(f=>f.state==='draft').map(f=>({ item:`Finding — ${f.title}`, size:'—' })),
-        ...evidence.filter(e=>String(e.state).toLowerCase()==='pending').map(e=>({ item:e.filename, size:humanSize(e.sizeBytes) })),
+        ...safeFindings.filter(f=>f.state==='draft').map(f=>({ item:`Finding — ${f.title}`, size:'—' })),
+        ...safeEvidence.filter(e=>String(e.state).toLowerCase()==='pending').map(e=>({ item:e.filename, size:humanSize(e.sizeBytes) })),
       ];
       const sq = $('s-queue');
       if (sq) sq.innerHTML = queue.length
         ? queue.map(q=>`<div class="list-item"><span>${esc(q.item)}</span><div><span class="meta">${esc(q.size)}</span> <span class="tag tag-ghost" style="margin-left:6px">Navbatda</span></div></div>`).join('')
         : `<div class="empty-state" style="padding:14px">Navbat boʿsh</div>`;
       const sl = $('s-logs');
-      if (sl) { sl.value = logs.slice(-40).map(l=>`[${l.ts}] ${String(l.level).padEnd(5)} ${l.message}`).join('\n'); sl.scrollTop=sl.scrollHeight; }
+      if (sl) { sl.value = safeLogs.slice(-40).map(l=>`[${l.ts}] ${String(l.level).padEnd(5)} ${l.message}`).join('\n'); sl.scrollTop=sl.scrollHeight; }
     }
     $('s-now').addEventListener('click', async () => {
       $('s-now').disabled=true; $('s-now').innerHTML=`${icon('refresh')} Sinxronlanmoqda…`;
       const r = await api.post('/api/sync');
-      $('s-now').disabled=false; $('s-now').innerHTML=`${icon('refresh')} Hozir sinxronla`;
+      const snowBtn = $('s-now');
+      if (snowBtn) { snowBtn.disabled=false; snowBtn.innerHTML=`${icon('refresh')} Hozir sinxronla`; }
       if (r.requiresReauth) { toast('Audit tokeni yaroqsiz.'); await nav('token'); return; }
       toast(r.online?`${r.created} finding, ${r.evidenceSent} fayl yuborildi`:'Server oflayn — keyinroq');
       await syncState(); renderShell(); await loadSync();
@@ -723,13 +733,17 @@ const SCREENS = {
     $('cfg-save').addEventListener('click', async () => {
       $('cfg-save').disabled=true;
       await api.put('/api/settings', { serverUrl:$('cfg-url').value.trim(), syncInterval:parseInt($('cfg-int').value)||5 });
-      $('cfg-save').disabled=false; toast('Sozlamalar saqlandi');
+      const saveBtn = $('cfg-save');
+      if (saveBtn) saveBtn.disabled=false;
+      toast('Sozlamalar saqlandi');
     });
     $('cfg-upd').addEventListener('click', async () => {
       $('cfg-upd').disabled=true;
       const r = await api.post('/api/update-check');
-      $('cfg-upd').disabled=false;
-      $('cfg-upd-msg').textContent = r.available?`Yangi versiya mavjud: v${r.latest}`:'Eng soʿnggi versiya oʿrnatilgan';
+      const updBtn = $('cfg-upd');
+      if (updBtn) updBtn.disabled=false;
+      const updMsg = $('cfg-upd-msg');
+      if (updMsg) updMsg.textContent = r.available?`Yangi versiya mavjud: v${r.latest}`:'Eng soʿnggi versiya oʿrnatilgan';
     });
     $('cfg-logout').addEventListener('click', async () => {
       await api.post('/api/logout'); S.audited=false; S.email=''; await nav('login');
@@ -740,6 +754,11 @@ const SCREENS = {
 // ── Tasks loader (shared) ──────────────────────────────────────────────
 async function loadTasks() {
   const tasks = await api.get('/api/tasks');
+  if (!Array.isArray(tasks)) {
+    const list = $('t-list');
+    if (list) list.innerHTML = `<div class="empty-state">Ma'lumot yuklanmadi</div>`;
+    return;
+  }
   cachedTasks = tasks;
   const sumEl = $('t-sum');
   if (sumEl) {
