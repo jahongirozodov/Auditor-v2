@@ -23,8 +23,8 @@ export async function canManageEvidence(auditId: string, userId: string): Promis
 }
 
 /**
- * Check if a user has audit leader access: either they hold super/head role,
- * or they are the audit's designated leader.
+ * True if the user can manage this audit's team and tokens:
+ * super/head roles always qualify; otherwise must be the audit's leaderId.
  */
 export async function isAuditLeader(
   auditId: string,
@@ -36,5 +36,6 @@ export async function isAuditLeader(
     where: { id: auditId },
     select: { leaderId: true },
   });
-  return audit?.leaderId === userId;
+  if (!audit) return false;
+  return audit.leaderId === userId;
 }
