@@ -18,8 +18,6 @@ export interface User {
 }
 
 // ---------- Organizations ----------
-export type RiskLevel = "high" | "medium" | "low";
-
 export interface Organization {
   id: string;
   name: string;
@@ -47,11 +45,7 @@ export interface OrgDevice {
 }
 
 export interface OrgDetail {
-  region: string;
-  address: string;
-  risk: RiskLevel;
   head: string;
-  since: string;
   contacts: OrgContact[];
   devices: OrgDevice[];
 }
@@ -62,6 +56,7 @@ export type AuditStatus =
   | "group_forming"
   | "project_draft"
   | "project_pending"
+  | "head_approved"
   | "assigning"
   | "in_progress"
   | "review"
@@ -147,6 +142,7 @@ export type TaskStatus =
   | "assigned"
   | "in_progress"
   | "review"
+  | "review_head"
   | "returned"
   | "done"
   | "blocked";
@@ -259,6 +255,27 @@ export interface ScanImportRowView {
   auditCode: string;
   severityAgg: { critical: number; high: number; medium: number; low: number; info: number };
   status: string;
+  createdAt: string;
+}
+
+export interface ConfigHistoryRowView {
+  id: string;
+  filename: string;
+  vendor: string;
+  auditCode: string;
+  gapCount: number;
+  severityAgg: { critical: number; high: number; medium: number };
+  createdAt: string;
+}
+
+export interface TrafficHistoryRowView {
+  id: string;
+  filename: string;
+  format: string;
+  auditCode: string;
+  anomalyCount: number;
+  totalPackets: number;
+  uniqueIps: number;
   createdAt: string;
 }
 
@@ -446,6 +463,8 @@ export interface TopologyNode {
   segment: string;
   sev: Severity;
   findings: number;
+  aiLabel?: string;
+  aiReason?: string;
 }
 
 export interface TopologyEdge {
