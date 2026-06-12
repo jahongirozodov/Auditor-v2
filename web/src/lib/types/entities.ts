@@ -28,6 +28,11 @@ export interface Organization {
   contact: string;
 }
 
+export interface Sector {
+  id: string;
+  name: string;
+}
+
 export interface OrgContact {
   name: string;
   role: string;
