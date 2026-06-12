@@ -16,13 +16,15 @@ import { Stat } from "@/components/ui/Stat";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { OrgFormModal, type EditableOrganization } from "./OrgFormModal";
-import type { Organization, OrgDetail } from "@/lib/types/entities";
+import type { Organization, OrgDetail, Sector } from "@/lib/types/entities";
 
 export interface OrgsScreenProps {
   orgs: Organization[];
   orgDetails: Record<string, OrgDetail>;
   activeAuditCount: number;
   canEdit?: boolean;
+  sectors: Sector[];
+  canManageSectors?: boolean;
 }
 
 function initials(name: string): string {
@@ -39,6 +41,8 @@ export function OrgsScreen({
   orgDetails,
   activeAuditCount,
   canEdit = true,
+  sectors,
+  canManageSectors = false,
 }: OrgsScreenProps) {
   const t = useTranslations("orgs");
   const [modalOpen, setModalOpen] = useState(false);
@@ -165,6 +169,8 @@ export function OrgsScreen({
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           organization={editing}
+          sectors={sectors}
+          canManageSectors={canManageSectors}
         />
       ) : null}
     </div>

@@ -19,7 +19,7 @@ const activeAuditCount = AUDITS.filter(
 function renderScreen() {
   return render(
     <NextIntlClientProvider locale="uz" messages={messages}>
-      <OrgsScreen orgs={ORGS} orgDetails={ORG_DETAIL} activeAuditCount={activeAuditCount} />
+      <OrgsScreen orgs={ORGS} orgDetails={ORG_DETAIL} activeAuditCount={activeAuditCount} sectors={[]} />
     </NextIntlClientProvider>,
   );
 }
