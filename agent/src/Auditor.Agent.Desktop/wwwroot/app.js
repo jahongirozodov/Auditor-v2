@@ -287,7 +287,7 @@ const SCREENS = {
             <input id="l-pass" class="input" type="password" placeholder="••••••••" autocomplete="current-password">
           </div>
           <div id="l-err" class="error-msg hidden"></div>
-          <button id="l-btn" class="btn btn-primary" style="margin-top:20px;width:100%">Kirish</button>
+          <button id="l-btn" class="btn btn-primary" style="margin-top:20px;width:100%">${icon('logIn')} Kirish</button>
           <button id="l-browser" class="btn-browser-link">${icon('externalLink')} Browserda ochish</button>
         </div>
       </div>
@@ -299,9 +299,9 @@ const SCREENS = {
     async function doLogin() {
       const e = emailIn.value.trim(), p = passIn.value;
       if (!e || !p) { errEl.textContent = 'Login va parolni kiriting'; errEl.classList.remove('hidden'); return; }
-      btn.disabled = true; btn.textContent = 'Kirilmoqda…';
+      btn.disabled = true; btn.innerHTML = 'Kirilmoqda…';
       const res = await api.post('/api/login', { email: e, password: p });
-      btn.disabled = false; btn.textContent = 'Kirish';
+      btn.disabled = false; btn.innerHTML = `${icon('logIn')} Kirish`;
       if (res.ok) {
         S.email = e;
         await syncState(); renderShell();
@@ -336,7 +336,7 @@ const SCREENS = {
             <input id="t-tok" class="input mono" placeholder="tok-xxxxxxxxxxxxxxxx">
           </div>
           <div id="t-err" class="error-msg hidden"></div>
-          <button id="t-btn" class="btn btn-primary" style="margin-top:20px;width:100%">Tasdiqlash</button>
+          <button id="t-btn" class="btn btn-primary" style="margin-top:20px;width:100%">${icon('shieldCheck')} Tasdiqlash</button>
         </div>
       </div>
     `;
@@ -347,9 +347,9 @@ const SCREENS = {
     async function doValidate() {
       const t = tokIn.value.trim();
       if (!t) { errEl.textContent = 'Tokenni kiriting'; errEl.classList.remove('hidden'); return; }
-      btn.disabled = true; btn.textContent = 'Tekshirilmoqda…';
+      btn.disabled = true; btn.innerHTML = 'Tekshirilmoqda…';
       const res = await api.post('/api/token/validate', { token: t });
-      btn.disabled = false; btn.textContent = 'Tasdiqlash';
+      btn.disabled = false; btn.innerHTML = `${icon('shieldCheck')} Tasdiqlash`;
       if (res.ok) { await syncState(); renderShell(); await nav('tasks'); }
       else {
         const msgs = { not_found:'Token topilmadi', expired:'Token muddati tugagan', token_inactive:'Token faol emas' };
@@ -502,16 +502,16 @@ const SCREENS = {
             ${icon('upload')}
             <p style="margin-bottom:8px">Fayllarni bu yerga tashlang yoki tanlang</p>
             <input id="nf-ev" type="file" multiple style="display:none">
-            <button class="btn btn-soft" type="button" id="nf-pick">Biriktirish</button>
+            <button class="btn btn-soft" type="button" id="nf-pick">${icon('upload')} Biriktirish</button>
           </div>
           <div id="nf-chips" class="chips" style="margin-top:8px"></div>
         </div>
 
         <div id="nf-err" class="error-msg hidden"></div>
         <div class="form-actions">
-          <button id="nf-cancel" class="btn btn-ghost">Bekor</button>
-          <button id="nf-save"   class="btn btn-soft">Lokal saqlash</button>
-          <button id="nf-send"   class="btn btn-primary">Yuborish</button>
+          <button id="nf-cancel" class="btn btn-ghost">${icon('x')} Bekor</button>
+          <button id="nf-save"   class="btn btn-soft">${icon('save')} Lokal saqlash</button>
+          <button id="nf-send"   class="btn btn-primary">${icon('send')} Yuborish</button>
         </div>
       </div>
     `;
@@ -589,7 +589,7 @@ const SCREENS = {
     });
     $('nf-send').addEventListener('click', async () => {
       if (!validate()) return;
-      $('nf-send').disabled = true; $('nf-send').textContent = 'Yuborilmoqda…';
+      $('nf-send').disabled = true; $('nf-send').innerHTML = 'Yuborilmoqda…';
       const res = await persist();
       if (res.ok) {
         const sync = await api.post('/api/sync');
@@ -597,7 +597,7 @@ const SCREENS = {
         await syncState(); await nav('findings');
       }
       const btn2 = $('nf-send');
-      if (btn2) { btn2.disabled = false; btn2.textContent = 'Yuborish'; }
+      if (btn2) { btn2.disabled = false; btn2.innerHTML = `${icon('send')} Yuborish`; }
     });
   },
 
@@ -726,7 +726,7 @@ const SCREENS = {
               <label class="field-label" for="cfg-int">AUTO-SYNC INTERVALI (DAQIQA)</label>
               <input id="cfg-int" class="input" type="number" min="1" max="60" value="${esc(String(cfg.syncInterval??5))}">
             </div>
-            <button id="cfg-save" class="btn btn-primary" style="margin-top:16px">Saqlash</button>
+            <button id="cfg-save" class="btn btn-primary" style="margin-top:16px">${icon('save')} Saqlash</button>
           </div>
         </div>
 
@@ -735,7 +735,7 @@ const SCREENS = {
           <div class="settings-row"><span class="meta">Shifrlash</span><span class="mono" style="color:var(--text-secondary);font-size:11px">${esc(cfg.encryption??'')}</span></div>
           <div class="settings-row"><span class="meta">Versiya</span><span class="mono" style="color:var(--text-secondary)">v${esc(cfg.version??'')}</span></div>
           <div style="padding:12px 16px">
-            <button id="cfg-upd" class="btn btn-ghost">Yangilanishni tekshirish</button>
+            <button id="cfg-upd" class="btn btn-ghost">${icon('refresh')} Yangilanishni tekshirish</button>
             <p id="cfg-upd-msg" class="meta" style="margin-top:8px"></p>
           </div>
         </div>
@@ -744,7 +744,7 @@ const SCREENS = {
           <div class="panel-header">Sessiya</div>
           <div style="padding:16px">
             <p class="meta" style="margin-bottom:12px">Chiqishda lokal sessiya oʿchadi.</p>
-            <button id="cfg-logout" class="btn btn-danger">Chiqish</button>
+            <button id="cfg-logout" class="btn btn-danger">${icon('logOut')} Chiqish</button>
           </div>
         </div>
       </div>
@@ -789,10 +789,10 @@ function renderTaskList() {
   const DONE     = new Set(['done', 'approved']);
   const TERMINAL = new Set(['done', 'approved', 'cancelled']);
   const STATUS_NEXT = {
-    assigned:    { toStatus: 'in_progress', label: 'Boshlash' },
-    in_progress: { toStatus: 'review',      label: 'Tekshiruvga' },
-    inprogress:  { toStatus: 'review',      label: 'Tekshiruvga' },
-    returned:    { toStatus: 'in_progress', label: 'Qayta boshlash' },
+    assigned:    { toStatus: 'in_progress', label: 'Boshlash',       icon: 'play'    },
+    in_progress: { toStatus: 'review',      label: 'Tekshiruvga',    icon: 'send'    },
+    inprogress:  { toStatus: 'review',      label: 'Tekshiruvga',    icon: 'send'    },
+    returned:    { toStatus: 'in_progress', label: 'Qayta boshlash', icon: 'refresh' },
   };
 
   const counts = {
@@ -841,7 +841,7 @@ function renderTaskList() {
     const statusBtn = nextStep ? `
       <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
               data-sid="${esc(t.id)}" data-snext="${esc(nextStep.toStatus)}">
-        ${nextStep.label}
+        ${icon(nextStep.icon)} ${nextStep.label}
       </button>` : '';
     return `
       <div class="list-item" data-sev="${t.findings > 0 ? 'high' : ''}" style="cursor:pointer" data-taskid="${esc(t.id)}">
@@ -913,10 +913,10 @@ async function openTaskDrawer(task) {
   document.getElementById('task-drawer')?.remove();
 
   const STATUS_NEXT = {
-    assigned:    { toStatus: 'in_progress', label: 'Boshlash' },
-    in_progress: { toStatus: 'review',      label: 'Tekshiruvga' },
-    inprogress:  { toStatus: 'review',      label: 'Tekshiruvga' },
-    returned:    { toStatus: 'in_progress', label: 'Qayta boshlash' },
+    assigned:    { toStatus: 'in_progress', label: 'Boshlash',       icon: 'play'    },
+    in_progress: { toStatus: 'review',      label: 'Tekshiruvga',    icon: 'send'    },
+    inprogress:  { toStatus: 'review',      label: 'Tekshiruvga',    icon: 'send'    },
+    returned:    { toStatus: 'in_progress', label: 'Qayta boshlash', icon: 'refresh' },
   };
   const TERMINAL = new Set(['done', 'approved', 'cancelled']);
 
@@ -946,7 +946,7 @@ async function openTaskDrawer(task) {
         </div>
         <div class="meta" style="margin-top:6px">Muddat: ${esc(task.due)}</div>
       </div>
-      <button class="drawer-close" id="drawer-close-btn" aria-label="Yopish">×</button>
+      <button class="drawer-close" id="drawer-close-btn" aria-label="Yopish">${icon('x')}</button>
     </div>
     <div class="drawer-body">
       <div class="drawer-section">
@@ -974,7 +974,7 @@ async function openTaskDrawer(task) {
         ${icon('plus')} Finding qo'shish
       </button>
       ${nextStep ? `<button class="btn btn-ghost" id="drawer-status-btn" style="width:100%"
-              data-snext="${esc(nextStep.toStatus)}">${nextStep.label} →</button>` : ''}
+              data-snext="${esc(nextStep.toStatus)}">${icon(nextStep.icon)} ${nextStep.label}</button>` : ''}
     `;
     document.getElementById('drawer-new-finding')?.addEventListener('click', () => {
       closeTaskDrawer();
@@ -1017,8 +1017,8 @@ async function openTaskDrawer(task) {
             <div id="drf-files" class="drawer-review-file-list"></div>
           </div>
           <div class="drawer-review-actions">
-            <button class="btn btn-soft" id="drf-submit" style="flex:1">Tekshiruvga yuborish</button>
-            <button class="btn btn-ghost" id="drf-cancel">Bekor</button>
+            <button class="btn btn-soft" id="drf-submit" style="flex:1">${icon('send')} Tekshiruvga yuborish</button>
+            <button class="btn btn-ghost" id="drf-cancel">${icon('x')} Bekor</button>
           </div>
         </div>
       `;
@@ -1064,7 +1064,7 @@ async function openTaskDrawer(task) {
         errEl.classList.add('hidden');
         if (!S.online) { toast("Oflayn rejimda holat o'zgartirib bo'lmaydi"); return; }
         const submitBtn = document.getElementById('drf-submit');
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Yuklanmoqda…'; }
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = 'Yuklanmoqda…'; }
 
         for (const file of selectedFiles) {
           const fd = new FormData();
@@ -1073,7 +1073,7 @@ async function openTaskDrawer(task) {
         }
 
         const r = await api.post(`/api/tasks/${task.id}/status`, { toStatus: 'review', comment });
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Tekshiruvga yuborish'; }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `${icon('send')} Tekshiruvga yuborish`; }
         if (r.ok) {
           formEl.remove();
           btn.remove();
@@ -1106,7 +1106,7 @@ async function openTaskDrawer(task) {
             nb.id = 'drawer-status-btn';
             nb.style.width = '100%';
             nb.dataset.snext = newNext.toStatus;
-            nb.textContent = `${newNext.label} →`;
+            nb.innerHTML = `${icon(newNext.icon)} ${newNext.label}`;
             actionsEl.appendChild(nb);
             wireStatusBtn();
           }
