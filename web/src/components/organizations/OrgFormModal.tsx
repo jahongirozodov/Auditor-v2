@@ -3,13 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Building2, Save } from "lucide-react";
+import { Building2, Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { createOrganization, updateOrganization } from "@/lib/actions/orgs";
-import type { Organization, OrgDetail } from "@/lib/types/entities";
+import { SectorManagerModal } from "./SectorManagerModal";
+import type { Organization, OrgDetail, Sector } from "@/lib/types/entities";
 
 const EMPTY = {
   name: "",
@@ -30,6 +32,8 @@ interface OrgFormModalProps {
   open: boolean;
   onClose: () => void;
   organization?: EditableOrganization | null;
+  sectors: Sector[];
+  canManageSectors?: boolean;
 }
 
 function toFormValue(value?: EditableOrganization | null): OrgFormValue {
@@ -43,11 +47,18 @@ function toFormValue(value?: EditableOrganization | null): OrgFormValue {
   };
 }
 
-export function OrgFormModal({ open, onClose, organization }: OrgFormModalProps) {
+export function OrgFormModal({
+  open,
+  onClose,
+  organization,
+  sectors,
+  canManageSectors = false,
+}: OrgFormModalProps) {
   const t = useTranslations("orgs");
   const toast = useToast();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [sectorMgrOpen, setSectorMgrOpen] = useState(false);
   const [form, setForm] = useState<OrgFormValue>(() => toFormValue(organization));
 
   const isEdit = !!organization;
@@ -80,6 +91,7 @@ export function OrgFormModal({ open, onClose, organization }: OrgFormModalProps)
   }
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -131,12 +143,27 @@ export function OrgFormModal({ open, onClose, organization }: OrgFormModalProps)
         </Field>
 
         <Field label={t("fSector")} htmlFor="org-sector">
-          <input
-            id="org-sector"
-            className="input"
-            value={form.sector}
-            onChange={(e) => set("sector", e.target.value)}
-          />
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <Select
+              id="org-sector"
+              options={sectors.map((s) => ({ value: s.name, label: s.name }))}
+              value={form.sector}
+              onChange={(v) => set("sector", v)}
+              placeholder="—"
+              style={{ flex: 1 }}
+            />
+            {canManageSectors && (
+              <button
+                type="button"
+                className="iconbtn"
+                aria-label={t("sectorMgrTitle")}
+                title={t("sectorMgrTitle")}
+                onClick={() => setSectorMgrOpen(true)}
+              >
+                <Plus size={15} />
+              </button>
+            )}
+          </div>
         </Field>
 
         <Field label={t("fContact")} htmlFor="org-contact">
@@ -158,5 +185,13 @@ export function OrgFormModal({ open, onClose, organization }: OrgFormModalProps)
         </Field>
       </div>
     </Modal>
+    {sectorMgrOpen ? (
+      <SectorManagerModal
+        open={sectorMgrOpen}
+        onClose={() => setSectorMgrOpen(false)}
+        sectors={sectors}
+      />
+    ) : null}
+    </>
   );
 }
