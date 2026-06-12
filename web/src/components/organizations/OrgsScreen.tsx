@@ -10,7 +10,6 @@ import {
   FolderKanban,
   Plus,
   Server,
-  ShieldAlert,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Stat } from "@/components/ui/Stat";

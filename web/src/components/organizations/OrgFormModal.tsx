@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Building2, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
-import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { createOrganization, updateOrganization } from "@/lib/actions/orgs";
@@ -149,16 +148,14 @@ export function OrgFormModal({ open, onClose, organization }: OrgFormModalProps)
           />
         </Field>
 
-        <div style={{ gridColumn: "span 2" }}>
-          <Field label={t("fHead")} htmlFor="org-head">
-            <input
-              id="org-head"
-              className="input"
-              value={form.head}
-              onChange={(e) => set("head", e.target.value)}
-            />
-          </Field>
-        </div>
+        <Field label={t("fHead")} htmlFor="org-head">
+          <input
+            id="org-head"
+            className="input"
+            value={form.head}
+            onChange={(e) => set("head", e.target.value)}
+          />
+        </Field>
       </div>
     </Modal>
   );

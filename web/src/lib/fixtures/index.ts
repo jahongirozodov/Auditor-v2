@@ -99,13 +99,6 @@ export const ORG_DETAIL: Record<string, OrgDetail> = {
   },
 };
 
-// Kept for reference; no longer used after OrgDetail fields refactoring.
-export const ORG_RISK: Record<"high" | "medium" | "low", { label: string; tag: string }> = {
-  high: { label: "Yuqori xavf", tag: "tag--danger" },
-  medium: { label: "Oʻrta xavf", tag: "tag--warning" },
-  low: { label: "Past xavf", tag: "tag--success" },
-};
-
 // ---------- Audits ----------
 export const AUDITS: Audit[] = [
   { id: "AUD-2026-014", code: "AUD-2026-014", title: "Aloqa va kommunikatsiya vazirligi — yillik kompleks audit", org: "o1", type: "Kompleks audit", status: "in_progress", stage: 7, startDate: "2026-04-12", endDate: "2026-05-31", progress: 64, leader: "u3", members: ["u3", "u4", "u6", "u7"], findings: { critical: 4, high: 9, medium: 14, low: 7 }, tasks: { total: 38, done: 22, in_progress: 11, blocked: 2, new: 3 }, lastSync: "12 daqiqa oldin", pinned: true, goal: "Aloqa va kommunikatsiya vazirligi axborot tizimlari xavfsizligini baholash, zaifliklarni aniqlash va remediatsiya boʻyicha tavsiyalar berish.", methodology: "OWASP ASVS · NIST 800-53 · ISO 27001", scope: ["Tashqi perimetr", "Ichki tarmoq (10.0.0.0/8)", "Web ilovalar (portal.gov.uz)", "Server infratuzilmasi", "Active Directory domeni", "VPN gateway", "Wi-Fi corporate"], tools: ["Nessus 10.5", "OpenVAS / GVM", "OWASP ZAP", "Burp Suite Pro", "Wireshark", "Nmap 7.94", "Suricata", "Hydra", "John the Ripper"] },
