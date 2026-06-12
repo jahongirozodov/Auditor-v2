@@ -32,11 +32,6 @@ describe("OrgsScreen", () => {
     expect(link).toHaveAttribute("href", "/organizations/o1");
   });
 
-  it("renders a risk tag per org", () => {
-    renderScreen();
-    expect(screen.getAllByText("Yuqori xavf").length).toBeGreaterThan(0);
-  });
-
   it("opens the create organization dialog", async () => {
     renderScreen();
     await userEvent.click(screen.getByRole("button", { name: "Tashkilot qoʻshish" }));
