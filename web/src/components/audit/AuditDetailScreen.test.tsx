@@ -138,6 +138,10 @@ describe("AuditDetailScreen", () => {
     expect(screen.getByRole("tab", { name: /Vazifalar/ })).not.toBeDisabled();
     expect(screen.getByRole("tab", { name: /Findinglar/ })).not.toBeDisabled();
     expect(screen.getByRole("tab", { name: /Tokenlar/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Fayllar/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /AI tahlil/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /KPI/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Hisobotlar/ })).not.toBeDisabled();
   });
 
   it("never disables overview, group, project, log tabs regardless of status", () => {
