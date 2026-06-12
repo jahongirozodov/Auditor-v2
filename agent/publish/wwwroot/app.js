@@ -828,7 +828,7 @@ function renderTaskList() {
         ${nextStep.label}
       </button>` : '';
     return `
-      <div class="list-item" data-sev="${t.findings > 0 ? 'high' : ''}">
+      <div class="list-item" data-sev="${t.findings > 0 ? 'high' : ''}" style="cursor:pointer" data-taskid="${esc(t.id)}">
         <div class="list-item-main">
           <div class="list-item-info">
             <div class="list-item-title">${esc(t.title)}</div>
@@ -873,6 +873,170 @@ function renderTaskList() {
       }
     });
   });
+
+  list.querySelectorAll('.list-item[data-taskid]').forEach(row => {
+    row.addEventListener('click', () => {
+      const t = cachedTasks.find(x => x.id === row.dataset.taskid);
+      if (t) openTaskDrawer(t);
+    });
+  });
+}
+
+// ── Task Drawer ─────────────────────────────────────────────────────
+function closeTaskDrawer() {
+  const backdrop = document.getElementById('drawer-backdrop');
+  const drawer   = document.getElementById('task-drawer');
+  if (!backdrop || !drawer) return;
+  backdrop.classList.remove('open');
+  drawer.classList.remove('open');
+  setTimeout(() => { backdrop.remove(); drawer.remove(); }, 230);
+}
+
+async function openTaskDrawer(task) {
+  document.getElementById('drawer-backdrop')?.remove();
+  document.getElementById('task-drawer')?.remove();
+
+  const STATUS_NEXT = {
+    assigned:    { toStatus: 'in_progress', label: 'Boshlash' },
+    in_progress: { toStatus: 'review',      label: 'Tekshiruvga' },
+    inprogress:  { toStatus: 'review',      label: 'Tekshiruvga' },
+    returned:    { toStatus: 'in_progress', label: 'Qayta boshlash' },
+  };
+  const TERMINAL = new Set(['done', 'approved', 'cancelled']);
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'drawer-backdrop';
+  backdrop.className = 'drawer-backdrop';
+  backdrop.addEventListener('click', closeTaskDrawer);
+  document.body.appendChild(backdrop);
+
+  const drawer = document.createElement('div');
+  drawer.id = 'task-drawer';
+  drawer.className = 'task-drawer';
+
+  const st = statusOf(task.status);
+  const nextStep = STATUS_NEXT[task.status];
+  const isTerminal = TERMINAL.has(task.status);
+
+  drawer.innerHTML = `
+    <div class="drawer-header">
+      <div class="drawer-header-info">
+        <div class="drawer-id">${esc(task.id)}</div>
+        <div class="drawer-title">${esc(task.title)}</div>
+        <div class="drawer-meta">
+          <span id="drawer-status-badge" class="tag tag-${esc(st.kind)}">${esc(st.label)}</span>
+          <span class="tag tag-ghost">${esc(task.priority)}</span>
+          <span class="tag tag-ghost">${esc(task.type)}</span>
+        </div>
+        <div class="meta" style="margin-top:6px">Muddat: ${esc(task.due)}</div>
+      </div>
+      <button class="drawer-close" id="drawer-close-btn" aria-label="Yopish">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-section">
+        <div class="drawer-section-title">Findinglar</div>
+        <div id="drawer-findings"><div class="loading" style="padding:16px 0">Yuklanmoqda…</div></div>
+      </div>
+    </div>
+    <div class="drawer-actions" id="drawer-actions"></div>
+  `;
+
+  document.body.appendChild(drawer);
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('open');
+    drawer.classList.add('open');
+  });
+
+  document.getElementById('drawer-close-btn').addEventListener('click', closeTaskDrawer);
+
+  // Actions panel
+  const actionsEl = document.getElementById('drawer-actions');
+  if (!isTerminal) {
+    actionsEl.innerHTML = `
+      <button class="btn btn-soft" id="drawer-new-finding" style="width:100%">
+        ${icon('plus')} Finding qo'shish
+      </button>
+      ${nextStep ? `<button class="btn btn-ghost" id="drawer-status-btn" style="width:100%"
+              data-snext="${esc(nextStep.toStatus)}">${nextStep.label} →</button>` : ''}
+    `;
+    document.getElementById('drawer-new-finding')?.addEventListener('click', () => {
+      closeTaskDrawer();
+      nav('new-finding', { taskId: task.id, taskTitle: task.title });
+    });
+
+    function wireStatusBtn() {
+      const btn = document.getElementById('drawer-status-btn');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        if (!S.online) { toast("Oflayn rejimda holat o'zgartirib bo'lmaydi"); return; }
+        btn.disabled = true;
+        const r = await api.post(`/api/tasks/${task.id}/status`, { toStatus: btn.dataset.snext });
+        btn.disabled = false;
+        if (r.ok) {
+          task = { ...task, status: btn.dataset.snext };
+          const updSt = statusOf(task.status);
+          const badge = document.getElementById('drawer-status-badge');
+          if (badge) { badge.className = `tag tag-${updSt.kind}`; badge.textContent = updSt.label; }
+          btn.remove();
+          const newNext = STATUS_NEXT[task.status];
+          if (newNext) {
+            const nb = document.createElement('button');
+            nb.className = 'btn btn-ghost';
+            nb.id = 'drawer-status-btn';
+            nb.style.width = '100%';
+            nb.dataset.snext = newNext.toStatus;
+            nb.textContent = `${newNext.label} →`;
+            actionsEl.appendChild(nb);
+            wireStatusBtn();
+          }
+          const idx = cachedTasks.findIndex(t => t.id === task.id);
+          if (idx !== -1) cachedTasks[idx] = { ...cachedTasks[idx], status: task.status };
+          toast('Vazifa holati yangilandi');
+          renderTaskList();
+        } else {
+          toast("Holat yangilanmadi");
+        }
+      });
+    }
+    wireStatusBtn();
+  }
+
+  // Load findings
+  const findingsEl = document.getElementById('drawer-findings');
+  const allFindings = await api.get('/api/findings');
+  const taskFindings = Array.isArray(allFindings)
+    ? allFindings.filter(f => f.taskId === task.id)
+    : [];
+
+  if (!findingsEl) return;
+
+  if (!taskFindings.length) {
+    findingsEl.innerHTML = `
+      <div class="drawer-empty">
+        <p>Bu vazifa uchun hali finding yo'q</p>
+        ${!isTerminal ? `<button class="btn btn-soft" id="drawer-empty-finding">
+          ${icon('plus')} Yangi finding qo'shish
+        </button>` : ''}
+      </div>
+    `;
+    document.getElementById('drawer-empty-finding')?.addEventListener('click', () => {
+      closeTaskDrawer();
+      nav('new-finding', { taskId: task.id, taskTitle: task.title });
+    });
+    return;
+  }
+
+  findingsEl.innerHTML = taskFindings.map(f => `
+    <div class="drawer-finding-row">
+      <span class="sev sev-${esc(f.severity)}">${esc(f.severity.toUpperCase())}</span>
+      <div class="drawer-finding-info">
+        <div class="drawer-finding-title">${esc(f.title)}</div>
+        <div class="drawer-finding-meta">CVSS ${esc(String((f.cvss||0).toFixed(1)))}${f.cwe?' · '+esc(f.cwe):''}${f.asset?' · '+esc(f.asset):''}</div>
+      </div>
+      <span class="tag tag-${esc(f.stateKind)}">${esc(f.stateLabel)}</span>
+    </div>
+  `).join('');
 }
 
 // ── Sidebar theme toggle wire-up ───────────────────────────────────────
