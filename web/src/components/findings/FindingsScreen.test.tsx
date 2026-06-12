@@ -25,17 +25,17 @@ const evidenceByFindingId = Object.fromEntries(
   FINDINGS.map((finding) => [
     finding.id,
     [
-    {
-      id: "ev-1",
-      findingId: finding.id,
-      filename: "screenshot.png",
-      mimeType: "image/png",
-      sizeBytes: 1024,
-      dataUrl: "data:image/png;base64,aW1n",
-      kind: "screenshot",
-      createdAt: "2026-06-10T00:00:00.000Z",
-    },
-  ],
+      {
+        id: "ev-1",
+        findingId: finding.id,
+        filename: "screenshot.png",
+        mimeType: "image/png",
+        sizeBytes: 1024,
+        previewUrl: "/api/evidence/ev1",
+        kind: "screenshot",
+        createdAt: "2026-06-10T00:00:00.000Z",
+      },
+    ],
   ]),
 );
 

@@ -12,13 +12,7 @@ import { findingApproval, findingRemediation } from "@/lib/actions/findings";
 import { APPROVAL_STAGES, canActAt, currentOf } from "@/lib/approval";
 import { REMEDIATION_STATUSES, type RemediationAction } from "@/lib/findings-machine";
 import type { FindingApprovalView } from "@/lib/data/approval";
-import type {
-  ApprovalEvent,
-  Finding,
-  FindingEvidenceView,
-  Task,
-  User,
-} from "@/lib/types/entities";
+import type { ApprovalEvent, Finding, FindingEvidenceView, Task, User } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 
 type ApprovalAction = "submit" | "resubmit" | "approve" | "return";
@@ -192,7 +186,7 @@ export function FindingDrawer({
                 aria-label={evidence.filename}
                 className="tile__thumb"
                 style={{
-                  backgroundImage: `url(${evidence.dataUrl})`,
+                  backgroundImage: `url(${evidence.previewUrl})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}

@@ -210,7 +210,7 @@ export interface FindingEvidenceView {
   filename: string;
   mimeType: string;
   sizeBytes: number;
-  dataUrl: string;
+  previewUrl: string;
   kind: string;
   createdAt: string;
 }

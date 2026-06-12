@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Stream an evidence file's bytes (DB-blob storage). Auth-gated; any signed-in user may download. */
+/** Stream a finding evidence file's bytes (DB-blob storage). Auth-gated. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session?.user) return Response.json({ error: "unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const ev = await prisma.auditEvidence.findUnique({
+  const ev = await prisma.findingEvidence.findUnique({
     where: { id },
     select: { file: { select: { filename: true, mimeType: true, bytes: true } } },
   });
@@ -20,7 +20,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return new Response(new Uint8Array(ev.file.bytes), {
     headers: {
       "Content-Type": ev.file.mimeType || "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${safeName}"`,
+      "Content-Disposition": `inline; filename="${safeName}"`,
+      "Cache-Control": "private, max-age=3600",
     },
   });
 }
