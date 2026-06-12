@@ -213,15 +213,9 @@ export function Overview({ a }: { a: Audit }) {
               <span className="ai-card__icon">
                 <Sparkles size={15} />
               </span>
-              <span className="ai-card__title">AI xulosa</span>
-              <span className="tag tag--brand" style={{ marginLeft: "auto" }}>
-                qwen2.5:14b
-              </span>
+              <span className="ai-card__title">{t("aiTitle")}</span>
             </div>
-            <p className="ai-card__body">
-              {a.findings.critical} ta kritik finding aniqlandi. Review jarayonini tezlashtirish va
-              segmentatsiya kamchiliklarini birinchi navbatda bartaraf etish tavsiya etiladi.
-            </p>
+            <p className="ai-card__body">{t("aiNoData")}</p>
           </div>
         </div>
       </div>
