@@ -15,6 +15,7 @@ const STATUS_COLORS: Record<AppealStatus, string> = {
   reviewing: "var(--color-warning, #f59e0b)",
   accepted: "var(--color-success, #22c55e)",
   rejected: "var(--color-danger)",
+  completed: "#06b6d4",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -45,10 +46,10 @@ export function AppealDrawer({ appeal, usersById, role, onClose }: AppealDrawerP
   if (!appeal) return <Drawer open={false} onClose={onClose} />;
 
   const submitter = usersById[appeal.submittedById] ?? { name: appeal.submittedById };
-  const isTerminal = appeal.status === "accepted" || appeal.status === "rejected";
+  const isTerminal = appeal.status === "accepted" || appeal.status === "rejected" || appeal.status === "completed";
   const canReview = role === "super" && !isTerminal;
 
-  function doReview(status: "reviewing" | "accepted" | "rejected") {
+  function doReview(status: "reviewing" | "accepted" | "rejected" | "completed") {
     startTransition(async () => {
       const res = await reviewAppeal({ id: appeal!.id, status, comment });
       if (res.ok) {
@@ -241,6 +242,17 @@ export function AppealDrawer({ appeal, usersById, role, onClose }: AppealDrawerP
             >
               {t("reject")}
             </button>
+            {appeal.type === "kamchilik" && (
+              <button
+                type="button"
+                className="btn btn--sm"
+                disabled={pending}
+                onClick={() => doReview("completed")}
+                style={{ background: "#06b6d4", borderColor: "#06b6d4", color: "#fff" }}
+              >
+                {t("complete")}
+              </button>
+            )}
           </div>
         </div>
       )}

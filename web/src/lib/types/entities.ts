@@ -217,7 +217,7 @@ export interface FindingEvidenceView {
 
 // ---------- Appeals (Murojaatlar) ----------
 export type AppealType = "taklif" | "kamchilik";
-export type AppealStatus = "new" | "reviewing" | "accepted" | "rejected";
+export type AppealStatus = "new" | "reviewing" | "accepted" | "rejected" | "completed";
 export type AppealPriority = "past" | "orta" | "yuqori";
 
 export interface AppealFileItem {

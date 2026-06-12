@@ -21,7 +21,6 @@ export async function createAppeal(formData: FormData): Promise<ActionResult> {
 
   if (!type || !["taklif", "kamchilik"].includes(type)) return { ok: false, error: "invalid_type" };
   if (!title) return { ok: false, error: "title_required" };
-  if (!description) return { ok: false, error: "description_required" };
 
   const rawFiles = formData.getAll("files");
   const validFiles = rawFiles.filter((f): f is File => f instanceof File && f.size > 0);
@@ -85,7 +84,7 @@ export async function createAppeal(formData: FormData): Promise<ActionResult> {
 
 export async function reviewAppeal(params: {
   id: string;
-  status: "reviewing" | "accepted" | "rejected";
+  status: "reviewing" | "accepted" | "rejected" | "completed";
   comment?: string;
 }): Promise<ActionResult> {
   const { userId, role } = await requireSession();
@@ -97,7 +96,7 @@ export async function reviewAppeal(params: {
   });
   if (!appeal) return { ok: false, error: "not_found" };
 
-  const isTerminal = appeal.status === "accepted" || appeal.status === "rejected";
+  const isTerminal = appeal.status === "accepted" || appeal.status === "rejected" || appeal.status === "completed";
   if (isTerminal) return { ok: false, error: "already_resolved" };
 
   await prisma.$transaction(async (tx) => {
