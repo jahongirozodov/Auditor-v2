@@ -121,11 +121,7 @@ model Organization {
   contact String
 
   // OrgDetail folded in
-  region  String?
-  address String?
-  risk    String?
   head    String
-  since   String?
 
   contacts   OrgContact[]
   devices    OrgDevice[]
