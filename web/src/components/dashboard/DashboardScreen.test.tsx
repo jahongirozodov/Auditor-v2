@@ -20,6 +20,10 @@ function renderDash(role: RoleCode, name = "Akmal Yoʻldoshev") {
         kpiUsers={KPI_USERS}
         orgsById={orgsById}
         usersById={usersById}
+        userId="u-test"
+        myTasks={[]}
+        teamTasks={[]}
+        scopedFindings={[]}
       />
     </NextIntlClientProvider>,
   );

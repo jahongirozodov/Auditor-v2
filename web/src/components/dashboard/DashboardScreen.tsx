@@ -21,7 +21,9 @@ import { Donut } from "@/components/ui/Donut";
 import { StatusTag } from "@/components/ui/StatusTag";
 import { HeroBand } from "@/components/wow/HeroBand";
 import { Podium } from "@/components/wow/Podium";
-import type { Audit, Finding, KpiUser, Organization, User } from "@/lib/types/entities";
+import { MemberView } from "./MemberView";
+import { TeamView } from "./TeamView";
+import type { Audit, Finding, KpiUser, Organization, Task, User } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
 
 const SEV_COLOR: Record<"critical" | "high" | "medium" | "low", string> = {
@@ -33,9 +35,13 @@ const SEV_COLOR: Record<"critical" | "high" | "medium" | "low", string> = {
 
 export interface DashboardScreenProps {
   role: RoleCode;
+  userId: string;
   name: string;
   audits: Audit[];
   findings: Finding[];
+  myTasks: Task[];
+  teamTasks: Task[];
+  scopedFindings: Finding[];
   kpiUsers: KpiUser[];
   orgsById: Record<string, Organization>;
   usersById: Record<string, User>;
@@ -43,15 +49,19 @@ export interface DashboardScreenProps {
 
 export function DashboardScreen({
   role,
+  userId,
   name,
   audits,
   findings,
+  myTasks,
+  teamTasks,
+  scopedFindings,
   kpiUsers,
   orgsById,
   usersById,
 }: DashboardScreenProps) {
   const t = useTranslations("dashboard");
-  const isLeader = role === "super" || role === "head";
+  const isGlobal = role === "super" || role === "head" || role === "chief";
   const firstName = name.split(" ")[0] || name;
   const pick = (id: string): User =>
     usersById[id] ?? { id, name: id, role: "t1", title: "", avatar: "?", dept: "" };
@@ -93,14 +103,14 @@ export function DashboardScreen({
     <div className="route-anim">
       <PageHeader
         title={t("greeting", { name: firstName })}
-        sub={isLeader ? t("subLeader") : t("subMember")}
+        sub={isGlobal ? t("subLeader") : role === "lead" ? t("subLead") : t("subT1")}
         actions={
           <>
             <button type="button" className="btn btn--ghost btn--sm">
               <Download size={14} />
               <span>{t("export")}</span>
             </button>
-            {isLeader ? (
+            {isGlobal ? (
               <button type="button" className="btn btn--primary btn--sm">
                 <Plus size={14} />
                 <span>{t("newAudit")}</span>
@@ -110,7 +120,7 @@ export function DashboardScreen({
         }
       />
 
-      {isLeader ? (
+      {isGlobal ? (
         <HeroBand
           score={taskBarPct}
           eyebrow={t("heroEyebrow")}
@@ -164,6 +174,26 @@ export function DashboardScreen({
         />
       </div>
 
+      {!isGlobal && (
+        <MemberView
+          myTasks={myTasks}
+          myFindings={scopedFindings.filter((f) => f.reportedBy === userId)}
+          usersById={usersById}
+          userId={userId}
+        />
+      )}
+
+      {role === "lead" && (
+        <TeamView
+          leadAudits={audits.filter((a) => a.leader === userId)}
+          teamTasks={teamTasks}
+          teamFindings={scopedFindings}
+          usersById={usersById}
+          userId={userId}
+        />
+      )}
+
+      {isGlobal && (
       <div
         style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)", gap: 16 }}
       >
@@ -369,6 +399,7 @@ export function DashboardScreen({
           </Panel>
         </div>
       </div>
+      )}
     </div>
   );
 }
