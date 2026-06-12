@@ -25,4 +25,26 @@ describe("Tabs", () => {
     await userEvent.click(screen.getByRole("tab", { name: /Findinglar/ }));
     expect(onChange).toHaveBeenCalledWith("findings");
   });
+
+  it("renders a disabled tab with title tooltip", () => {
+    const TABS_WITH_DISABLED = [
+      { id: "overview", label: "Umumiy" },
+      { id: "tasks", label: "Vazifalar", disabled: true, disabledTitle: "Loyiha tasdiqlanishi kerak" },
+    ];
+    render(<Tabs active="overview" onChange={() => {}} tabs={TABS_WITH_DISABLED} />);
+    const btn = screen.getByRole("tab", { name: /Vazifalar/ });
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute("title", "Loyiha tasdiqlanishi kerak");
+  });
+
+  it("does not call onChange when a disabled tab is clicked", async () => {
+    const onChange = vi.fn();
+    const TABS_WITH_DISABLED = [
+      { id: "overview", label: "Umumiy" },
+      { id: "tasks", label: "Vazifalar", disabled: true, disabledTitle: "Loyiha tasdiqlanishi kerak" },
+    ];
+    render(<Tabs active="overview" onChange={onChange} tabs={TABS_WITH_DISABLED} />);
+    await userEvent.click(screen.getByRole("tab", { name: /Vazifalar/ }), { pointerEventsCheck: 0 });
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

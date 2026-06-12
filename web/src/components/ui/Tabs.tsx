@@ -7,6 +7,8 @@ export interface TabDef {
   label: string;
   icon?: ReactNode;
   count?: number;
+  disabled?: boolean;
+  disabledTitle?: string;
 }
 
 /** Underline tab bar over the `.tabs` classes (content rendered by the parent). */
@@ -27,6 +29,8 @@ export function Tabs({
           type="button"
           role="tab"
           aria-selected={active === tab.id}
+          disabled={tab.disabled}
+          title={tab.disabled ? tab.disabledTitle : undefined}
           className={`tabs__btn${active === tab.id ? " is-active" : ""}`}
           onClick={() => onChange(tab.id)}
         >
