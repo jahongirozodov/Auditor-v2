@@ -70,12 +70,6 @@ enum TokenStatus {
   revoked
 }
 
-enum RiskLevel {
-  high
-  medium
-  low
-}
-
 // ---------- Users + Auth ----------
 model User {
   id        String   @id
@@ -127,11 +121,11 @@ model Organization {
   contact String
 
   // OrgDetail folded in
-  region  String
-  address String
-  risk    RiskLevel
+  region  String?
+  address String?
+  risk    String?
   head    String
-  since   String
+  since   String?
 
   contacts   OrgContact[]
   devices    OrgDevice[]
