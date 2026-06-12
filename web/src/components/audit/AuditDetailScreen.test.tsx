@@ -131,6 +131,7 @@ describe("AuditDetailScreen", () => {
     expect(screen.getByRole("tab", { name: /KPI/ })).toBeDisabled();
     expect(screen.getByRole("tab", { name: /AI tahlil/ })).toBeDisabled();
     expect(screen.getByRole("tab", { name: /Fayllar/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Hisobotlar/ })).toBeDisabled();
   });
 
   it("does not disable task-related tabs for an in_progress audit", () => {
