@@ -903,7 +903,7 @@
     "devicesTitle": "Qurilma inventari",
     "findingsTitle": "Topilmalar profili",
     "contactsTitle": "Kontaktlar",
-    "fSector": "Soha",
+    "fSector": "Tashkilotning faoliyat sohasi",
     "fHead": "Masʼul auditor",
     "fContact": "Aloqa",
     "thCode": "Kod",
@@ -929,7 +929,14 @@
     "updated": "Tashkilot maʼlumotlari yangilandi",
     "failed": "Xatolik yuz berdi",
     "editOrg": "{name} tashkilotini tahrirlash",
-    "stirHint": "Faqat 9 ta raqam"
+    "stirHint": "Faqat 9 ta raqam",
+    "sectorMgrTitle": "Faoliyat sohalari",
+    "sectorNew": "Yangi soha",
+    "sectorAdd": "Qoʻshish",
+    "sectorEmpty": "Hozircha soha qoʻshilmagan",
+    "sectorPlaceholder": "Soha nomi",
+    "sectorDuplicate": "Bu soha allaqachon mavjud",
+    "sectorDelete": "{name} sohasini oʻchirish"
   },
   "audits": {
     "title": "Auditlar",
