@@ -25,6 +25,7 @@ import type {
   Audit,
   AuditEvidenceView,
   AuditProject,
+  AuditStatus,
   AuditToken,
   KpiUser,
   Report,
@@ -101,22 +102,27 @@ export function AuditDetailScreen({
   const org = orgById(a.org);
   const findingsCount = a.findings.critical + a.findings.high + a.findings.medium + a.findings.low;
 
+  const LOCK_PRE_ASSIGNING = new Set<AuditStatus>([
+    "planning", "group_forming", "project_draft", "project_pending", "head_approved",
+  ]);
+  const LOCK_PRE_IN_PROGRESS = new Set<AuditStatus>([
+    "planning", "group_forming", "project_draft", "project_pending", "head_approved", "assigning",
+  ]);
+  const lockMsg = t("tabLocked");
+  const lock = (set: Set<AuditStatus>) =>
+    set.has(a.status) ? { disabled: true as const, disabledTitle: lockMsg } : {};
+
   const tabs = [
     { id: "overview", label: t("tabOverview"), icon: <LayoutDashboard size={15} /> },
     { id: "group", label: t("tabGroup"), icon: <Users size={15} /> },
     { id: "project", label: t("tabProject"), icon: <Map size={15} /> },
-    { id: "tasks", label: t("tabTasks"), icon: <CheckSquare size={15} />, count: a.tasks.total },
-    {
-      id: "findings",
-      label: t("tabFindings"),
-      icon: <AlertTriangle size={15} />,
-      count: findingsCount,
-    },
-    { id: "files", label: t("tabFiles"), icon: <Folder size={15} /> },
-    { id: "tokens", label: t("tabTokens"), icon: <KeyRound size={15} /> },
-    { id: "ai", label: t("tabAi"), icon: <Sparkles size={15} /> },
-    { id: "kpi", label: t("tabKpi"), icon: <Trophy size={15} /> },
-    { id: "reports", label: t("tabReports"), icon: <FileText size={15} /> },
+    { id: "tasks", label: t("tabTasks"), icon: <CheckSquare size={15} />, count: a.tasks.total, ...lock(LOCK_PRE_ASSIGNING) },
+    { id: "findings", label: t("tabFindings"), icon: <AlertTriangle size={15} />, count: findingsCount, ...lock(LOCK_PRE_ASSIGNING) },
+    { id: "files", label: t("tabFiles"), icon: <Folder size={15} />, ...lock(LOCK_PRE_ASSIGNING) },
+    { id: "tokens", label: t("tabTokens"), icon: <KeyRound size={15} />, ...lock(LOCK_PRE_ASSIGNING) },
+    { id: "ai", label: t("tabAi"), icon: <Sparkles size={15} />, ...lock(LOCK_PRE_ASSIGNING) },
+    { id: "kpi", label: t("tabKpi"), icon: <Trophy size={15} />, ...lock(LOCK_PRE_ASSIGNING) },
+    { id: "reports", label: t("tabReports"), icon: <FileText size={15} />, ...lock(LOCK_PRE_IN_PROGRESS) },
     { id: "log", label: t("tabLog"), icon: <History size={15} /> },
   ];
 
@@ -173,12 +179,7 @@ export function AuditDetailScreen({
           approval={projectApproval}
         />
       ) : tab === "tasks" ? (
-        <TasksTab
-          audit={a}
-          tasks={tasks}
-          usersById={usersById}
-          canCreate={canCreateTasks}
-        />
+        <TasksTab audit={a} tasks={tasks} usersById={usersById} canCreate={canCreateTasks} />
       ) : tab === "findings" ? (
         <FindingsTab a={a} role={role} />
       ) : tab === "files" ? (

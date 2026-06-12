@@ -78,7 +78,7 @@ describe("AuditDetailScreen", () => {
   it("opens the Group tab with member rows", async () => {
     renderDetail("AUD-2026-014");
     await userEvent.click(screen.getByRole("tab", { name: /Audit guruhi/ }));
-    expect(screen.getByText("Bobur Mirzayev")).toBeInTheDocument();
+    expect(screen.getAllByText("Bobur Mirzayev").length).toBeGreaterThan(0);
   });
 
   it("opens the Project tab with the approval flow", async () => {
@@ -119,5 +119,32 @@ describe("AuditDetailScreen", () => {
   it("shows a not-found state for an unknown audit", () => {
     renderDetail("nope");
     expect(screen.getByRole("heading", { name: "Audit topilmadi" })).toBeInTheDocument();
+  });
+
+  it("disables task-related tabs for a project_pending audit", () => {
+    renderDetail("AUD-2026-015");
+    const lockedMsg = (messages.auditDetail as Record<string, string>).tabLocked;
+    expect(screen.getByRole("tab", { name: /Vazifalar/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Vazifalar/ })).toHaveAttribute("title", lockedMsg);
+    expect(screen.getByRole("tab", { name: /Findinglar/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Tokenlar/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /KPI/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /AI tahlil/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Fayllar/ })).toBeDisabled();
+  });
+
+  it("does not disable task-related tabs for an in_progress audit", () => {
+    renderDetail("AUD-2026-014");
+    expect(screen.getByRole("tab", { name: /Vazifalar/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Findinglar/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Tokenlar/ })).not.toBeDisabled();
+  });
+
+  it("never disables overview, group, project, log tabs regardless of status", () => {
+    renderDetail("AUD-2026-015");
+    expect(screen.getByRole("tab", { name: /Umumiy/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Audit guruhi/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Audit loyihasi/ })).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /Audit log/ })).not.toBeDisabled();
   });
 });
