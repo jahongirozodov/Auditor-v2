@@ -131,7 +131,7 @@ export async function projectApproval(
     const nxt = nextStage(cur);
     nextProjectStatus = nxt ? "submitted" : "approved";
     nextProjectStage = nxt;
-    nextAuditStatus = nxt ? "head_approved" : "approved";
+    nextAuditStatus = nxt ? "head_approved" : "assigning";
     nextAuditStage = nxt ? 4 : 5;
     evAction = "Approve";
     evStage = cur;
@@ -216,7 +216,7 @@ export async function projectApproval(
         entityType: "audit",
         entityId: project.auditId,
       });
-    } else if (nextAuditStatus === "approved") {
+    } else if (nextAuditStatus === "assigning") {
       await emitNotification(tx, {
         type: "project_approved",
         recipients: [project.audit.leaderId].filter(Boolean) as string[],

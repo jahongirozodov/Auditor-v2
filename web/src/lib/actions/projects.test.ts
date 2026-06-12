@@ -157,7 +157,7 @@ describe("projectApproval", () => {
     });
   });
 
-  it("dept approve sets project approved and audit approved (Tasdiqlangan)", async () => {
+  it("dept approve sets project approved and audit assigning", async () => {
     h.project = {
       ...h.project,
       status: "submitted",
@@ -172,7 +172,7 @@ describe("projectApproval", () => {
     });
     expect(mockPrisma.audit.update).toHaveBeenCalledWith({
       where: { id: "AUD-1" },
-      data: { status: "approved", stage: 5 },
+      data: { status: "assigning", stage: 5 },
     });
   });
 
