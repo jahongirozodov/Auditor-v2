@@ -2,10 +2,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/session";
+import { Prisma } from "@prisma/client";
 
 const h = vi.hoisted(() => ({
   canManage: true,
-  audit: { status: "group_forming", leaderId: "u3", title: "Test Audit" } as { status: string; leaderId: string; title: string },
+  audit: { status: "group_forming", leaderId: "u3", title: "Test Audit" } as {
+    status: string;
+    leaderId: string;
+    title: string;
+  } | null,
   codes: [{ code: "AUD-2026-015" }] as { code: string }[],
 }));
 
@@ -131,5 +136,60 @@ describe("KPI emission", () => {
   it("removeMember does NOT emit KPI events", async () => {
     await removeMember({ auditId: "AUD-1", userId: "u6" });
     expect(mockPrisma.kpiEvent.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("createAudit — validation gaps", () => {
+  it("rejects title shorter than 3 characters", async () => {
+    expect(await createAudit({ ...validCreate, title: "AB" })).toEqual({
+      ok: false,
+      error: "invalid",
+    });
+  });
+
+  it("returns code_conflict when Prisma throws P2002", async () => {
+    mockPrisma.$transaction.mockImplementationOnce(async () => {
+      throw new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "5.0.0",
+      });
+    });
+    expect(await createAudit(validCreate)).toEqual({ ok: false, error: "code_conflict" });
+  });
+});
+
+describe("team actions — audit not found", () => {
+  beforeEach(() => {
+    h.audit = null;
+  });
+
+  it("addMember returns not_found when audit does not exist", async () => {
+    expect(await addMember({ auditId: "AUD-missing", userId: "u6" })).toEqual({
+      ok: false,
+      error: "not_found",
+    });
+  });
+
+  it("removeMember returns not_found when audit does not exist", async () => {
+    expect(await removeMember({ auditId: "AUD-missing", userId: "u6" })).toEqual({
+      ok: false,
+      error: "not_found",
+    });
+  });
+
+  it("promoteLead returns not_found when audit does not exist", async () => {
+    expect(await promoteLead({ auditId: "AUD-missing", userId: "u6" })).toEqual({
+      ok: false,
+      error: "not_found",
+    });
+  });
+});
+
+describe("team actions — invalid input", () => {
+  it("addMember returns invalid when auditId is empty", async () => {
+    expect(await addMember({ auditId: "", userId: "u6" })).toEqual({
+      ok: false,
+      error: "invalid",
+    });
   });
 });
