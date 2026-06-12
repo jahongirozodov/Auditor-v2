@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -283,6 +284,22 @@ public sealed class LocalApiHost
         });
 
         // ── misc ──────────────────────────────────────────────────────────
+        app.MapPost("/api/open-browser", () =>
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo($"http://127.0.0.1:{Port}/")
+                {
+                    UseShellExecute = true,
+                });
+                return Results.Json(new { ok = true }, Json);
+            }
+            catch
+            {
+                return Results.Json(new { ok = false }, Json);
+            }
+        });
+
         app.MapPost("/api/update-check", async () =>
         {
             var (available, latest) = await _svc.CheckUpdateAsync();

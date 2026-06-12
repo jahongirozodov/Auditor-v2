@@ -458,6 +458,26 @@ body::before {
   margin-bottom: 24px;
 }
 
+.btn-browser-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 10px 0 0;
+  margin: 8px auto 0;
+  transition: color .15s;
+  letter-spacing: .01em;
+}
+.btn-browser-link:hover { color: var(--brand); }
+.btn-browser-link .icon { display: flex; align-items: center; }
+.btn-browser-link .icon svg { width: 13px; height: 13px; }
+
 /* ── Form elements ──────────────────────────────────────────────── */
 .field-label {
   display: block;

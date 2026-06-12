@@ -27,6 +27,11 @@ function esc(s) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Open in browser ────────────────────────────────────────────────────
+async function openInBrowser() {
+  await api.post('/api/open-browser', {});
+}
+
 // ── API ────────────────────────────────────────────────────────────────
 const api = {
   async get(path) {
@@ -160,6 +165,11 @@ function renderShell() {
   const ti = $('theme-icon');
   if (ti) ti.innerHTML = getTheme() === 'dark' ? ICONS.moon : ICONS.sun;
 
+  const bi = $('browser-icon');
+  if (bi) bi.innerHTML = ICONS.externalLink;
+  const bb = $('browser-btn');
+  if (bb) { bb.onclick = null; bb.addEventListener('click', openInBrowser); }
+
   const sb = $('statusbar');
   if (sb) {
     const dot = S.online
@@ -274,10 +284,12 @@ const SCREENS = {
           </div>
           <div id="l-err" class="error-msg hidden"></div>
           <button id="l-btn" class="btn btn-primary" style="margin-top:20px;width:100%">Kirish</button>
+          <button id="l-browser" class="btn-browser-link">${icon('externalLink')} Browserda ochish</button>
         </div>
       </div>
     `;
 
+    $('l-browser').addEventListener('click', openInBrowser);
     const btn = $('l-btn'), emailIn = $('l-email'), passIn = $('l-pass'), errEl = $('l-err');
 
     async function doLogin() {
