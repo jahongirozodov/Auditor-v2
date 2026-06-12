@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Auditor.Agent.Core;
@@ -8,6 +9,8 @@ using Auditor.Agent.Core.Local;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 
 namespace Auditor.Agent.Desktop.LocalApi;
@@ -29,14 +32,22 @@ public sealed class LocalApiHost
 
     public async Task StartAsync(CancellationToken ct = default)
     {
-        // Single-file publish: AppContext.BaseDirectory → temp extraction dir.
-        // Use the EXE's actual directory to find wwwroot alongside it.
         var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+
+        // Build a composite file provider: physical wwwroot (dev) → embedded resources (single-file publish)
+        var providers = new List<IFileProvider>();
+        var physicalWwwroot = Path.Combine(exeDir, "wwwroot");
+        if (Directory.Exists(physicalWwwroot))
+            providers.Add(new PhysicalFileProvider(physicalWwwroot));
+        providers.Add(new EmbeddedFileProvider(Assembly.GetExecutingAssembly(), "Auditor.Agent.Desktop.wwwroot"));
+        IFileProvider fileProvider = providers.Count == 1
+            ? providers[0]
+            : new CompositeFileProvider(providers);
+
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = new[] { $"--urls=http://127.0.0.1:{Port}" },
             ContentRootPath = exeDir,
-            WebRootPath = Path.Combine(exeDir, "wwwroot"),
             ApplicationName = "AuditorAgent",
         });
 
@@ -45,9 +56,24 @@ public sealed class LocalApiHost
         var app = builder.Build();
         _app = app;
 
-        app.UseStaticFiles();
+        var contentTypeProvider = new FileExtensionContentTypeProvider();
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = fileProvider,
+            ContentTypeProvider = contentTypeProvider,
+        });
+
         MapRoutes(app);
-        app.MapFallbackToFile("index.html");
+
+        // SPA fallback: serve index.html for any unmatched route
+        app.MapFallback(async ctx =>
+        {
+            var fileInfo = fileProvider.GetFileInfo("index.html");
+            if (!fileInfo.Exists) { ctx.Response.StatusCode = 404; return; }
+            ctx.Response.ContentType = "text/html; charset=utf-8";
+            await using var stream = fileInfo.CreateReadStream();
+            await stream.CopyToAsync(ctx.Response.Body);
+        });
 
         await app.StartAsync(ct);
     }
