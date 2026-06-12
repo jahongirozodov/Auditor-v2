@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import type { Organization, OrgDetail, RiskLevel } from "@/lib/types/entities";
+import type { Organization, OrgDetail } from "@/lib/types/entities";
 
 function toOrg(o: {
   id: string;
@@ -22,22 +22,14 @@ function toOrg(o: {
 }
 
 type DetailRow = {
-  region: string;
-  address: string;
-  risk: string;
   head: string;
-  since: string;
   contacts: { name: string; role: string; email: string; phone: string }[];
   devices: { name: string; kind: string; vendor: string; ip: string; crit: string }[];
 };
 
 function toDetail(o: DetailRow): OrgDetail {
   return {
-    region: o.region,
-    address: o.address,
-    risk: o.risk as RiskLevel,
     head: o.head,
-    since: o.since,
     contacts: o.contacts.map((c) => ({
       name: c.name,
       role: c.role,

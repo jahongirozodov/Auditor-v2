@@ -17,11 +17,7 @@ const OrganizationInput = z.object({
     .regex(/^\d{9}$/),
   sector: z.string().trim().min(2).max(80),
   contact: z.string().trim().min(2).max(120),
-  region: z.string().trim().min(2).max(80),
-  address: z.string().trim().min(2).max(200),
-  risk: z.enum(["high", "medium", "low"]),
   head: z.string().trim().min(2).max(120),
-  since: z.string().trim().min(2).max(40),
 });
 
 export type OrganizationInput = z.input<typeof OrganizationInput>;

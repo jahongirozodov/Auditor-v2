@@ -93,11 +93,7 @@ async function main() {
       sector: o.sector,
       audits: o.audits,
       contact: o.contact,
-      region: d.region,
-      address: d.address,
-      risk: d.risk,
       head: d.head,
-      since: d.since,
     };
     await prisma.organization.upsert({
       where: { id: o.id },

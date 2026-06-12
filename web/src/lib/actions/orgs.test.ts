@@ -39,11 +39,7 @@ const validInput = {
   stir: "123456789",
   sector: "Davlat",
   contact: "info@gov.uz",
-  region: "Toshkent",
-  address: "Mustaqillik shoh kochasi",
-  risk: "medium" as const,
   head: "Ali Valiyev",
-  since: "2026",
 };
 
 beforeEach(() => {

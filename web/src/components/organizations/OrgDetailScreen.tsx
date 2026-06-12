@@ -15,17 +15,14 @@ import { Stat } from "@/components/ui/Stat";
 import { Tag } from "@/components/ui/Tag";
 import { Progress } from "@/components/ui/Progress";
 import { StatusTag } from "@/components/ui/StatusTag";
-import { ORG_RISK } from "@/lib/fixtures";
 import type { TagTone } from "@/components/ui/Tag";
-import type { Audit, Organization, OrgDetail, RiskLevel } from "@/lib/types/entities";
+import type { Audit, Organization, OrgDetail } from "@/lib/types/entities";
 
 export interface OrgDetailScreenProps {
   org: Organization | undefined;
   det: OrgDetail | undefined;
   orgAudits: Audit[];
 }
-
-const RISK_TONE: Record<RiskLevel, TagTone> = { high: "danger", medium: "warning", low: "success" };
 const SEV: { key: "critical" | "high" | "medium" | "low"; label: string; color: string }[] = [
   { key: "critical", label: "Critical", color: "var(--status-danger-fg)" },
   { key: "high", label: "High", color: "var(--status-warning-fg)" },
@@ -69,11 +66,8 @@ export function OrgDetailScreen({ org, det, orgAudits }: OrgDetailScreenProps) {
 
   const info: [string, string][] = [
     [t("fSector"), org.sector],
-    [t("fRegion"), det.region],
-    [t("fAddress"), det.address],
     [t("fHead"), det.head],
     [t("fContact"), org.contact],
-    [t("fSince"), det.since],
   ];
 
   return (
@@ -85,7 +79,7 @@ export function OrgDetailScreen({ org, det, orgAudits }: OrgDetailScreenProps) {
           { label: org.name },
         ]}
         title={org.name}
-        sub={`${org.sector} · ${det.region}`}
+        sub={org.sector}
         actions={
           <>
             <Link href="/organizations" className="btn btn--ghost btn--sm">
@@ -133,7 +127,6 @@ export function OrgDetailScreen({ org, det, orgAudits }: OrgDetailScreenProps) {
                 <Building2 size={15} />
                 <span>{t("infoTitle")}</span>
               </div>
-              <Tag tone={RISK_TONE[det.risk]}>{ORG_RISK[det.risk].label}</Tag>
             </div>
             <div className="panel__body">
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
@@ -174,35 +167,35 @@ export function OrgDetailScreen({ org, det, orgAudits }: OrgDetailScreenProps) {
                     {orgAudits.map((a) => {
                       const href = `/audits/${a.id}`;
                       return (
-                      <tr key={a.id}>
-                        <td className="cell-mono">
-                          <Link href={href}>{a.code}</Link>
-                        </td>
-                        <td>
-                          <Link href={href} className="text-primary font-semi">
-                            {a.title}
-                          </Link>
-                        </td>
-                        <td>
-                          <Tag tone="outline">{a.type}</Tag>
-                        </td>
-                        <td>
-                          <StatusTag status={a.status} />
-                        </td>
-                        <td style={{ minWidth: 120 }}>
-                          <Progress
-                            value={a.progress}
-                            tone={a.progress > 90 ? "success" : "brand"}
-                          />
-                        </td>
-                        <td>
-                          {a.findings.critical > 0 ? (
-                            <span className="sev sev--critical">{a.findings.critical}</span>
-                          ) : (
-                            <span className="cell-sub">—</span>
-                          )}
-                        </td>
-                      </tr>
+                        <tr key={a.id}>
+                          <td className="cell-mono">
+                            <Link href={href}>{a.code}</Link>
+                          </td>
+                          <td>
+                            <Link href={href} className="text-primary font-semi">
+                              {a.title}
+                            </Link>
+                          </td>
+                          <td>
+                            <Tag tone="outline">{a.type}</Tag>
+                          </td>
+                          <td>
+                            <StatusTag status={a.status} />
+                          </td>
+                          <td style={{ minWidth: 120 }}>
+                            <Progress
+                              value={a.progress}
+                              tone={a.progress > 90 ? "success" : "brand"}
+                            />
+                          </td>
+                          <td>
+                            {a.findings.critical > 0 ? (
+                              <span className="sev sev--critical">{a.findings.critical}</span>
+                            ) : (
+                              <span className="cell-sub">—</span>
+                            )}
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>

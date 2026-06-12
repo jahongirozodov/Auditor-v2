@@ -17,15 +17,7 @@ import { Stat } from "@/components/ui/Stat";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { OrgFormModal, type EditableOrganization } from "./OrgFormModal";
-import { ORG_RISK } from "@/lib/fixtures";
-import type { Organization, OrgDetail, RiskLevel } from "@/lib/types/entities";
-import type { TagTone } from "@/components/ui/Tag";
-
-const RISK_TONE: Record<RiskLevel, TagTone> = {
-  high: "danger",
-  medium: "warning",
-  low: "success",
-};
+import type { Organization, OrgDetail } from "@/lib/types/entities";
 
 export interface OrgsScreenProps {
   orgs: Organization[];
@@ -52,7 +44,6 @@ export function OrgsScreen({
   const t = useTranslations("orgs");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditableOrganization | null>(null);
-  const highRisk = orgs.filter((o) => orgDetails[o.id]?.risk === "high").length;
   const devices = orgs.reduce((s, o) => s + (orgDetails[o.id]?.devices.length ?? 0), 0);
 
   function openCreate() {
@@ -83,14 +74,13 @@ export function OrgsScreen({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(3, 1fr)",
           gap: 14,
           marginBottom: 16,
         }}
       >
         <Stat icon={<Building2 size={15} />} label={t("statOrgs")} value={orgs.length} />
         <Stat icon={<FolderKanban size={15} />} label={t("statAudits")} value={activeAuditCount} />
-        <Stat icon={<ShieldAlert size={15} />} label={t("statHighRisk")} value={highRisk} />
         <Stat icon={<Server size={15} />} label={t("statDevices")} value={devices} />
       </div>
 
@@ -102,8 +92,6 @@ export function OrgsScreen({
                 <th>{t("thOrg")}</th>
                 <th>{t("thStir")}</th>
                 <th>{t("thSector")}</th>
-                <th>{t("thRegion")}</th>
-                <th>{t("thRisk")}</th>
                 <th>{t("thDevices")}</th>
                 <th>{t("thAudits")}</th>
                 <th />
@@ -112,7 +100,6 @@ export function OrgsScreen({
             <tbody>
               {orgs.map((o) => {
                 const det = orgDetails[o.id];
-                const risk = det?.risk ?? "low";
                 return (
                   <tr key={o.id}>
                     <td>
@@ -134,10 +121,6 @@ export function OrgsScreen({
                     <td className="cell-mono">{o.stir}</td>
                     <td>
                       <Tag tone="outline">{o.sector}</Tag>
-                    </td>
-                    <td className="cell-sub">{det?.region}</td>
-                    <td>
-                      <Tag tone={RISK_TONE[risk]}>{ORG_RISK[risk].label}</Tag>
                     </td>
                     <td className="tabular">{det?.devices.length ?? 0}</td>
                     <td className="tabular text-primary font-semi">{o.audits}</td>

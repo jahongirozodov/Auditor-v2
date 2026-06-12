@@ -6,21 +6,18 @@ import { useTranslations } from "next-intl";
 import { Building2, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { createOrganization, updateOrganization } from "@/lib/actions/orgs";
-import type { Organization, OrgDetail, RiskLevel } from "@/lib/types/entities";
+import type { Organization, OrgDetail } from "@/lib/types/entities";
 
 const EMPTY = {
   name: "",
   stir: "",
   sector: "",
   contact: "",
-  region: "",
-  address: "",
-  risk: "medium" as RiskLevel,
   head: "",
-  since: "",
 };
 
 type OrgFormValue = typeof EMPTY;
@@ -43,11 +40,7 @@ function toFormValue(value?: EditableOrganization | null): OrgFormValue {
     stir: value.org.stir,
     sector: value.org.sector,
     contact: value.org.contact,
-    region: value.detail.region,
-    address: value.detail.address,
-    risk: value.detail.risk,
     head: value.detail.head,
-    since: value.detail.since,
   };
 }
 
@@ -64,10 +57,7 @@ export function OrgFormModal({ open, onClose, organization }: OrgFormModalProps)
     /^\d{9}$/.test(form.stir.trim()) &&
     form.sector.trim().length >= 2 &&
     form.contact.trim().length >= 2 &&
-    form.region.trim().length >= 2 &&
-    form.address.trim().length >= 2 &&
-    form.head.trim().length >= 2 &&
-    form.since.trim().length >= 2;
+    form.head.trim().length >= 2;
 
   function set<K extends keyof OrgFormValue>(key: K, value: OrgFormValue[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -156,48 +146,6 @@ export function OrgFormModal({ open, onClose, organization }: OrgFormModalProps)
             className="input"
             value={form.contact}
             onChange={(e) => set("contact", e.target.value)}
-          />
-        </Field>
-
-        <Field label={t("fRegion")} htmlFor="org-region">
-          <input
-            id="org-region"
-            className="input"
-            value={form.region}
-            onChange={(e) => set("region", e.target.value)}
-          />
-        </Field>
-
-        <div style={{ gridColumn: "span 2" }}>
-          <Field label={t("fAddress")} htmlFor="org-address">
-            <input
-              id="org-address"
-              className="input"
-              value={form.address}
-              onChange={(e) => set("address", e.target.value)}
-            />
-          </Field>
-        </div>
-
-        <Field label={t("fRisk")} htmlFor="org-risk">
-          <select
-            id="org-risk"
-            className="select"
-            value={form.risk}
-            onChange={(e) => set("risk", e.target.value as RiskLevel)}
-          >
-            <option value="high">{t("riskHigh")}</option>
-            <option value="medium">{t("riskMedium")}</option>
-            <option value="low">{t("riskLow")}</option>
-          </select>
-        </Field>
-
-        <Field label={t("fSince")} htmlFor="org-since">
-          <input
-            id="org-since"
-            className="input"
-            value={form.since}
-            onChange={(e) => set("since", e.target.value)}
           />
         </Field>
 
