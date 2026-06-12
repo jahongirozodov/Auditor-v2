@@ -7,7 +7,9 @@ import { TasksTab } from "./TasksTab";
 import { AUDITS, TASKS, USERS } from "@/lib/fixtures";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("@/lib/actions/tasks", () => ({ createTask: vi.fn(async () => ({ ok: true, id: "T-999" })) }));
+vi.mock("@/lib/actions/tasks", () => ({
+  createTask: vi.fn(async () => ({ ok: true, id: "T-999" })),
+}));
 
 const audit = AUDITS.find((a) => a.id === "AUD-2026-014")!;
 const tasks = TASKS.filter((t) => t.auditId === audit.id);
@@ -21,7 +23,11 @@ function renderTab(canCreate = false, taskList = tasks) {
   );
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // jsdom doesn't implement scrollIntoView — needed by Select combobox
+  Element.prototype.scrollIntoView = vi.fn();
+});
 
 describe("TasksTab", () => {
   it("renders a row per task with a link to the task detail", () => {
@@ -51,7 +57,11 @@ describe("TasksTab", () => {
     // Pick an assignee that is NOT the first task's assignee, so the first row drops out.
     const other = audit.members.find((m) => m !== first.assignee);
     if (other) {
-      await userEvent.selectOptions(screen.getByLabelText(/Masʼul boʻyicha/), other);
+      // Assignee filter uses a custom combobox — open it then click the option.
+      const trigger = screen.getByRole("combobox");
+      await userEvent.click(trigger);
+      const label = usersById[other]?.name ?? other;
+      await userEvent.click(await screen.findByRole("option", { name: label }));
       expect(screen.queryByRole("link", { name: first.id })).toBeNull();
     }
   });

@@ -96,25 +96,24 @@ export function AgentScreen({
   }
 
   async function downloadExe() {
-    toast(t("downloadStarted"), "info");
+    // HEAD check — tells us 404 (not published) before triggering a browser download.
     try {
-      const res = await fetch("/api/v1/agent/download");
-      if (!res.ok) {
+      const check = await fetch("/api/v1/agent/download", { method: "HEAD" });
+      if (!check.ok) {
         toast(t("downloadUnavailable"), "danger");
         return;
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `AuditorAgent_v${version?.version ?? "1.0.0"}.exe`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
     } catch {
       toast(t("downloadUnavailable"), "danger");
+      return;
     }
+    // Let the browser stream the file natively — avoids loading 150 MB into JS heap.
+    toast(t("downloadStarted"), "info");
+    const a = document.createElement("a");
+    a.href = "/api/v1/agent/download";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   return (
@@ -370,7 +369,9 @@ export function AgentScreen({
                     <td className="font-mono cell-sub" style={{ fontSize: 12 }}>
                       {auditCodeById[f.auditId] ?? f.auditId}
                     </td>
-                    <td style={{ fontSize: 13 }}>{usersById[f.reportedById]?.name ?? f.reportedById}</td>
+                    <td style={{ fontSize: 13 }}>
+                      {usersById[f.reportedById]?.name ?? f.reportedById}
+                    </td>
                     <td>
                       <span className="tag tag--ghost">{f.status}</span>
                     </td>

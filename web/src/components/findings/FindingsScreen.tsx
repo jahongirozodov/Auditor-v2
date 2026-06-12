@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Download, Plus, Search, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { FindingsList } from "./FindingsList";
 import { FindingDrawer } from "./FindingDrawer";
@@ -59,10 +60,7 @@ export function FindingsScreen({
   const defaultAuditId =
     audits.find((a) => tasks.some((tk) => tk.auditId === a.id))?.id ?? audits[0]?.id ?? "";
 
-  const auditsById = useMemo(
-    () => Object.fromEntries(audits.map((a) => [a.id, a])),
-    [audits],
-  );
+  const auditsById = useMemo(() => Object.fromEntries(audits.map((a) => [a.id, a])), [audits]);
 
   const reporterOptions = useMemo(() => {
     const ids = [...new Set(findings.map((f) => f.reportedBy))];
@@ -85,8 +83,7 @@ export function FindingsScreen({
                 ? f.status === "review"
                 : f.ai;
       const searchMatch =
-        !q ||
-        [f.title, f.asset, f.cwe, f.type].some((v) => v.toLowerCase().includes(q));
+        !q || [f.title, f.asset, f.cwe, f.type].some((v) => v.toLowerCase().includes(q));
       const auditMatch = !auditFilter || f.auditId === auditFilter;
       const userMatch = !userFilter || f.reportedBy === userFilter;
       const audit = auditsById[f.auditId];
@@ -147,7 +144,15 @@ export function FindingsScreen({
           </>
         }
       />
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 16,
+          flexWrap: "wrap",
+        }}
+      >
         <div className="input-group" style={{ width: 240 }}>
           <Search className="icon-l" size={14} />
           <input
@@ -159,48 +164,33 @@ export function FindingsScreen({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select
-          className="select"
-          aria-label={t("filterAudit")}
-          style={{ width: 260 }}
+        <Select
           value={auditFilter}
-          onChange={(e) => setAuditFilter(e.target.value)}
-        >
-          <option value="">{t("filterAudit")}: {t("filterAll")}</option>
-          {audits.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.code} — {a.title}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          aria-label={t("filterUser")}
-          style={{ width: 200 }}
+          onChange={setAuditFilter}
+          style={{ width: 260 }}
+          options={[
+            { value: "", label: `${t("filterAudit")}: ${t("filterAll")}` },
+            ...audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` })),
+          ]}
+        />
+        <Select
           value={userFilter}
-          onChange={(e) => setUserFilter(e.target.value)}
-        >
-          <option value="">{t("filterUser")}: {t("filterAll")}</option>
-          {reporterOptions.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          aria-label={t("filterOrg")}
+          onChange={setUserFilter}
           style={{ width: 200 }}
+          options={[
+            { value: "", label: `${t("filterUser")}: ${t("filterAll")}` },
+            ...reporterOptions.map((u) => ({ value: u.id, label: u.name })),
+          ]}
+        />
+        <Select
           value={orgFilter}
-          onChange={(e) => setOrgFilter(e.target.value)}
-        >
-          <option value="">{t("filterOrg")}: {t("filterAll")}</option>
-          {Object.values(orgsById).map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.name}
-            </option>
-          ))}
-        </select>
+          onChange={setOrgFilter}
+          style={{ width: 200 }}
+          options={[
+            { value: "", label: `${t("filterOrg")}: ${t("filterAll")}` },
+            ...Object.values(orgsById).map((o) => ({ value: o.id, label: o.name })),
+          ]}
+        />
         {hasFilters && (
           <button type="button" className="btn btn--ghost btn--sm" onClick={clearFilters}>
             <X size={14} />

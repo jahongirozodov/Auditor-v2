@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export type ToastTone = "success" | "info" | "warning" | "danger";
 
@@ -29,6 +30,10 @@ export function ToastProvider({
   duration?: number;
 }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), []);
 
   const show = useCallback<ShowToast>(
     (message, tone = "info") => {
@@ -42,13 +47,17 @@ export function ToastProvider({
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className="toast-host">
-        {items.map((t) => (
-          <div key={t.id} role="status" className={`toast toast--in toast--${t.tone}`}>
-            <span className="toast__msg">{t.message}</span>
-          </div>
-        ))}
-      </div>
+      {mounted &&
+        createPortal(
+          <div className="toast-host">
+            {items.map((t) => (
+              <div key={t.id} role="status" className={`toast toast--in toast--${t.tone}`}>
+                <span className="toast__msg">{t.message}</span>
+              </div>
+            ))}
+          </div>,
+          document.body,
+        )}
     </ToastContext.Provider>
   );
 }

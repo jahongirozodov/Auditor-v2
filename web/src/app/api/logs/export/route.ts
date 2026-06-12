@@ -29,16 +29,42 @@ export async function GET(req: Request) {
     to: p.get("to") || undefined,
     q: p.get("q") || undefined,
     actorId: p.get("actorId") || undefined,
-    category: category && CATEGORIES.includes(category as LogCategory) ? (category as LogCategory) : undefined,
-    level: level && (LEVELS as readonly string[]).includes(level) ? (level as AuditLogFilters["level"]) : undefined,
+    category:
+      category && CATEGORIES.includes(category as LogCategory)
+        ? (category as LogCategory)
+        : undefined,
+    level:
+      level && (LEVELS as readonly string[]).includes(level)
+        ? (level as AuditLogFilters["level"])
+        : undefined,
   };
 
   const rows = await getAuditLogsForExport(userId, role as RoleCode, filters);
-  const header = ["time", "level", "userId", "userName", "action", "entity", "ip", "device", "payload"];
+  const header = [
+    "time",
+    "level",
+    "userId",
+    "userName",
+    "action",
+    "entity",
+    "ip",
+    "device",
+    "payload",
+  ];
   const lines = [
     header.join(","),
     ...rows.map((r) =>
-      [r.time, r.level, r.userId ?? "", r.userName ?? "", r.action, r.entity, r.ip, r.device, r.payload]
+      [
+        r.time,
+        r.level,
+        r.userId ?? "",
+        r.userName ?? "",
+        r.action,
+        r.entity,
+        r.ip,
+        r.device,
+        r.payload,
+      ]
         .map(csvCell)
         .join(","),
     ),

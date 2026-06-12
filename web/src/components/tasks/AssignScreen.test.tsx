@@ -43,36 +43,37 @@ describe("AssignScreen", () => {
     expect(screen.getByRole("heading", { name: "Vazifalarni taqsimlash" })).toBeInTheDocument();
     expect(bodyRows()).toHaveLength(TASKS.length);
     expect(screen.getByRole("link", { name: "T-114" })).toHaveAttribute("href", "/tasks/T-114");
-    // Audit column header + each row's audit code.
+    // Audit column header + spot-check: tasks belonging to AUD-2026-014 render that code.
     expect(screen.getByRole("columnheader", { name: messages.assign.thAudit })).toBeInTheDocument();
-    expect(screen.getAllByText("AUD-2026-014").length).toBe(TASKS.length);
+    const aud14Count = TASKS.filter((t) => t.auditId === "AUD-2026-014").length;
+    expect(screen.getAllByText("AUD-2026-014").length).toBe(aud14Count);
   });
 
   it("filters by status", async () => {
     renderScreen();
-    await userEvent.selectOptions(
-      screen.getByLabelText(messages.assign.filterStatus),
-      "done",
-    );
-    // T-116 and T-122 are the only done tasks.
-    expect(bodyRows()).toHaveLength(2);
+    await userEvent.selectOptions(screen.getByLabelText(messages.assign.filterStatus), "done");
+    const doneTasks = TASKS.filter((t) => t.status === "done");
+    expect(bodyRows()).toHaveLength(doneTasks.length);
     expect(screen.getByRole("link", { name: "T-116" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "T-114" })).not.toBeInTheDocument();
   });
 
   it("filters by assignee", async () => {
     renderScreen();
-    // u7 (Jasur Tursunov) owns T-115 and T-121.
+    // u7 (Jasur Tursunov) is assigned tasks across multiple audits.
     await userEvent.selectOptions(screen.getByLabelText(messages.assign.filterAssignee), "u7");
-    expect(bodyRows()).toHaveLength(2);
+    const u7Tasks = TASKS.filter((t) => t.assignee === "u7");
+    expect(bodyRows()).toHaveLength(u7Tasks.length);
     expect(screen.getByRole("link", { name: "T-115" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "T-121" })).toBeInTheDocument();
   });
 
   it("searches by id and title", async () => {
     renderScreen();
-    await userEvent.type(screen.getByLabelText(messages.assign.search), "firewall");
-    expect(bodyRows()).toHaveLength(1);
+    const q = "firewall";
+    const matches = TASKS.filter((t) => `${t.id} ${t.title}`.toLowerCase().includes(q));
+    await userEvent.type(screen.getByLabelText(messages.assign.search), q);
+    expect(bodyRows()).toHaveLength(matches.length);
     expect(screen.getByRole("link", { name: "T-114" })).toBeInTheDocument();
   });
 

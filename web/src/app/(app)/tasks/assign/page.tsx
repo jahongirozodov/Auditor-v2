@@ -19,9 +19,7 @@ export default async function AssignPage() {
   // Audits the user may see here — same scope as the tasks above, so the Audit
   // filter never offers an audit whose tasks aren't on the board.
   const accessibleAudits =
-    role === "super" || role === "head"
-      ? audits
-      : audits.filter((a) => a.leader === userId);
+    role === "super" || role === "head" ? audits : audits.filter((a) => a.leader === userId);
   return (
     <AssignScreen
       audits={accessibleAudits}

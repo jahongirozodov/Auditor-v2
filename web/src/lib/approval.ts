@@ -63,6 +63,7 @@ export function projectCurrentOf(
   if (status === "project_draft") return "new";
   if (status === "returned") return "returned";
   if (status === "project_pending") return (projectStage as ApprovalStageKey) ?? "head";
+  if (status === "head_approved") return "dept";
   // assigning/in_progress/review/approved/completed → project already approved (or not started).
   return null;
 }

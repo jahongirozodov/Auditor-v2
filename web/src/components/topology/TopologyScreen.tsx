@@ -30,10 +30,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Sev } from "@/components/ui/Sev";
 import { useToast } from "@/components/ui/Toast";
-import { analyzeTopology } from "@/lib/actions/topology";
+import { analyzeTopology, enrichTopology } from "@/lib/actions/topology";
 import type { TopologyAnalysis } from "@/lib/analysis/topology/types";
 import { TopologyAiResult } from "./TopologyAiResult";
 import type { Audit, Finding, NodeKind, Severity, Topology } from "@/lib/types/entities";
@@ -177,6 +178,7 @@ export function TopologyScreen({
   const [ai, setAi] = useState<TopologyAnalysis | null>(latestAi);
   const [aiPending, setAiPending] = useState(false);
   const [aiDegraded, setAiDegraded] = useState(false);
+  const [enrichPending, setEnrichPending] = useState(false);
   const autoRan = useRef(false);
 
   async function runAi() {
@@ -188,6 +190,21 @@ export function TopologyScreen({
       else setAiDegraded(true);
     } finally {
       setAiPending(false);
+    }
+  }
+
+  async function runEnrich() {
+    setEnrichPending(true);
+    try {
+      const r = await enrichTopology({ auditId });
+      if (r.ok) {
+        toast(t("aiEnrichDone"), "success");
+        router.refresh();
+      } else {
+        toast(t("aiEnrichFailed"), "danger");
+      }
+    } finally {
+      setEnrichPending(false);
     }
   }
 
@@ -383,19 +400,12 @@ export function TopologyScreen({
 
   const auditSelect =
     audits.length > 1 ? (
-      <select
-        className="select"
+      <Select
         value={auditId}
-        onChange={(e) => selectAudit(e.target.value)}
-        style={{ maxWidth: 220 }}
-        aria-label={tNav("audits")}
-      >
-        {audits.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.code}
-          </option>
-        ))}
-      </select>
+        onChange={selectAudit}
+        style={{ width: 220 }}
+        options={audits.map((a) => ({ value: a.id, label: a.code }))}
+      />
     ) : null;
 
   if (topology.nodes.length === 0) {
@@ -509,6 +519,16 @@ export function TopologyScreen({
             >
               {aiPending ? t("aiAnalyzing") : t("aiAnalyze")}
             </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              icon={<Sparkles size={12} className={enrichPending ? "spin" : undefined} />}
+              onClick={() => void runEnrich()}
+              disabled={enrichPending}
+              style={{ marginLeft: 8 }}
+            >
+              {enrichPending ? t("aiEnriching") : t("aiEnrich")}
+            </Button>
           </div>
           <TopologyAiResult
             analysis={ai}
@@ -603,6 +623,22 @@ export function TopologyScreen({
                             </text>
                           </g>
                         ) : null}
+                        {n.aiLabel ? (
+                          <g transform="translate(-20,-17)">
+                            <circle r={6} fill="var(--brand)" opacity={0.85} />
+                            <text
+                              style={{
+                                fontSize: 8,
+                                fill: "white",
+                                textAnchor: "middle",
+                                fontFamily: "inherit",
+                              }}
+                              y={3}
+                            >
+                              ✦
+                            </text>
+                          </g>
+                        ) : null}
                       </g>
                     );
                   })}
@@ -681,6 +717,23 @@ export function TopologyScreen({
                     <span className="topo-detail__k">{t("segment")}</span>
                     <span className="topo-detail__v">{selNode.segment}</span>
                   </div>
+                  {selNode.aiLabel ? (
+                    <>
+                      <div className="topo-detail__kv">
+                        <span className="topo-detail__k">{t("aiEnrichedLabel")}</span>
+                        <span className="topo-detail__v">{selNode.aiLabel}</span>
+                      </div>
+                      <div className="topo-detail__kv">
+                        <span className="topo-detail__k">{t("aiEnrichedReason")}</span>
+                        <span
+                          className="topo-detail__v"
+                          style={{ color: "var(--text-tertiary)", fontSize: 12 }}
+                        >
+                          {selNode.aiReason}
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
                   <div className="topo-detail__kv">
                     <span className="topo-detail__k">{t("topSev")}</span>
                     <span className="topo-detail__v">

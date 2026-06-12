@@ -15,7 +15,9 @@ const audit = AUDITS[0];
 const ANALYSIS: AuditAnalysis = {
   executiveSummary: "Audit yuqori xavfli.",
   overallRisk: "high",
-  topRisks: [{ title: "SQL injection", severity: "critical", why: "Ochiq", recommendation: "Parametrlash" }],
+  topRisks: [
+    { title: "SQL injection", severity: "critical", why: "Ochiq", recommendation: "Parametrlash" },
+  ],
   remediationPlan: [{ priority: "high", action: "Patch qiling" }],
   kpiNote: "KPI yaxshi.",
 };

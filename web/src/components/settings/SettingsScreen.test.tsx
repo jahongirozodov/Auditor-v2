@@ -12,15 +12,21 @@ vi.mock("next-intl", () => ({
 }));
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => vi.fn() }));
 
-const { saveSettings, saveKpiRules, testOllama, addCustomRole, updateCustomRole, deleteCustomRole } =
-  vi.hoisted(() => ({
-    saveSettings: vi.fn(),
-    saveKpiRules: vi.fn(),
-    testOllama: vi.fn(),
-    addCustomRole: vi.fn(),
-    updateCustomRole: vi.fn(),
-    deleteCustomRole: vi.fn(),
-  }));
+const {
+  saveSettings,
+  saveKpiRules,
+  testOllama,
+  addCustomRole,
+  updateCustomRole,
+  deleteCustomRole,
+} = vi.hoisted(() => ({
+  saveSettings: vi.fn(),
+  saveKpiRules: vi.fn(),
+  testOllama: vi.fn(),
+  addCustomRole: vi.fn(),
+  updateCustomRole: vi.fn(),
+  deleteCustomRole: vi.fn(),
+}));
 vi.mock("@/lib/actions/settings", () => ({
   saveSettings,
   saveKpiRules,

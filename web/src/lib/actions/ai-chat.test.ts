@@ -14,7 +14,13 @@ vi.mock("@/lib/prisma", () => ({
       update: vi.fn(async () => ({})),
       findUnique: vi.fn(async () => ({ userId: "u1" })),
       findMany: vi.fn(async () => [
-        { id: "c1", title: "T", auditId: "a1", updatedAt: new Date("2026-06-10T10:00:00Z"), _count: { messages: 4 } },
+        {
+          id: "c1",
+          title: "T",
+          auditId: "a1",
+          updatedAt: new Date("2026-06-10T10:00:00Z"),
+          _count: { messages: 4 },
+        },
       ]),
       delete: vi.fn(async () => ({})),
     },
@@ -43,7 +49,12 @@ describe("saveExchange", () => {
   });
 
   it("appends to an existing owned conversation", async () => {
-    const res = await saveExchange({ conversationId: "c1", auditId: "a1", userText: "yana", aiText: "ok" });
+    const res = await saveExchange({
+      conversationId: "c1",
+      auditId: "a1",
+      userText: "yana",
+      aiText: "ok",
+    });
     expect(res).toMatchObject({ ok: true, conversationId: "c1" });
     expect(db.aiConversation.update).toHaveBeenCalledOnce();
     expect(db.aiConversation.create).not.toHaveBeenCalled();
@@ -60,7 +71,10 @@ describe("saveExchange", () => {
 
   it("forbids a user without ai permission", async () => {
     h.allowed = false;
-    expect(await saveExchange({ auditId: "a1", userText: "x" })).toEqual({ ok: false, error: "forbidden" });
+    expect(await saveExchange({ auditId: "a1", userText: "x" })).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
   });
 });
 
@@ -79,7 +93,10 @@ describe("getConversation", () => {
       title: "T",
       auditId: "a1",
       userId: "u1",
-      messages: [{ role: "user", text: "hi" }, { role: "ai", text: "salom" }],
+      messages: [
+        { role: "user", text: "hi" },
+        { role: "ai", text: "salom" },
+      ],
     });
     const conv = await getConversation({ id: "c1" });
     expect(conv?.messages).toHaveLength(2);

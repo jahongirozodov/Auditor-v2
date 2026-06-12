@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { generateReport } from "@/lib/actions/reports";
 import { REPORT_TYPES, REPORT_FORMATS } from "@/lib/reports/constants";
@@ -78,32 +79,20 @@ export function ReportGenerateModal({ open, onClose, audits }: Props) {
           />
         </Field>
         <Field label={t("fieldAudit")} htmlFor="rg-audit">
-          <select
+          <Select
             id="rg-audit"
-            className="select"
             value={auditId}
-            onChange={(e) => setAuditId(e.target.value)}
-          >
-            {audits.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.code} — {a.title}
-              </option>
-            ))}
-          </select>
+            onChange={setAuditId}
+            options={audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` }))}
+          />
         </Field>
         <Field label={t("fieldType")} htmlFor="rg-type">
-          <select
+          <Select
             id="rg-type"
-            className="select"
             value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            {REPORT_TYPES.map((rt) => (
-              <option key={rt} value={rt}>
-                {rt}
-              </option>
-            ))}
-          </select>
+            onChange={setType}
+            options={REPORT_TYPES.map((rt) => ({ value: rt, label: rt }))}
+          />
         </Field>
         <Field label={t("fieldFormat")} htmlFor="rg-fmt">
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

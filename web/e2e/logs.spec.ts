@@ -16,7 +16,9 @@ test("audit log viewer: events, server filter, detail drawer, export", async ({ 
   await login(page); // the login itself writes an auth.login audit-log row for u1
   await page.goto("/logs");
 
-  await expect(page.getByRole("heading", { name: "Audit loglar" })).toBeVisible({ timeout: COMPILE });
+  await expect(page.getByRole("heading", { name: "Audit loglar" })).toBeVisible({
+    timeout: COMPILE,
+  });
   await expect(page.getByText("auth.login").first()).toBeVisible({ timeout: COMPILE });
 
   // Admin-only actor filter + CSV export link.

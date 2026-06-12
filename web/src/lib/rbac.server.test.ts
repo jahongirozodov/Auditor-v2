@@ -9,10 +9,14 @@ const h = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: {
-      findUnique: vi.fn(async ({ where }: { where: { id: string } }) => h.users.get(where.id) ?? null),
+      findUnique: vi.fn(
+        async ({ where }: { where: { id: string } }) => h.users.get(where.id) ?? null,
+      ),
     },
     systemSetting: {
-      findUnique: vi.fn(async ({ where }: { where: { key: string } }) => h.settings.get(where.key) ?? null),
+      findUnique: vi.fn(
+        async ({ where }: { where: { key: string } }) => h.settings.get(where.key) ?? null,
+      ),
     },
   },
 }));

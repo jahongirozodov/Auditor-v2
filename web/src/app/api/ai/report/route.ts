@@ -8,8 +8,7 @@ import { analyzeAudit } from "@/lib/actions/audit-ai";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DOCX_MIME =
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const Body = z.object({
   auditId: z.string().min(1),

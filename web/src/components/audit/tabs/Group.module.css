@@ -1,0 +1,276 @@
+/* =========================================================================
+   Audit Group — drag-drop layout
+   All animations gated behind prefers-reduced-motion: no-preference
+   ========================================================================= */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* ——— Panels ——— */
+.groupPanel,
+.candidatesPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ——— Lead zone ——— */
+.leadZone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  margin: 10px 12px 6px;
+  border-radius: 6px;
+  border: 1.5px dashed color-mix(in srgb, var(--amber-500) 35%, transparent);
+  background: color-mix(in srgb, var(--amber-500) 5%, transparent);
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+.leadZone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--amber-500) 4%, transparent),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.leadZoneOver {
+  border-color: var(--amber-500);
+  background: color-mix(in srgb, var(--amber-500) 12%, transparent);
+}
+
+.leadStar {
+  color: var(--amber-500);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.leadLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.leadContent {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  position: relative;
+}
+
+.leadEmpty {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+  position: relative;
+}
+
+/* ——— Group drop zone body ——— */
+.groupBody {
+  flex: 1;
+  min-height: 80px;
+  border-radius: 0 0 8px 8px;
+}
+
+.groupBodyOver {
+  background: color-mix(in srgb, var(--brand-soft) 70%, transparent);
+  outline: 1.5px dashed var(--brand);
+  outline-offset: -3px;
+  border-radius: 0 0 6px 6px;
+}
+
+/* ——— Empty state ——— */
+.emptyZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 16px;
+  margin: 6px 12px 12px;
+  border-radius: 6px;
+  border: 1.5px dashed var(--border-color);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.emptyZoneIcon {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ——— Draggable rows ——— */
+.draggableRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.draggableRowDragging {
+  opacity: 0.35;
+}
+
+.gripHandle {
+  display: flex;
+  align-items: center;
+  padding: 0 2px 0 10px;
+  cursor: grab;
+  color: var(--text-muted);
+  opacity: 0;
+  flex-shrink: 0;
+  touch-action: none;
+}
+
+.draggableRow:hover .gripHandle {
+  opacity: 1;
+}
+
+.gripHandle:active {
+  cursor: grabbing;
+}
+
+.memberRow,
+.candidateRow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ——— Stats ——— */
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 48px;
+  gap: 1px;
+}
+
+.statNum {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.statLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+/* ——— Candidates panel drop zone ——— */
+.candidatesBody {
+  flex: 1;
+  min-height: 60px;
+  border-radius: 0 0 8px 8px;
+}
+
+.candidatesBodyOver {
+  background: color-mix(in srgb, var(--status-danger-bg) 60%, transparent);
+  outline: 1.5px dashed var(--status-danger-fg);
+  outline-offset: -3px;
+  border-radius: 0 0 6px 6px;
+}
+
+/* ——— Search ——— */
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+}
+
+.searchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: inherit;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+/* ——— Drag overlay ghost ——— */
+.dragGhost {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ——— Lock badge ——— */
+.lockBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+/* ——— Animations (only when motion is OK) ——— */
+@media (prefers-reduced-motion: no-preference) {
+  .leadZone {
+    transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .leadZoneOver {
+    box-shadow: 0 0 16px color-mix(in srgb, var(--amber-500) 22%, transparent);
+  }
+
+  .groupBody,
+  .candidatesBody {
+    transition: background 0.15s ease, outline-color 0.15s ease;
+  }
+
+  .gripHandle {
+    transition: opacity 0.12s ease;
+  }
+
+  .draggableRow {
+    transition: opacity 0.1s ease;
+  }
+
+  .dragGhost {
+    animation: ghostAppear 0.12s ease forwards;
+  }
+
+  @keyframes ghostAppear {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+}

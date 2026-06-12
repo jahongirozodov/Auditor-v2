@@ -64,7 +64,8 @@ export async function uploadTrafficFile(
   const { filename, content, auditId, taskId } = parsed.data;
 
   const { userId } = await requireSession();
-  if (!(await requirePermission(userId, "traffic.upload"))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "traffic.upload")))
+    return { ok: false, error: "forbidden" };
 
   // Binary pcap arrives base64-encoded and is parsed server-side into a structured
   // result (stored in `parsed`). Text formats keep raw content (NUL-stripped for
@@ -181,7 +182,8 @@ export async function reanalyzeTraffic(input: {
   if (!parsed.success) return { ok: false, error: "invalid" };
 
   const { userId } = await requireSession();
-  if (!(await requirePermission(userId, "traffic.upload"))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "traffic.upload")))
+    return { ok: false, error: "forbidden" };
 
   const upload = await prisma.trafficUpload.findUnique({ where: { id: parsed.data } });
   if (!upload) return { ok: false, error: "not_found" };
@@ -225,7 +227,8 @@ export async function createTrafficDrafts(
   const { uploadId } = parsed.data;
 
   const { userId } = await requireSession();
-  if (!(await requirePermission(userId, "traffic.upload"))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "traffic.upload")))
+    return { ok: false, error: "forbidden" };
 
   const upload = await prisma.trafficUpload.findUnique({ where: { id: uploadId } });
   if (!upload) return { ok: false, error: "not_found" };
@@ -237,7 +240,10 @@ export async function createTrafficDrafts(
   // Enrich each draft with the stored AI recommendation (matched by parser order).
   const ai = parseTrafficAnalysis(upload.aiResult);
   const inputs: FindingRowInput[] = result.anomalies.map((a, i) => {
-    const base = trafficAnomalyToFindingInput(a, { auditId: upload.auditId, taskId: upload.taskId });
+    const base = trafficAnomalyToFindingInput(a, {
+      auditId: upload.auditId,
+      taskId: upload.taskId,
+    });
     const rec = ai?.anomalies[i]?.recommendation?.trim();
     return rec ? { ...base, description: `${base.description}. Tavsiya: ${rec}`, ai: true } : base;
   });

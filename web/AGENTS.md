@@ -12,8 +12,8 @@ The production Next.js app. Read the repo-level [../AGENTS.md](../AGENTS.md) and
 ## Stack
 
 Next.js 16 (App Router, RSC) · React 19 · TypeScript (strict) · `next-intl` · vendored CSS design
-system (no Tailwind) · `next/font` (self-hosted). Data/Auth/AI arrive in later phases (Prisma+Postgres,
-Auth.js, Ollama proxy) — see the plan.
+system (no Tailwind) · `next/font` (self-hosted) · Prisma 5 + PostgreSQL · Auth.js · Ollama proxy
+(local, optional).
 
 ## Layout
 
@@ -37,8 +37,8 @@ messages/           # i18n catalogs (uz.json)
 - **i18n:** add strings to `messages/uz.json` and read with `useTranslations("namespace")`. Server and
   client components can both use it. Keep Uzbek-Latin copy rules (sentence case, correct glyphs).
 - **Prototype → component:** translate `screens-*.jsx`/`chrome.jsx` (which use `h(...)`/`React.createElement`)
-  into clean JSX. Port `data.js` into typed fixtures now and Prisma seed later. Map `icons.jsx` →
-  `lucide-react`.
+  into clean JSX. Fixtures live in `src/lib/fixtures/`; Prisma seed is in `prisma/seed.ts`. Map
+  `icons.jsx` → `lucide-react`.
 - **Server-first:** fetch in Server Components; mutate via Server Actions; `"use client"` only when
   needed. Re-check RBAC on the server for every mutation.
 
@@ -49,5 +49,3 @@ npm run build && npm run lint && npm run typecheck   # all must pass
 npm run format                                        # apply Prettier
 ```
 
-The current placeholder home page (`src/app/page.tsx`) and `ThemeToggle` are scaffolding to validate
-tokens/fonts/i18n/theming — they get replaced by the real app shell + login in Phases 2–3.

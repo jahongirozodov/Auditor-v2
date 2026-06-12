@@ -28,8 +28,7 @@ export async function addAuditEvidence(formData: FormData): Promise<ActionResult
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "no_file" };
   if (file.size > MAX_BYTES) return { ok: false, error: "too_large" };
 
-  if (!(await canManageEvidence(auditId, userId)))
-    return { ok: false, error: "forbidden" };
+  if (!(await canManageEvidence(auditId, userId))) return { ok: false, error: "forbidden" };
 
   const buf = Buffer.from(await file.arrayBuffer());
   const sha256 = createHash("sha256").update(buf).digest("hex");

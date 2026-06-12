@@ -22,7 +22,13 @@ export function analyzeTraffic(filename: string, content: string): TrafficParseR
   }
 }
 
-export type { TrafficAnomaly, TrafficParseResult, TrafficFormat, AnomalySeverity } from "./types";
+export type {
+  TrafficAnomaly,
+  TrafficParseResult,
+  TrafficFormat,
+  AnomalySeverity,
+  TrafficConversation,
+} from "./types";
 export { TRAFFIC_FORMAT_LABELS } from "./types";
 export { sniffTraffic } from "./sniff";
 export { trafficAnomalyToFindingInput, TRAFFIC_FINDING_TYPE } from "./to-finding";

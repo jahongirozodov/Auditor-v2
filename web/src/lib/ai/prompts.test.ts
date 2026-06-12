@@ -167,7 +167,15 @@ describe("ScannerNormalizationSchema", () => {
 const TOPO: Topology = {
   audit: "AUD-1",
   nodes: [
-    { id: "fw", label: "FW-CORE-01", ip: "10.0.0.1", kind: "firewall", segment: "Perimetr", sev: "critical", findings: 2 },
+    {
+      id: "fw",
+      label: "FW-CORE-01",
+      ip: "10.0.0.1",
+      kind: "firewall",
+      segment: "Perimetr",
+      sev: "critical",
+      findings: 2,
+    },
   ],
   edges: [{ s: "fw", t: "web", flag: true }],
 };
@@ -190,7 +198,9 @@ describe("topology prompt + schema", () => {
 
   it("validates the analysis schema and exposes a JSON schema + system prompt", () => {
     expect(TopologyAnalysisSchema.safeParse(TOPO_ANALYSIS).success).toBe(true);
-    expect(TopologyAnalysisSchema.safeParse({ ...TOPO_ANALYSIS, overallRisk: "boom" }).success).toBe(false);
+    expect(
+      TopologyAnalysisSchema.safeParse({ ...TOPO_ANALYSIS, overallRisk: "boom" }).success,
+    ).toBe(false);
     expect(typeof TOPOLOGY_JSON_SCHEMA).toBe("object");
     expect(SYSTEM.topology).toContain("JSON");
   });
@@ -213,7 +223,9 @@ const AUDIT_ANALYSIS = {
 describe("audit analysis schema", () => {
   it("validates the schema + exposes a JSON schema + system prompt", () => {
     expect(AuditAnalysisSchema.safeParse(AUDIT_ANALYSIS).success).toBe(true);
-    expect(AuditAnalysisSchema.safeParse({ ...AUDIT_ANALYSIS, overallRisk: "boom" }).success).toBe(false);
+    expect(AuditAnalysisSchema.safeParse({ ...AUDIT_ANALYSIS, overallRisk: "boom" }).success).toBe(
+      false,
+    );
     expect(typeof AUDIT_JSON_SCHEMA).toBe("object");
     expect(SYSTEM.audit).toContain("JSON");
   });
@@ -276,7 +288,9 @@ describe("traffic analysis schema (enriched)", () => {
         anomalies: [{ ...TRAFFIC_ANALYSIS.anomalies[0], attackType: "ufo" }],
       }).success,
     ).toBe(false);
-    expect(TrafficAnalysisSchema.safeParse({ ...TRAFFIC_ANALYSIS, overallRisk: "boom" }).success).toBe(false);
+    expect(
+      TrafficAnalysisSchema.safeParse({ ...TRAFFIC_ANALYSIS, overallRisk: "boom" }).success,
+    ).toBe(false);
   });
 
   it("parses a stored traffic-analysis string and rejects garbage", () => {

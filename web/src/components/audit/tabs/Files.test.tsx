@@ -11,7 +11,15 @@ vi.mock("next-intl", () => ({
 }));
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => vi.fn() }));
 vi.mock("@/components/ui/Modal", () => ({
-  Modal: ({ open, children, footer }: { open: boolean; children: React.ReactNode; footer: React.ReactNode }) =>
+  Modal: ({
+    open,
+    children,
+    footer,
+  }: {
+    open: boolean;
+    children: React.ReactNode;
+    footer: React.ReactNode;
+  }) =>
     open ? (
       <div data-testid="modal">
         {children}

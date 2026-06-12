@@ -38,7 +38,7 @@ export function HeroBand({
         <div className="hero-band__headline">
           <div className="hero-score">
             <CountUp value={score} />
-            <sup>/100</sup>
+            <sup>%</sup>
           </div>
           <div className="hero-band__caption">
             <h2>{title ?? "Tashkilot xavfsizlik koʻrsatkichi"}</h2>

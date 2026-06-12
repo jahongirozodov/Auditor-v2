@@ -134,6 +134,7 @@ function setup(props: Partial<TrafficAnalysisScreenProps> = {}) {
       tasks={TASKS}
       latest={props.latest ?? null}
       latestAi={props.latestAi ?? null}
+      uploads={props.uploads ?? []}
       {...props}
     />,
   );

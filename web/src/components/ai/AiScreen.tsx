@@ -18,6 +18,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
 import { Panel } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -257,20 +258,21 @@ export function AiScreen({ audits, orgsById, userName, model }: AiScreenProps) {
         title={t("title")}
         sub={t("sub", { model, audit: audit?.code ?? "—" })}
         actions={
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <select
-              className="select"
-              aria-label={t("auditContext")}
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+            }}
+          >
+            <Select
               value={auditId}
-              onChange={(e) => onAuditChange(e.target.value)}
-              style={{ maxWidth: 200 }}
-            >
-              {audits.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.code}
-                </option>
-              ))}
-            </select>
+              onChange={onAuditChange}
+              style={{ width: 200 }}
+              options={audits.map((a) => ({ value: a.id, label: a.code }))}
+            />
             <span className="tag tag--brand" title={model} style={{ whiteSpace: "nowrap" }}>
               <Cpu size={11} /> {model}
             </span>
@@ -331,7 +333,13 @@ export function AiScreen({ audits, orgsById, userName, model }: AiScreenProps) {
             }}
           >
             {messages.map((m, i) => (
-              <ChatBubble key={i} m={m} userName={userName} aiName={t("aiName")} model={modelShort} />
+              <ChatBubble
+                key={i}
+                m={m}
+                userName={userName}
+                aiName={t("aiName")}
+                model={modelShort}
+              />
             ))}
           </div>
 
@@ -436,9 +444,7 @@ export function AiScreen({ audits, orgsById, userName, model }: AiScreenProps) {
                     type="checkbox"
                     className="checkbox"
                     checked={!!checked[s.key]}
-                    onChange={(e) =>
-                      setChecked((c) => ({ ...c, [s.key]: e.target.checked }))
-                    }
+                    onChange={(e) => setChecked((c) => ({ ...c, [s.key]: e.target.checked }))}
                   />
                   <span style={{ flex: 1, fontSize: 13.5, color: "var(--text-primary)" }}>
                     {t(s.i18n)}

@@ -1,0 +1,7 @@
+// Stub for @/auth used in vitest — prevents next-auth ESM resolution errors.
+import { vi } from "vitest";
+
+export const auth = vi.fn().mockResolvedValue(null);
+export const signIn = vi.fn();
+export const signOut = vi.fn();
+export const handlers = { GET: vi.fn(), POST: vi.fn() };

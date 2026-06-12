@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Select } from "@/components/ui/Select";
 import { fetchAuditLogs } from "@/lib/actions/logs";
 import type {
   AuditLogFilters,
@@ -168,35 +169,27 @@ export function LogsScreen({
             />
           </div>
         </div>
-        <select
-          className="select"
-          aria-label={t("filterLevel")}
-          style={{ width: 180 }}
+        <Select
           value={filters.level ?? ""}
-          onChange={(e) =>
-            change({ level: (e.target.value || undefined) as AuditLogFilters["level"] })
-          }
-        >
-          <option value="">{t("levelAll")}</option>
-          <option value="info">{t("levelInfo")}</option>
-          <option value="warn">{t("levelWarn")}</option>
-          <option value="danger">{t("levelDanger")}</option>
-        </select>
+          onChange={(v) => change({ level: (v || undefined) as AuditLogFilters["level"] })}
+          style={{ width: 180 }}
+          options={[
+            { value: "", label: t("levelAll") },
+            { value: "info", label: t("levelInfo") },
+            { value: "warn", label: t("levelWarn") },
+            { value: "danger", label: t("levelDanger") },
+          ]}
+        />
         {isAdmin && (
-          <select
-            className="select"
-            aria-label={t("filterActor")}
-            style={{ width: 220 }}
+          <Select
             value={filters.actorId ?? ""}
-            onChange={(e) => change({ actorId: e.target.value || undefined })}
-          >
-            <option value="">{t("actorAll")}</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => change({ actorId: v || undefined })}
+            style={{ width: 220 }}
+            options={[
+              { value: "", label: t("actorAll") },
+              ...users.map((u) => ({ value: u.id, label: u.name })),
+            ]}
+          />
         )}
       </div>
 

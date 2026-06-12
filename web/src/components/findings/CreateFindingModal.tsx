@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ImagePlus, Plus, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { createFinding } from "@/lib/actions/findings";
 import { SEV_CVSS } from "@/lib/severity";
@@ -227,52 +228,36 @@ export function CreateFindingModal({
 
         {!locked ? (
           <Field label={t("fAudit")} htmlFor="cf-audit">
-            <select
+            <Select
               id="cf-audit"
-              className="select"
               value={auditId}
-              onChange={(e) => changeAudit(e.target.value)}
-            >
-              {audits.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.code} — {a.title}
-                </option>
-              ))}
-            </select>
+              onChange={changeAudit}
+              options={audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` }))}
+            />
           </Field>
         ) : null}
 
         {!locked ? (
           <Field label={t("fTask")} htmlFor="cf-task">
-            <select
+            <Select
               id="cf-task"
-              className="select"
               value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-            >
-              {auditTasks.length === 0 ? <option value="">{t("noTasks")}</option> : null}
-              {auditTasks.map((tk) => (
-                <option key={tk.id} value={tk.id}>
-                  {tk.id} — {tk.title}
-                </option>
-              ))}
-            </select>
+              onChange={setTaskId}
+              options={[
+                ...(auditTasks.length === 0 ? [{ value: "", label: t("noTasks") }] : []),
+                ...auditTasks.map((tk) => ({ value: tk.id, label: `${tk.id} — ${tk.title}` })),
+              ]}
+            />
           </Field>
         ) : null}
 
         <Field label={t("fSeverity")} htmlFor="cf-severity">
-          <select
+          <Select
             id="cf-severity"
-            className="select"
             value={severity}
-            onChange={(e) => changeSeverity(e.target.value as Severity)}
-          >
-            {SEVERITIES.map((s) => (
-              <option key={s.v} value={s.v}>
-                {t(s.k)}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => changeSeverity(v as Severity)}
+            options={SEVERITIES.map((s) => ({ value: s.v, label: t(s.k) }))}
+          />
         </Field>
 
         <Field label={t("fCvss")} htmlFor="cf-cvss">
@@ -302,18 +287,12 @@ export function CreateFindingModal({
 
         <div style={{ gridColumn: "span 2" }}>
           <Field label={t("fType")} htmlFor="cf-type">
-            <select
+            <Select
               id="cf-type"
-              className="select"
               value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              {TYPES.map((x) => (
-                <option key={x} value={x}>
-                  {x}
-                </option>
-              ))}
-            </select>
+              onChange={setType}
+              options={TYPES.map((x) => ({ value: x, label: x }))}
+            />
           </Field>
         </div>
 

@@ -23,3 +23,14 @@ export interface TopologyAnalysis {
   segmentationIssues: string[];
   recommendations: string[];
 }
+
+import type { NodeKind } from "@/lib/types/entities";
+
+/** Per-node patch returned by the enrichment AI call. */
+export interface EnrichedNodePatch {
+  id: string;
+  kind: NodeKind;
+  segment: string;
+  aiLabel: string;
+  aiReason: string;
+}

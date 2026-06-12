@@ -1,0 +1,179 @@
+/* =========================================================================
+   RESPONSIVE — tablet breakpoints (≤1024px landscape, ≤768px portrait)
+   Phones (<640px) excluded — SOC admin app is desk/tablet only.
+
+   Rules here override vendored app.css / kit-extra.css without touching them.
+   Use design tokens (var(--…)) only. No raw hex or off-system values.
+   ========================================================================= */
+
+/* =========================================================================
+   SIDEBAR BACKDROP — always position:fixed so it never enters the CSS grid
+   flow on desktop. Hidden by default; shown via data-drawer-open at ≤1024px.
+   ========================================================================= */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  top: 56px;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(2px);
+  z-index: 99;
+}
+
+/* =========================================================================
+   STAT GRID — responsive dashboard stat card container
+   Usage: <div className="stat-grid"> … </div>
+   ========================================================================= */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+/* =========================================================================
+   TABLET LANDSCAPE — ≤1024px
+   ========================================================================= */
+@media (max-width: 1024px) {
+  /* ── App shell: drop sidebar column ─────────────────────────────────── */
+  .app,
+  .app[data-collapsed="true"] {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Sidebar becomes drawer overlay ─────────────────────────────────── */
+  .sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 100;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-xl);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .sidebar {
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+  }
+
+  .app[data-drawer-open="true"] .sidebar {
+    transform: translateX(0);
+  }
+
+  /* Force full nav labels in drawer (undo desktop collapsed-state hiding) */
+  .app .sidebar__label              { display: block; }
+  .app .sidebar__foot               { display: block; }
+  .app .navitem                     { padding: 8px 10px; justify-content: flex-start; }
+  .app .navitem .label,
+  .app .navitem .count              { display: inline; }
+
+  /* ── Drawer backdrop ─────────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .app[data-drawer-open="true"] .sidebar-backdrop {
+      animation: fadeIn var(--dur-base) var(--ease-out);
+    }
+  }
+
+  .app[data-drawer-open="true"] .sidebar-backdrop {
+    display: block;
+  }
+
+  /* ── Topbar adjustments ──────────────────────────────────────────────── */
+  .shell-top__brand {
+    width: auto;
+    border-right: none;
+    padding-right: 0;
+  }
+
+  /* ── Touch targets: 44px minimum (WCAG 2.5.5) ───────────────────────── */
+  .navitem    { min-height: 44px; }
+  .iconbtn    { width: 44px; height: 44px; }
+  .btn        { min-height: 44px; }
+  .btn--sm    { min-height: 36px; padding-block: 8px; }
+  .btn--xs    { min-height: 28px; }
+  .btn--icon  { width: 44px; height: 44px; padding: 0; }
+  .btn--icon.btn--sm { width: 36px; height: 36px; }
+
+  /* ── Typography: page titles drop one step ───────────────────────────── */
+  .pageh h1 { font-size: 20px; }
+
+  /* ── Canvas padding ──────────────────────────────────────────────────── */
+  .canvas { padding: var(--space-4) var(--space-4) var(--space-8); }
+
+  /* ── Stat grid: 4 → 2 columns ────────────────────────────────────────── */
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* ── Tables: ensure horizontal scroll + sticky first column ─────────── */
+  .tbl-wrap { overflow: hidden; }
+  .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  .tbl thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: var(--bg-surface-2);
+  }
+  .tbl tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg-surface);
+  }
+  .tbl tbody tr:hover td:first-child    { background: var(--bg-hover); }
+  .tbl tbody tr.is-selected td:first-child { background: var(--brand-soft); }
+}
+
+/* =========================================================================
+   TABLET PORTRAIT — ≤768px
+   ========================================================================= */
+@media (max-width: 768px) {
+  /* ── Stat grid: 2 → 1 column ─────────────────────────────────────────── */
+  .stat-grid { grid-template-columns: 1fr; }
+
+  /* ── Form grids: all single column ──────────────────────────────────── */
+  .form-grid,
+  .form-grid--3 {
+    grid-template-columns: 1fr;
+  }
+  .form-grid > .span-2,
+  .form-grid > .span-3 { grid-column: span 1; }
+
+  /* ── Modals: full-width ──────────────────────────────────────────────── */
+  .modal-bg  { padding: 12px; align-items: flex-end; }
+  .modal,
+  .modal--wide,
+  .modal--xl {
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+  }
+
+  /* ── Topbar: shrink search to icon-only ──────────────────────────────── */
+  .shell-top__search-ph { display: none; }
+  .kbd-hint             { display: none; }
+  .shell-top__search    { max-width: 44px; flex: 0 0 44px; padding: 0; justify-content: center; }
+  .shell-top__search .icon-search {
+    position: static;
+    transform: none;
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ── Topbar: collapse user pill to avatar only ───────────────────────── */
+  .user-pill__text { display: none; }
+  .user-pill__chev { display: none; }
+  .user-pill       { padding: 4px; gap: 0; }
+
+  /* ── Page header: stack actions below title ──────────────────────────── */
+  .pageh {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pageh__actions {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+}

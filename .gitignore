@@ -28,3 +28,17 @@ Thumbs.db
 
 # Test / coverage
 **/coverage/
+
+# .NET agent — build output (never commit binaries or obj cache)
+agent/publish/
+agent/publish_tmp/
+agent/src/**/bin/
+agent/src/**/obj/
+agent/Screenshot*.png
+
+# Root-level publish dir (CI artifact, not source)
+publish/
+panel.png
+
+# Claude worktrees — ephemeral, not part of the project
+.claire/

@@ -162,7 +162,12 @@ export function parsePcap(bytes: Uint8Array): TrafficParseResult {
           eventCount: count,
         });
       } else if (info) {
-        anomalies.push({ severity: info.sev, title: info.title, dstIpPort: `-:${port}`, eventCount: count });
+        anomalies.push({
+          severity: info.sev,
+          title: info.title,
+          dstIpPort: `-:${port}`,
+          eventCount: count,
+        });
       }
     }
     const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };

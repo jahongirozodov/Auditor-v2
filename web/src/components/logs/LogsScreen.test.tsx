@@ -10,11 +10,36 @@ vi.mock("next-intl", () => ({
 }));
 
 const fetchAuditLogs = vi.fn();
-vi.mock("@/lib/actions/logs", () => ({ fetchAuditLogs: (...a: unknown[]) => fetchAuditLogs(...a) }));
+vi.mock("@/lib/actions/logs", () => ({
+  fetchAuditLogs: (...a: unknown[]) => fetchAuditLogs(...a),
+}));
 
 const ROWS: AuditLogView[] = [
-  { id: "1", time: "2026-06-10T09:11:24.000Z", userId: "u1", userName: "Akmal", avatar: "AY", action: "auth.login", entity: "—", ip: "10.0.0.1", device: "PC1", level: "info", payload: { ok: true } },
-  { id: "2", time: "2026-06-10T09:10:00.000Z", userId: "u9", userName: "Sherzod", avatar: "SH", action: "auth.login.fail", entity: "—", ip: "10.0.0.2", device: "PC2", level: "warn" },
+  {
+    id: "1",
+    time: "2026-06-10T09:11:24.000Z",
+    userId: "u1",
+    userName: "Akmal",
+    avatar: "AY",
+    action: "auth.login",
+    entity: "—",
+    ip: "10.0.0.1",
+    device: "PC1",
+    level: "info",
+    payload: { ok: true },
+  },
+  {
+    id: "2",
+    time: "2026-06-10T09:10:00.000Z",
+    userId: "u9",
+    userName: "Sherzod",
+    avatar: "SH",
+    action: "auth.login.fail",
+    entity: "—",
+    ip: "10.0.0.2",
+    device: "PC2",
+    level: "warn",
+  },
 ];
 
 const PAGE: AuditLogPage = {

@@ -70,8 +70,6 @@ describe("parseZeek", () => {
   it("emits host-to-host conversations for the communication graph", () => {
     const r = parseZeek(ZEEK_LOG);
     expect(r.conversations && r.conversations.length).toBeGreaterThan(0);
-    expect(
-      r.conversations?.some((c) => c.src === "10.10.42.16" && c.dst === "8.8.8.8"),
-    ).toBe(true);
+    expect(r.conversations?.some((c) => c.src === "10.10.42.16" && c.dst === "8.8.8.8")).toBe(true);
   });
 });

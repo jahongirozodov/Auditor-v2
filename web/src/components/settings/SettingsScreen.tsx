@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { PERMISSIONS, ROLES, type PermissionId, type RoleCode } from "@/lib/types/roles";
@@ -288,28 +289,28 @@ export function SettingsScreen({ settings, customRoles, kpiRules }: SettingsScre
                   />
                 </Field>
                 <Field label={t("lang")} htmlFor="s-lang">
-                  <select
+                  <Select
                     id="s-lang"
-                    className="select"
                     value={gen.lang}
-                    onChange={(e) => setGen({ ...gen, lang: e.target.value })}
-                  >
-                    <option value="uz">{t("langUz")}</option>
-                    <option value="uz-cyrl">{t("langUzCyrl")}</option>
-                    <option value="ru">{t("langRu")}</option>
-                    <option value="en">{t("langEn")}</option>
-                  </select>
+                    onChange={(v) => setGen({ ...gen, lang: v })}
+                    options={[
+                      { value: "uz", label: t("langUz") },
+                      { value: "uz-cyrl", label: t("langUzCyrl") },
+                      { value: "ru", label: t("langRu") },
+                      { value: "en", label: t("langEn") },
+                    ]}
+                  />
                 </Field>
                 <Field label={t("timezone")} htmlFor="s-tz">
-                  <select
+                  <Select
                     id="s-tz"
-                    className="select"
                     value={gen.timezone}
-                    onChange={(e) => setGen({ ...gen, timezone: e.target.value })}
-                  >
-                    <option value="Asia/Tashkent">{t("tzTashkent")}</option>
-                    <option value="UTC">{t("tzUtc")}</option>
-                  </select>
+                    onChange={(v) => setGen({ ...gen, timezone: v })}
+                    options={[
+                      { value: "Asia/Tashkent", label: t("tzTashkent") },
+                      { value: "UTC", label: t("tzUtc") },
+                    ]}
+                  />
                 </Field>
                 <Field label={t("auditCodeFormat")} htmlFor="s-code">
                   <input
@@ -320,15 +321,15 @@ export function SettingsScreen({ settings, customRoles, kpiRules }: SettingsScre
                   />
                 </Field>
                 <Field label={t("dateFormat")} htmlFor="s-date">
-                  <select
+                  <Select
                     id="s-date"
-                    className="select"
                     value={gen.dateFormat}
-                    onChange={(e) => setGen({ ...gen, dateFormat: e.target.value })}
-                  >
-                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                    <option value="DD.MM.YYYY">DD.MM.YYYY</option>
-                  </select>
+                    onChange={(v) => setGen({ ...gen, dateFormat: v })}
+                    options={[
+                      { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
+                      { value: "DD.MM.YYYY", label: "DD.MM.YYYY" },
+                    ]}
+                  />
                 </Field>
               </div>
             </Panel>
@@ -534,16 +535,16 @@ export function SettingsScreen({ settings, customRoles, kpiRules }: SettingsScre
                     />
                   </Field>
                   <Field label={t("model")} htmlFor="s-model">
-                    <select
+                    <Select
                       id="s-model"
-                      className="select"
                       value={ai.model}
-                      onChange={(e) => setAi({ ...ai, model: e.target.value })}
-                    >
-                      <option value="qwen2.5:14b-instruct">qwen2.5:14b-instruct</option>
-                      <option value="llama3.1:8b">llama3.1:8b</option>
-                      <option value="mistral-nemo:12b">mistral-nemo:12b</option>
-                    </select>
+                      onChange={(v) => setAi({ ...ai, model: v })}
+                      options={[
+                        { value: "qwen2.5:14b-instruct", label: "qwen2.5:14b-instruct" },
+                        { value: "llama3.1:8b", label: "llama3.1:8b" },
+                        { value: "mistral-nemo:12b", label: "mistral-nemo:12b" },
+                      ]}
+                    />
                   </Field>
                   <Field label={t("maxTokens")} htmlFor="s-tok">
                     <input
@@ -658,15 +659,15 @@ export function SettingsScreen({ settings, customRoles, kpiRules }: SettingsScre
                     />
                   </Field>
                   <Field label={t("encryption")} htmlFor="s-enc">
-                    <select
+                    <Select
                       id="s-enc"
-                      className="select"
                       value={notif.smtpEncryption}
-                      onChange={(e) => setNotif({ ...notif, smtpEncryption: e.target.value })}
-                    >
-                      <option value="STARTTLS">{t("starttls")}</option>
-                      <option value="SSL/TLS">{t("ssltls")}</option>
-                    </select>
+                      onChange={(v) => setNotif({ ...notif, smtpEncryption: v })}
+                      options={[
+                        { value: "STARTTLS", label: t("starttls") },
+                        { value: "SSL/TLS", label: t("ssltls") },
+                      ]}
+                    />
                   </Field>
                 </div>
               </Panel>
@@ -714,9 +715,12 @@ export function SettingsScreen({ settings, customRoles, kpiRules }: SettingsScre
                     />
                   </Field>
                   <Field label={t("hashAlgo")} htmlFor="s-hash">
-                    <select id="s-hash" className="select" value="argon2" disabled>
-                      <option value="argon2">{t("argon2")}</option>
-                    </select>
+                    <Select
+                      id="s-hash"
+                      value="argon2"
+                      disabled
+                      options={[{ value: "argon2", label: t("argon2") }]}
+                    />
                   </Field>
                   <Field label={t("pwHistory")} htmlFor="s-pwhist">
                     <input
@@ -813,18 +817,12 @@ export function SettingsScreen({ settings, customRoles, kpiRules }: SettingsScre
             />
           </Field>
           <Field label={t("roleBase")} htmlFor="r-base">
-            <select
+            <Select
               id="r-base"
-              className="select"
               value={rBase}
-              onChange={(e) => setRBase(e.target.value as RoleCode)}
-            >
-              {ROLES.map((r) => (
-                <option key={r.code} value={r.code}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setRBase(v as RoleCode)}
+              options={ROLES.map((r) => ({ value: r.code, label: r.name }))}
+            />
           </Field>
           <Field label={t("rolePermissions")}>
             <div style={{ display: "grid", gap: 8, maxHeight: 260, overflow: "auto" }}>

@@ -5,9 +5,11 @@ const h = vi.hoisted(() => ({
   auth: { ok: true, identity: { userId: "u6", auditId: "AUD-1", tokenId: "tk_x" } } as
     | { ok: true; identity: { userId: string; auditId: string; tokenId: string } }
     | { ok: false; status: number; error: string },
-  task: { auditId: "AUD-1", status: "in_progress", assigneeId: "u6" } as
-    | { auditId: string; status: string; assigneeId: string }
-    | null,
+  task: { auditId: "AUD-1", status: "in_progress", assigneeId: "u6" } as {
+    auditId: string;
+    status: string;
+    assigneeId: string;
+  } | null,
 }));
 
 vi.mock("@/lib/agent/auth", () => ({ requireAgent: vi.fn(async () => h.auth) }));
@@ -48,41 +50,44 @@ beforeEach(() => {
 });
 
 describe("POST /agent/tasks/[id]/status", () => {
-  it("completes an in_progress task (assignee → done)", async () => {
-    const res = await post("T-1", "done");
-    expect(await res.json()).toMatchObject({ ok: true, status: "done" });
-    expect(mock._tx.task.update).toHaveBeenCalledWith({ where: { id: "T-1" }, data: { status: "done" } });
+  it("submits an in_progress task for review (assignee → review)", async () => {
+    const res = await post("T-1", "review");
+    expect(await res.json()).toMatchObject({ ok: true, status: "review" });
+    expect(mock._tx.task.update).toHaveBeenCalledWith({
+      where: { id: "T-1" },
+      data: { status: "review" },
+    });
   });
 
-  it("rejects an illegal transition (done → in_progress)", async () => {
-    h.task = { auditId: "AUD-1", status: "done", assigneeId: "u6" };
+  it("rejects an illegal transition (review → in_progress via agent)", async () => {
+    h.task = { auditId: "AUD-1", status: "review", assigneeId: "u6" };
     const res = await post("T-1", "in_progress");
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({ error: "illegal_transition" });
   });
 
-  it("forbids a non-assignee", async () => {
+  it("forbids a non-assignee from submitting", async () => {
     h.task = { auditId: "AUD-1", status: "in_progress", assigneeId: "someone-else" };
-    const res = await post("T-1", "done");
+    const res = await post("T-1", "review");
     expect(res.status).toBe(403);
   });
 
   it("blocks a task outside the token's audit", async () => {
     h.task = { auditId: "AUD-OTHER", status: "in_progress", assigneeId: "u6" };
-    const res = await post("T-1", "done");
+    const res = await post("T-1", "review");
     expect(res.status).toBe(403);
     expect(await res.json()).toMatchObject({ error: "task_scope" });
   });
 
   it("is a no-op when already at the target status", async () => {
-    h.task = { auditId: "AUD-1", status: "done", assigneeId: "u6" };
-    const res = await post("T-1", "done");
+    h.task = { auditId: "AUD-1", status: "review", assigneeId: "u6" };
+    const res = await post("T-1", "review");
     expect(await res.json()).toMatchObject({ ok: true });
     expect(mock._tx.task.update).not.toHaveBeenCalled();
   });
 
   it("404s an unknown task", async () => {
     h.task = null;
-    expect((await post("T-9", "done")).status).toBe(404);
+    expect((await post("T-9", "review")).status).toBe(404);
   });
 });

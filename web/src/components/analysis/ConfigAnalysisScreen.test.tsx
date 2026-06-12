@@ -87,6 +87,7 @@ function renderScreen(withLatest = true, latestAi: ConfigAiAnalysis | null = nul
         devices={withLatest ? devices : []}
         latest={withLatest ? latest : null}
         latestAi={latestAi}
+        uploads={[]}
       />
     </NextIntlClientProvider>,
   );

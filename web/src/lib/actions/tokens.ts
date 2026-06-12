@@ -36,7 +36,8 @@ export async function issueToken(input: z.input<typeof IssueInput>): Promise<Cre
     select: { id: true, leaderId: true },
   });
   if (!audit) return { ok: false, error: "not_found" };
-  if (role !== "super" && role !== "head" && audit.leaderId !== actor) return { ok: false, error: "forbidden" };
+  if (role !== "super" && role !== "head" && audit.leaderId !== actor)
+    return { ok: false, error: "forbidden" };
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) return { ok: false, error: "not_found" };
 
@@ -81,7 +82,10 @@ export async function revokeToken(input: { id: string }): Promise<ActionResult> 
   const { userId, role } = await requireSession();
   if (!(await requirePermission(userId, "agent.revoke"))) return { ok: false, error: "forbidden" };
 
-  const tok = await prisma.auditToken.findUnique({ where: { id }, select: { id: true, auditId: true } });
+  const tok = await prisma.auditToken.findUnique({
+    where: { id },
+    select: { id: true, auditId: true },
+  });
   if (!tok) return { ok: false, error: "not_found" };
   if (!(await isAuditLeader(tok.auditId, userId, role))) return { ok: false, error: "forbidden" };
 

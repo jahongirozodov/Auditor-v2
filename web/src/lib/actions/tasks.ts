@@ -38,15 +38,7 @@ function canCreateTaskForAudit(userId: string, role: RoleCode, leaderId: string)
 
 const TaskTransitionInput = z.object({
   taskId: z.string().min(1),
-  action: z.enum([
-    "assign",
-    "start",
-    "approve",
-    "approve_head",
-    "return",
-    "restart",
-    "unblock",
-  ]),
+  action: z.enum(["assign", "start", "approve", "approve_head", "return", "restart", "unblock"]),
   comment: z.string().optional(),
 });
 
@@ -70,7 +62,8 @@ export async function taskTransition(
 
   const { userId, role } = await requireSession();
   const requiredPermission = action === "assign" ? "task.assign" : "task.update_status";
-  if (!(await requirePermission(userId, requiredPermission))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, requiredPermission)))
+    return { ok: false, error: "forbidden" };
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: { audit: { select: { leaderId: true } } },
@@ -332,7 +325,10 @@ export async function updateTask(input: z.input<typeof UpdateTaskInput>): Promis
   const { userId } = await requireSession();
   if (!(await requirePermission(userId, "task.assign"))) return { ok: false, error: "forbidden" };
 
-  const task = await prisma.task.findUnique({ where: { id: taskId }, select: { status: true, auditId: true } });
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { status: true, auditId: true },
+  });
   if (!task) return { ok: false, error: "not_found" };
   if (!(EDITABLE_STATUSES as readonly string[]).includes(task.status)) {
     return { ok: false, error: "illegal_status" };

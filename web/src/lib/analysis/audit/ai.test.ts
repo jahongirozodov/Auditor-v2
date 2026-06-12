@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { generateJson } = vi.hoisted(() => ({ generateJson: vi.fn() }));
 const h = vi.hoisted(() => ({
-  audit: { code: "AUD-1", title: "T", stage: 7, status: "in_progress", findings: {}, tasksAgg: {} } as unknown,
+  audit: {
+    code: "AUD-1",
+    title: "T",
+    stage: 7,
+    status: "in_progress",
+    findings: {},
+    tasksAgg: {},
+  } as unknown,
   findings: [] as unknown[],
   config: [] as unknown[],
   scanner: [] as unknown[],
@@ -34,7 +41,14 @@ function analysis() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.audit = { code: "AUD-1", title: "T", stage: 7, status: "in_progress", findings: {}, tasksAgg: {} };
+  h.audit = {
+    code: "AUD-1",
+    title: "T",
+    stage: 7,
+    status: "in_progress",
+    findings: {},
+    tasksAgg: {},
+  };
   h.findings = [{ severity: "critical", status: "new", asset: "fw", cwe: "CWE-89", title: "SQLi" }];
   h.config = [];
   h.scanner = [];
@@ -43,16 +57,30 @@ beforeEach(() => {
 
 describe("analyzeAuditAI", () => {
   it("gathers context and returns the validated analysis", async () => {
-    generateJson.mockResolvedValue({ ok: true, raw: JSON.stringify(analysis()), tokens: 30, latencyMs: 9 });
+    generateJson.mockResolvedValue({
+      ok: true,
+      raw: JSON.stringify(analysis()),
+      tokens: 30,
+      latencyMs: 9,
+    });
     const r = await analyzeAuditAI("AUD-1");
     expect(r.ok).toBe(true);
     expect(r.analysis?.topRisks[0].title).toBe("SQLi");
-    expect(generateJson).toHaveBeenCalledWith(expect.any(String), expect.anything(), { numPredict: 4096 });
+    expect(generateJson).toHaveBeenCalledWith(expect.any(String), expect.anything(), {
+      numPredict: 4096,
+    });
   });
 
   it("skips the model for a truly empty audit (no rows, no modules, no aggregate)", async () => {
     h.findings = [];
-    h.audit = { code: "AUD-1", title: "T", stage: 7, status: "in_progress", findings: {}, tasksAgg: {} };
+    h.audit = {
+      code: "AUD-1",
+      title: "T",
+      stage: 7,
+      status: "in_progress",
+      findings: {},
+      tasksAgg: {},
+    };
     const r = await analyzeAuditAI("AUD-1");
     expect(r.ok).toBe(false);
     expect(r.reason).toBe("no_data");
@@ -72,7 +100,12 @@ describe("analyzeAuditAI", () => {
       findings: { critical: 2, high: 5, medium: 8, low: 4 },
       tasksAgg: { total: 26, done: 24 },
     };
-    generateJson.mockResolvedValue({ ok: true, raw: JSON.stringify(analysis()), tokens: 12, latencyMs: 7 });
+    generateJson.mockResolvedValue({
+      ok: true,
+      raw: JSON.stringify(analysis()),
+      tokens: 12,
+      latencyMs: 7,
+    });
     const r = await analyzeAuditAI("AUD-1");
     expect(r.ok).toBe(true);
     expect(generateJson).toHaveBeenCalledOnce();

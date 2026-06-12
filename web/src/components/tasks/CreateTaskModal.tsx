@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Check, Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useToast } from "@/components/ui/Toast";
 import { createTask } from "@/lib/actions/tasks";
@@ -130,48 +131,30 @@ export function CreateTaskModal({
         </div>
 
         <Field label={t("fAudit")} htmlFor="ct-audit">
-          <select
+          <Select
             id="ct-audit"
-            className="select"
             value={auditId}
-            onChange={(e) => changeAudit(e.target.value)}
-          >
-            {audits.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.code} — {a.title}
-              </option>
-            ))}
-          </select>
+            onChange={changeAudit}
+            options={audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` }))}
+          />
         </Field>
 
         <Field label={t("fType")} htmlFor="ct-type">
-          <select
+          <Select
             id="ct-type"
-            className="select"
             value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            {TYPES.map((x) => (
-              <option key={x} value={x}>
-                {x}
-              </option>
-            ))}
-          </select>
+            onChange={setType}
+            options={TYPES.map((x) => ({ value: x, label: x }))}
+          />
         </Field>
 
         <Field label={t("fPriority")} htmlFor="ct-priority">
-          <select
+          <Select
             id="ct-priority"
-            className="select"
             value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-          >
-            {PRIORITIES.map((x) => (
-              <option key={x} value={x}>
-                {x}
-              </option>
-            ))}
-          </select>
+            onChange={setPriority}
+            options={PRIORITIES.map((x) => ({ value: x, label: x }))}
+          />
         </Field>
 
         <Field label={t("fDue")} htmlFor="ct-due">
@@ -180,19 +163,15 @@ export function CreateTaskModal({
 
         <div style={{ gridColumn: "span 2" }}>
           <Field label={t("fAssignee")} htmlFor="ct-assignee">
-            <select
+            <Select
               id="ct-assignee"
-              className="select"
               value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-            >
-              <option value="">—</option>
-              {members.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} · {u.title}
-                </option>
-              ))}
-            </select>
+              onChange={setAssigneeId}
+              options={[
+                { value: "", label: "—" },
+                ...members.map((u) => ({ value: u.id, label: `${u.name} · ${u.title}` })),
+              ]}
+            />
           </Field>
         </div>
 

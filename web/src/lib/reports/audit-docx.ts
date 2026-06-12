@@ -42,6 +42,7 @@ const STATUS_UZ: Record<string, string> = {
   group_forming: "Guruh shakllantirish",
   project_draft: "Loyiha qoralama",
   project_pending: "Loyiha tasdiqda",
+  head_approved: "Qisman tasdiqlangan",
   assigning: "Vazifa taqsimlash",
   in_progress: "Jarayonda",
   review: "Koʻrib chiqilmoqda",
@@ -52,7 +53,11 @@ const STATUS_UZ: Record<string, string> = {
 };
 
 function heading(text: string): Paragraph {
-  return new Paragraph({ text, heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 120 } });
+  return new Paragraph({
+    text,
+    heading: HeadingLevel.HEADING_2,
+    spacing: { before: 240, after: 120 },
+  });
 }
 
 function para(text: string): Paragraph {
@@ -60,7 +65,11 @@ function para(text: string): Paragraph {
 }
 
 function bullet(text: string): Paragraph {
-  return new Paragraph({ children: [new TextRun(text)], bullet: { level: 0 }, spacing: { after: 40 } });
+  return new Paragraph({
+    children: [new TextRun(text)],
+    bullet: { level: 0 },
+    spacing: { after: 40 },
+  });
 }
 
 function kvTable(rows: [string, string][]): Table {
@@ -81,7 +90,10 @@ function kvTable(rows: [string, string][]): Table {
   });
 }
 
-function sectionChildren(section: ReportSection, d: AuditReportData): Paragraph[] | (Paragraph | Table)[] {
+function sectionChildren(
+  section: ReportSection,
+  d: AuditReportData,
+): Paragraph[] | (Paragraph | Table)[] {
   switch (section) {
     case "overview": {
       const f = d.audit.findings;
@@ -95,7 +107,10 @@ function sectionChildren(section: ReportSection, d: AuditReportData): Paragraph[
           ["Bosqich", `${d.audit.stage}/10`],
           ["Muddat", `${d.audit.startDate} — ${d.audit.endDate}`],
           ["Rahbar", d.audit.leader],
-          ["Findinglar", `${f.critical} critical, ${f.high} high, ${f.medium} medium, ${f.low} low`],
+          [
+            "Findinglar",
+            `${f.critical} critical, ${f.high} high, ${f.medium} medium, ${f.low} low`,
+          ],
         ]),
       ];
     }
@@ -110,12 +125,17 @@ function sectionChildren(section: ReportSection, d: AuditReportData): Paragraph[
     case "findings": {
       if (d.findings.length === 0) return [para("Tasdiqlangan finding yoʻq.")];
       return d.findings.map((f) =>
-        bullet(`[${f.severity}] ${f.title}${f.asset ? ` — ${f.asset}` : ""}${f.cwe ? ` (${f.cwe})` : ""}`),
+        bullet(
+          `[${f.severity}] ${f.title}${f.asset ? ` — ${f.asset}` : ""}${f.cwe ? ` (${f.cwe})` : ""}`,
+        ),
       );
     }
     case "exec": {
       if (!d.ai?.executiveSummary) return [para("Executive summary hozircha mavjud emas.")];
-      const out: Paragraph[] = [para(`Umumiy xavf: ${d.ai.overallRisk}.`), para(d.ai.executiveSummary)];
+      const out: Paragraph[] = [
+        para(`Umumiy xavf: ${d.ai.overallRisk}.`),
+        para(d.ai.executiveSummary),
+      ];
       return out;
     }
     case "remediation": {
@@ -131,7 +151,10 @@ function sectionChildren(section: ReportSection, d: AuditReportData): Paragraph[
       return [
         kvTable([
           ["Vazifa bajarilishi", `${d.kpi.taskCompletion}%`],
-          ["Finding hal etilishi", `${d.kpi.findingResolution}% (${d.kpi.findingResolved}/${d.kpi.findingTotal})`],
+          [
+            "Finding hal etilishi",
+            `${d.kpi.findingResolution}% (${d.kpi.findingResolved}/${d.kpi.findingTotal})`,
+          ],
         ]),
       ];
     }

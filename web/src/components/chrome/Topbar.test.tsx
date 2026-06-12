@@ -20,7 +20,7 @@ const USER: ShellUser = {
 function renderTopbar() {
   return render(
     <NextIntlClientProvider locale="uz" messages={messages}>
-      <Topbar user={USER} onToggleCollapse={() => {}} />
+      <Topbar user={USER} onToggleSidebar={() => {}} />
     </NextIntlClientProvider>,
   );
 }
@@ -53,7 +53,7 @@ describe("Topbar", () => {
     const onToggle = vi.fn();
     render(
       <NextIntlClientProvider locale="uz" messages={messages}>
-        <Topbar user={USER} onToggleCollapse={onToggle} />
+        <Topbar user={USER} onToggleSidebar={onToggle} />
       </NextIntlClientProvider>,
     );
     await userEvent.click(screen.getByRole("button", { name: "Menyuni yigʻish" }));

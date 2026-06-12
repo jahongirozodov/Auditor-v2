@@ -87,7 +87,11 @@ export function TopologyAiResult({
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <span className="stat__label">{t("aiAttackPaths")}</span>
           {analysis.attackPaths.map((p, i) => (
-            <div key={i} className="ai-card__body" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div
+              key={i}
+              className="ai-card__body"
+              style={{ display: "flex", gap: 8, alignItems: "center" }}
+            >
               <Sev level={p.severity} />
               <span className="font-mono">{p.nodes.join(" → ")}</span>
               {p.risk ? <span className="text-sm text-muted">— {p.risk}</span> : null}

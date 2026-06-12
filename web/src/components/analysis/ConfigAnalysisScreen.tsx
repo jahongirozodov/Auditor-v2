@@ -28,12 +28,20 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { VENDOR_LABELS, type VendorKey } from "@/lib/analysis/config/types";
 import type { ConfigAiAnalysis } from "@/lib/ai/prompts";
 import { uploadConfig, createConfigDrafts, reanalyzeConfig } from "@/lib/actions/config";
 import { ConfigAiResult } from "./ConfigAiResult";
-import type { Audit, Task, AnalyzedDeviceView, ConfigUploadView } from "@/lib/types/entities";
+import type {
+  Audit,
+  Task,
+  AnalyzedDeviceView,
+  ConfigUploadView,
+  ConfigHistoryRowView,
+} from "@/lib/types/entities";
+import { relTime } from "@/lib/utils/time";
 
 const VENDOR_ICON: Record<string, LucideIcon> = {
   cisco_asa: Shield,
@@ -65,6 +73,7 @@ export interface ConfigAnalysisScreenProps {
   devices: AnalyzedDeviceView[];
   latest: ConfigUploadView | null;
   latestAi: ConfigAiAnalysis | null;
+  uploads: ConfigHistoryRowView[];
 }
 
 export function ConfigAnalysisScreen({
@@ -73,6 +82,7 @@ export function ConfigAnalysisScreen({
   devices,
   latest,
   latestAi,
+  uploads,
 }: ConfigAnalysisScreenProps) {
   const t = useTranslations("config");
   const tNav = useTranslations("nav");
@@ -200,8 +210,13 @@ export function ConfigAnalysisScreen({
         sub={t("sub")}
         actions={
           <>
-            <Button size="sm" variant="ghost" icon={<History size={14} />} disabled>
-              {t("history")}
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<History size={14} />}
+              disabled={uploads.length === 0}
+            >
+              {t("history")} {uploads.length > 0 ? `(${uploads.length})` : ""}
             </Button>
             <Button size="sm" variant="primary" icon={<Upload size={14} />} onClick={pickFile}>
               {t("fileUpload")}
@@ -296,6 +311,69 @@ export function ConfigAnalysisScreen({
                   </div>
                 );
               })
+            )}
+          </Panel>
+
+          {/* Recent config uploads history */}
+          <Panel title={t("recentTitle")} icon={<History size={15} />} flush>
+            {uploads.length === 0 ? (
+              <p className="text-sm text-muted" style={{ padding: "14px 16px" }}>
+                {t("recentEmpty")}
+              </p>
+            ) : (
+              <div className="tbl-scroll">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Fayl</th>
+                      <th>Vendor</th>
+                      <th>Audit</th>
+                      <th>Kamchiliklar</th>
+                      <th>Vaqt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploads.map((u) => {
+                      const Icon = VENDOR_ICON[u.vendor] ?? Server;
+                      return (
+                        <tr key={u.id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div className="stat__icon">
+                                <Icon size={13} />
+                              </div>
+                              <span className="font-mono" style={{ fontSize: 13 }}>
+                                {u.filename}
+                              </span>
+                            </div>
+                          </td>
+                          <td>{VENDOR_LABELS[u.vendor as VendorKey] ?? u.vendor}</td>
+                          <td>{u.auditCode}</td>
+                          <td>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              {u.severityAgg.critical ? (
+                                <span className="sev sev--critical">{u.severityAgg.critical}</span>
+                              ) : null}
+                              {u.severityAgg.high ? (
+                                <span className="sev sev--high">{u.severityAgg.high}</span>
+                              ) : null}
+                              {u.severityAgg.medium ? (
+                                <span className="sev sev--medium">{u.severityAgg.medium}</span>
+                              ) : null}
+                              {!u.severityAgg.critical &&
+                              !u.severityAgg.high &&
+                              !u.severityAgg.medium ? (
+                                <span className="tag tag--success">Yaxshi</span>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="cell-sub">{relTime(u.createdAt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Panel>
         </div>
@@ -438,33 +516,23 @@ export function ConfigAnalysisScreen({
         </p>
         <div style={{ display: "grid", gap: 14 }}>
           <Field label={t("targetAudit")} htmlFor="cfg-audit">
-            <select
+            <Select
               id="cfg-audit"
-              className="select"
               value={auditId}
-              onChange={(e) => changeAudit(e.target.value)}
-            >
-              {audits.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.code} — {a.title}
-                </option>
-              ))}
-            </select>
+              onChange={changeAudit}
+              options={audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` }))}
+            />
           </Field>
           <Field label={t("targetTask")} htmlFor="cfg-task">
-            <select
+            <Select
               id="cfg-task"
-              className="select"
               value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-            >
-              {auditTasks.length === 0 ? <option value="">{t("noTasks")}</option> : null}
-              {auditTasks.map((tk) => (
-                <option key={tk.id} value={tk.id}>
-                  {tk.id} — {tk.title}
-                </option>
-              ))}
-            </select>
+              onChange={setTaskId}
+              options={[
+                ...(auditTasks.length === 0 ? [{ value: "", label: t("noTasks") }] : []),
+                ...auditTasks.map((tk) => ({ value: tk.id, label: `${tk.id} — ${tk.title}` })),
+              ]}
+            />
           </Field>
         </div>
       </Modal>

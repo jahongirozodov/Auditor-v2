@@ -22,7 +22,12 @@ import { prisma } from "@/lib/prisma";
 const mock = prisma as any;
 
 const post = (body: unknown) =>
-  POST(new Request("http://x/api/v1/agent/logs/upload", { method: "POST", body: JSON.stringify(body) }));
+  POST(
+    new Request("http://x/api/v1/agent/logs/upload", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  );
 
 beforeEach(() => {
   vi.clearAllMocks();

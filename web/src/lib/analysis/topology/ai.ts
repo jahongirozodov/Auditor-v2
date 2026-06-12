@@ -1,6 +1,11 @@
 import "server-only";
 import { generateJson } from "@/lib/ai/ollama";
-import { SYSTEM, TOPOLOGY_JSON_SCHEMA, buildTopologyPrompt, parseTopologyAnalysis } from "@/lib/ai/prompts";
+import {
+  SYSTEM,
+  TOPOLOGY_JSON_SCHEMA,
+  buildTopologyPrompt,
+  parseTopologyAnalysis,
+} from "@/lib/ai/prompts";
 import type { Topology } from "@/lib/types/entities";
 import type { TopologyAnalysis } from "./types";
 

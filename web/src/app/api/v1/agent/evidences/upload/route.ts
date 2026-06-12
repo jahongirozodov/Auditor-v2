@@ -18,8 +18,11 @@ export async function POST(req: Request) {
   const { userId, auditId, tokenId } = auth.identity;
 
   let form: FormData;
-  try { form = await req.formData(); }
-  catch { return json({ ok: false, error: "invalid" }, 400); }
+  try {
+    form = await req.formData();
+  } catch {
+    return json({ ok: false, error: "invalid" }, 400);
+  }
 
   const file = form.get("file");
   const findingKey = String(form.get("findingKey") ?? "");

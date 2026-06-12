@@ -54,11 +54,11 @@ function useDismiss(open: boolean, close: () => void) {
 
 export function Topbar({
   user,
-  onToggleCollapse,
+  onToggleSidebar,
   onOpenSearch,
 }: {
   user: ShellUser;
-  onToggleCollapse: () => void;
+  onToggleSidebar: () => void;
   onOpenSearch?: () => void;
 }) {
   const t = useTranslations("shell");
@@ -102,7 +102,7 @@ export function Topbar({
         type="button"
         className="iconbtn"
         aria-label={t("toggleSidebar")}
-        onClick={onToggleCollapse}
+        onClick={onToggleSidebar}
       >
         <Menu size={18} />
       </button>

@@ -22,6 +22,7 @@ import { Stat } from "@/components/ui/Stat";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { issueToken, revokeToken, rotateToken } from "@/lib/actions/tokens";
 import type { AuditToken, Audit, User } from "@/lib/types/entities";
@@ -349,32 +350,20 @@ export function TokensScreen({ tokens, usersById, audits, users }: TokensScreenP
       >
         <div className="form-grid">
           <Field className="span-2" label={t("fAudit")} htmlFor="tk-audit">
-            <select
+            <Select
               id="tk-audit"
-              className="select"
               value={auditId}
-              onChange={(e) => setAuditId(e.target.value)}
-            >
-              {audits.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.code} — {a.title}
-                </option>
-              ))}
-            </select>
+              onChange={setAuditId}
+              options={audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` }))}
+            />
           </Field>
           <Field className="span-2" label={t("fUser")} htmlFor="tk-user">
-            <select
+            <Select
               id="tk-user"
-              className="select"
               value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-            >
-              {issueUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} — {u.title}
-                </option>
-              ))}
-            </select>
+              onChange={setUserId}
+              options={issueUsers.map((u) => ({ value: u.id, label: `${u.name} — ${u.title}` }))}
+            />
           </Field>
           <Field label={t("fExpires")} htmlFor="tk-exp">
             <input

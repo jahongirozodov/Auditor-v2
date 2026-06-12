@@ -94,7 +94,13 @@ export async function listConversations(input: {
     where: { userId, auditId: auditId.data },
     orderBy: { updatedAt: "desc" },
     take: 30,
-    select: { id: true, title: true, auditId: true, updatedAt: true, _count: { select: { messages: true } } },
+    select: {
+      id: true,
+      title: true,
+      auditId: true,
+      updatedAt: true,
+      _count: { select: { messages: true } },
+    },
   });
   return rows.map((r) => ({
     id: r.id,
@@ -106,9 +112,7 @@ export async function listConversations(input: {
 }
 
 /** Load one thread's messages (ownership-checked) to restore it into the chat. */
-export async function getConversation(input: {
-  id: string;
-}): Promise<ConversationDetail | null> {
+export async function getConversation(input: { id: string }): Promise<ConversationDetail | null> {
   const id = z.string().min(1).safeParse(input?.id);
   if (!id.success) return null;
 

@@ -13,6 +13,7 @@ import {
   History,
   Inbox,
   Paperclip,
+  Plus,
   Send,
   SquarePen,
   UserCheck,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Sev } from "@/components/ui/Sev";
 import { Avatar } from "@/components/ui/Avatar";
@@ -27,6 +29,9 @@ import { useToast } from "@/components/ui/Toast";
 import { TASK_STATUS } from "@/lib/fixtures";
 import { reassignTask, taskTransition } from "@/lib/actions/tasks";
 import { actionsFor, type TaskAction } from "@/lib/tasks-machine";
+import { CreateFindingModal } from "@/components/findings/CreateFindingModal";
+import { SubmitForReviewModal } from "./SubmitForReviewModal";
+import { EditTaskModal } from "./EditTaskModal";
 import type { TaskHistoryEntry } from "@/lib/data/tasks";
 import type { Audit, Finding, Task, TaskPriority, User } from "@/lib/types/entities";
 import type { RoleCode } from "@/lib/types/roles";
@@ -36,6 +41,7 @@ const FLOW: { key: string; labelKey: string; icon: LucideIcon }[] = [
   { key: "assigned", labelKey: "fAssigned", icon: UserCheck },
   { key: "in_progress", labelKey: "fInProgress", icon: Activity },
   { key: "review", labelKey: "fReview", icon: Eye },
+  { key: "review_head", labelKey: "fReviewHead", icon: Eye },
   { key: "done", labelKey: "fDone", icon: Check },
 ];
 
@@ -43,8 +49,8 @@ const ACTION_LABEL: Record<TaskAction, string> = {
   assign: "aAssign",
   start: "aStart",
   submit: "aSubmit",
-  complete: "aComplete",
   approve: "aApprove",
+  approve_head: "aApproveHead",
   return: "aReturn",
   restart: "aRestart",
   unblock: "aUnblock",
@@ -80,6 +86,9 @@ export function TaskDetailScreen({
   const [pending, startTransition] = useTransition();
   const [returning, setReturning] = useState(false);
   const [comment, setComment] = useState("");
+  const [showAddFinding, setShowAddFinding] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   if (!task) {
     return (
@@ -110,7 +119,7 @@ export function TaskDetailScreen({
   const created: TaskHistoryEntry = { who: task.assignee, action: t("aAssign"), time: task.due };
   const timeline = [created, ...history];
 
-  function run(action: TaskAction, withComment?: string) {
+  function run(action: Exclude<TaskAction, "submit">, withComment?: string) {
     startTransition(async () => {
       const res = await taskTransition({ taskId: task!.id, action, comment: withComment });
       if (res.ok) {
@@ -126,6 +135,10 @@ export function TaskDetailScreen({
   function onAction(action: TaskAction) {
     if (action === "return") {
       setReturning((v) => !v);
+      return;
+    }
+    if (action === "submit") {
+      setShowSubmitModal(true);
       return;
     }
     run(action);
@@ -155,10 +168,17 @@ export function TaskDetailScreen({
               <ChevronLeft size={14} />
               <span>{t("back")}</span>
             </Link>
-            <button type="button" className="btn btn--secondary btn--sm">
-              <SquarePen size={14} />
-              <span>{t("edit")}</span>
-            </button>
+            {(role === "super" || role === "head") &&
+            (task.status === "new" || task.status === "assigned") ? (
+              <button
+                type="button"
+                className="btn btn--secondary btn--sm"
+                onClick={() => setShowEdit(true)}
+              >
+                <SquarePen size={14} />
+                <span>{t("edit")}</span>
+              </button>
+            ) : null}
           </>
         }
       />
@@ -286,6 +306,16 @@ export function TaskDetailScreen({
                 <AlertTriangle size={15} />
                 <span>{t("findingsTitle")}</span>
               </div>
+              {!["review", "review_head", "done"].includes(task.status) && (
+                <button
+                  type="button"
+                  className="btn btn--primary btn--xs"
+                  onClick={() => setShowAddFinding(true)}
+                >
+                  <Plus size={13} />
+                  <span>{t("addFinding")}</span>
+                </button>
+              )}
             </div>
             <div className="panel__body panel__body--flush">
               {linkedFindings.length ? (
@@ -316,6 +346,22 @@ export function TaskDetailScreen({
               )}
             </div>
           </section>
+
+          <CreateFindingModal
+            open={showAddFinding}
+            onClose={() => setShowAddFinding(false)}
+            audits={[]}
+            tasks={[]}
+            defaultAuditId={task.auditId}
+            lockedAuditId={task.auditId}
+            lockedTaskId={task.id}
+          />
+
+          <SubmitForReviewModal
+            open={showSubmitModal}
+            onClose={() => setShowSubmitModal(false)}
+            taskId={task.id}
+          />
 
           {task.files ? (
             <section className="panel">
@@ -369,19 +415,13 @@ export function TaskDetailScreen({
                 <label className="field__label" htmlFor="reassign">
                   {t("reassign")}
                 </label>
-                <select
+                <Select
                   id="reassign"
-                  className="select"
                   value={task.assignee}
                   disabled={pending}
-                  onChange={(e) => onReassign(e.target.value)}
-                >
-                  {members.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={onReassign}
+                  options={members.map((u) => ({ value: u.id, label: u.name }))}
+                />
               </div>
               <div
                 className="lrow"
@@ -434,7 +474,42 @@ export function TaskDetailScreen({
                         <div className="apf__tlaction" style={{ marginTop: 2 }}>
                           {e.action}
                         </div>
-                        {e.comment ? <div className="apf__tlcomment">“{e.comment}”</div> : null}
+                        {e.comment ? (
+                          <div className="apf__tlcomment">&ldquo;{e.comment}&rdquo;</div>
+                        ) : null}
+                        {e.files && e.files.length ? (
+                          <div
+                            style={{
+                              marginTop: 4,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
+                            }}
+                          >
+                            {e.files.map((f) => (
+                              <div
+                                key={f.id}
+                                style={{
+                                  display: "flex",
+                                  gap: 6,
+                                  fontSize: 12,
+                                  color: "var(--text-secondary)",
+                                }}
+                              >
+                                <Paperclip size={11} style={{ flexShrink: 0, marginTop: 1 }} />
+                                <a
+                                  href={`/api/files/${f.id}`}
+                                  download={f.filename}
+                                  className="font-mono"
+                                  style={{ color: "inherit", textDecoration: "underline" }}
+                                >
+                                  {f.filename}
+                                </a>
+                                <span>({(f.sizeBytes / 1024).toFixed(0)} KB)</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -444,6 +519,8 @@ export function TaskDetailScreen({
           </section>
         </div>
       </div>
+
+      <EditTaskModal open={showEdit} onClose={() => setShowEdit(false)} task={task} />
     </div>
   );
 }

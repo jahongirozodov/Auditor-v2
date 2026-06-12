@@ -30,7 +30,11 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("next/server", () => ({ after: vi.fn((fn: () => void) => { void fn(); }) }));
+vi.mock("next/server", () => ({
+  after: vi.fn((fn: () => void) => {
+    void fn();
+  }),
+}));
 
 // Mock heavy AI/analysis dependencies so they don't error
 vi.mock("@/lib/ai/ollama", () => ({
@@ -41,7 +45,13 @@ vi.mock("@/lib/ai/ollama", () => ({
   generateJson: vi.fn(async () => ({ ok: false, raw: "", tokens: 0, latencyMs: 0 })),
 }));
 vi.mock("@/lib/analysis/config", () => ({
-  analyzeConfigAI: vi.fn(async () => ({ ok: true, analysis: { device: { vendor: "cisco", hostname: "r1", model: "m", firmware: "f" }, gaps: [] }, raw: "", tokens: 0, latencyMs: 0 })),
+  analyzeConfigAI: vi.fn(async () => ({
+    ok: true,
+    analysis: { device: { vendor: "cisco", hostname: "r1", model: "m", firmware: "f" }, gaps: [] },
+    raw: "",
+    tokens: 0,
+    latencyMs: 0,
+  })),
   gapToFindingInput: vi.fn(() => ({})),
 }));
 vi.mock("@/lib/analysis/config/to-finding", () => ({
@@ -63,7 +73,13 @@ vi.mock("@/lib/analysis/traffic", () => ({
   trafficAnomalyToFindingInput: vi.fn(() => ({})),
 }));
 vi.mock("@/lib/analysis/traffic/ai", () => ({
-  analyzeTrafficAI: vi.fn(async () => ({ ok: true, analysis: { summary: "", anomalies: [] }, raw: "", tokens: 0, latencyMs: 0 })),
+  analyzeTrafficAI: vi.fn(async () => ({
+    ok: true,
+    analysis: { summary: "", anomalies: [] },
+    raw: "",
+    tokens: 0,
+    latencyMs: 0,
+  })),
 }));
 vi.mock("@/lib/analysis/traffic/parsers/pcap", () => ({
   parsePcap: vi.fn(() => ({ format: "pcap", anomalies: [], totalPackets: 0, uniqueIps: 0 })),
@@ -101,12 +117,22 @@ beforeEach(() => {
 
 describe("uploadConfig — membership gate", () => {
   it("returns forbidden when user is not audit member", async () => {
-    const r = await uploadConfig({ filename: "f.txt", content: "x", auditId: "AUD-1", taskId: "T-1" });
+    const r = await uploadConfig({
+      filename: "f.txt",
+      content: "x",
+      auditId: "AUD-1",
+      taskId: "T-1",
+    });
     expect(r).toEqual({ ok: false, error: "forbidden" });
   });
   it("proceeds when user is audit member", async () => {
     h.isMember = true;
-    const r = await uploadConfig({ filename: "f.txt", content: "x", auditId: "AUD-1", taskId: "T-1" });
+    const r = await uploadConfig({
+      filename: "f.txt",
+      content: "x",
+      auditId: "AUD-1",
+      taskId: "T-1",
+    });
     expect(r.ok).toBe(true);
   });
 });
@@ -127,7 +153,12 @@ describe("createConfigDrafts — membership gate", () => {
 
 describe("uploadScannerFile — membership gate", () => {
   it("returns forbidden when user is not audit member", async () => {
-    const r = await uploadScannerFile({ filename: "f.xml", content: "x", auditId: "AUD-1", taskId: "T-1" });
+    const r = await uploadScannerFile({
+      filename: "f.xml",
+      content: "x",
+      auditId: "AUD-1",
+      taskId: "T-1",
+    });
     expect(r).toEqual({ ok: false, error: "forbidden" });
   });
 });
@@ -148,7 +179,12 @@ describe("createScannerDrafts — membership gate", () => {
 
 describe("uploadTrafficFile — membership gate", () => {
   it("returns forbidden when user is not audit member", async () => {
-    const r = await uploadTrafficFile({ filename: "f.pcap", content: "x", auditId: "AUD-1", taskId: "T-1" });
+    const r = await uploadTrafficFile({
+      filename: "f.pcap",
+      content: "x",
+      auditId: "AUD-1",
+      taskId: "T-1",
+    });
     expect(r).toEqual({ ok: false, error: "forbidden" });
   });
 });

@@ -65,7 +65,10 @@ export function TrafficAiResult({ analysis, loading, degraded }: TrafficAiResult
                 <Sev level={a.severity} />
                 <strong style={{ color: "var(--text-primary)" }}>{a.title}</strong>
                 {a.attackType && a.attackType !== "other" ? (
-                  <span className="tag tag--danger" style={{ textTransform: "uppercase", fontSize: 10 }}>
+                  <span
+                    className="tag tag--danger"
+                    style={{ textTransform: "uppercase", fontSize: 10 }}
+                  >
                     {a.attackType}
                   </span>
                 ) : null}
@@ -121,7 +124,9 @@ export function TrafficAiResult({ analysis, loading, degraded }: TrafficAiResult
       )}
 
       {analysis.recommendations.length > 0 ? (
-        <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+        <ul
+          style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}
+        >
           {analysis.recommendations.map((r, i) => (
             <li key={i} className="ai-card__body">
               {r}

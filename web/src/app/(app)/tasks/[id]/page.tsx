@@ -1,5 +1,6 @@
+import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/session";
-import { getTaskById, getTaskStatusHistory } from "@/lib/data/tasks";
+import { getTaskByIdScoped, getTaskStatusHistory } from "@/lib/data/tasks";
 import { getAuditById } from "@/lib/data/audits";
 import { getUsersById } from "@/lib/data/users";
 import { getFindingsByTask } from "@/lib/data/findings";
@@ -9,17 +10,19 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
   const { userId, role } = await requireSession();
   const { id } = await params;
 
-  const [task, usersById, history, linkedFindings] = await Promise.all([
-    getTaskById(id),
+  const task = await getTaskByIdScoped(id, userId, role);
+  if (!task) notFound();
+
+  const [usersById, history, linkedFindings] = await Promise.all([
     getUsersById(),
     getTaskStatusHistory(id),
     getFindingsByTask(id),
   ]);
-  const audit = task ? await getAuditById(task.auditId) : undefined;
+  const audit = await getAuditById(task.auditId);
 
   return (
     <TaskDetailScreen
-      task={task ?? null}
+      task={task}
       audit={audit}
       usersById={usersById}
       history={history}

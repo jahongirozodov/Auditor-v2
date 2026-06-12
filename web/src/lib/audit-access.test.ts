@@ -3,9 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const h = vi.hoisted(() => ({
   canManagePermission: false,
-  audit: { leaderId: "u9", members: [] as { userId: string }[] } as
-    | { leaderId: string; members: { userId: string }[] }
-    | null,
+  audit: { leaderId: "u9", members: [] as { userId: string }[] } as {
+    leaderId: string;
+    members: { userId: string }[];
+  } | null,
 }));
 
 vi.mock("@/lib/prisma", () => ({

@@ -14,3 +14,5 @@ This repo's working guidance is shared across agents in [AGENTS.md](AGENTS.md) �
   before using unfamiliar Next APIs.
 - Prefer the dedicated file/search tools, keep changes scoped, and leave the build green
   (`npm run build && npm run lint && npm run typecheck`) before finishing.
+- Follow the **Development workflow** in `AGENTS.md` — `/grill-me` → `writing-plans` →
+  `subagent-driven-development` → `finishing-a-development-branch` for every feature.

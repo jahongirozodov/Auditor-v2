@@ -16,7 +16,13 @@ const h = vi.hoisted(() => ({
       summary: "Shubhali skan",
       overallRisk: "high" as const,
       anomalies: [
-        { title: "Port scan", severity: "high" as const, risk: "r", impact: "i", recommendation: "Portni yoping" },
+        {
+          title: "Port scan",
+          severity: "high" as const,
+          risk: "r",
+          impact: "i",
+          recommendation: "Portni yoping",
+        },
       ],
       recommendations: [],
     },
@@ -33,7 +39,15 @@ const h = vi.hoisted(() => ({
     aiResult: JSON.stringify({
       summary: "s",
       overallRisk: "high",
-      anomalies: [{ title: "Port scan", severity: "high", risk: "r", impact: "i", recommendation: "Portni yoping" }],
+      anomalies: [
+        {
+          title: "Port scan",
+          severity: "high",
+          risk: "r",
+          impact: "i",
+          recommendation: "Portni yoping",
+        },
+      ],
       recommendations: [],
     }),
   } as Record<string, unknown> | null,
@@ -48,7 +62,8 @@ vi.mock("@/lib/session", () => ({
 vi.mock("@/lib/rbac.server", () => ({ requirePermission: vi.fn(async () => h.permission) }));
 vi.mock("@/lib/kpi-engine", () => ({ emitKpiEvent: vi.fn(async () => ({})) }));
 vi.mock("@/lib/analysis/traffic", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/analysis/traffic")>("@/lib/analysis/traffic");
+  const actual =
+    await vi.importActual<typeof import("@/lib/analysis/traffic")>("@/lib/analysis/traffic");
   return { ...actual, analyzeTraffic: vi.fn(() => h.parse) };
 });
 vi.mock("@/lib/analysis/traffic/ai", () => ({ analyzeTrafficAI: vi.fn(async () => h.ai) }));
@@ -143,7 +158,12 @@ describe("uploadTrafficFile", () => {
   });
 
   it("blocks the import when AI is unreachable (hard dependency, no DB write)", async () => {
-    vi.mocked(analyzeTrafficAI).mockResolvedValueOnce({ ok: false, raw: "", tokens: 0, latencyMs: 5 });
+    vi.mocked(analyzeTrafficAI).mockResolvedValueOnce({
+      ok: false,
+      raw: "",
+      tokens: 0,
+      latencyMs: 5,
+    });
     const res = await uploadTrafficFile(upInput);
     expect(res).toEqual({ ok: false, error: "ai_unreachable" });
     expect(prisma.trafficUpload.create).not.toHaveBeenCalled();
@@ -176,7 +196,12 @@ describe("reanalyzeTraffic", () => {
   });
 
   it("returns ai_unreachable when the model is down", async () => {
-    vi.mocked(analyzeTrafficAI).mockResolvedValueOnce({ ok: false, raw: "", tokens: 0, latencyMs: 5 });
+    vi.mocked(analyzeTrafficAI).mockResolvedValueOnce({
+      ok: false,
+      raw: "",
+      tokens: 0,
+      latencyMs: 5,
+    });
     const res = await reanalyzeTraffic({ uploadId: "tu-1" });
     expect(res).toEqual({ ok: false, error: "ai_unreachable" });
   });

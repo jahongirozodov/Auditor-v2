@@ -2,16 +2,46 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { buildTopology } from "@/lib/analysis/topology/build";
-import { parseTopologyAnalysis, type TopologyAiAnalysis } from "@/lib/ai/prompts";
+import {
+  parseTopologyAnalysis,
+  parseTopologyEnrichment,
+  type TopologyAiAnalysis,
+} from "@/lib/ai/prompts";
 import type { Topology } from "@/lib/types/entities";
 
 /**
  * Network topology (TZ §10.4) — built from real backend data (analyzed devices +
- * finding assets as nodes, traffic IP-pairs as edges). See `analysis/topology/build`.
+ * finding assets as nodes, traffic IP-pairs as edges), then merged with the latest
+ * AI enrichment patches (kind/segment reclassification + aiLabel/aiReason per node).
  */
-export const getTopology = cache(
-  async (auditId: string): Promise<Topology> => buildTopology(auditId),
-);
+export const getTopology = cache(async (auditId: string): Promise<Topology> => {
+  const [base, enrichRow] = await Promise.all([
+    buildTopology(auditId),
+    prisma.topologyEnrichment.findFirst({
+      where: { auditId, ok: true },
+      orderBy: { createdAt: "desc" },
+      select: { output: true },
+    }),
+  ]);
+
+  if (!enrichRow) return base;
+  const patches = parseTopologyEnrichment(enrichRow.output);
+  if (!patches || patches.length === 0) return base;
+
+  const patchMap = new Map(patches.map((p) => [p.id, p]));
+  const nodes = base.nodes.map((n) => {
+    const patch = patchMap.get(n.id);
+    if (!patch) return n;
+    return {
+      ...n,
+      kind: patch.kind,
+      segment: patch.segment,
+      aiLabel: patch.aiLabel || undefined,
+      aiReason: patch.aiReason || undefined,
+    };
+  });
+  return { ...base, nodes };
+});
 
 /** Latest persisted AI analysis for an audit's topology — hydrates the screen. */
 export const getLatestTopologyAnalysis = cache(

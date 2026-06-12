@@ -21,7 +21,9 @@ const ANALYSIS: TopologyAnalysis = {
   summary: "Tarmoq xavfi yuqori.",
   overallRisk: "high",
   // Labels intentionally distinct from graph node labels to keep getByText unambiguous.
-  criticalNodes: [{ nodeId: "node-x", label: "Kritik-tugun-X", reason: "Perimetr", recommendation: "ACL" }],
+  criticalNodes: [
+    { nodeId: "node-x", label: "Kritik-tugun-X", reason: "Perimetr", recommendation: "ACL" },
+  ],
   attackPaths: [{ nodes: ["node-x", "node-y"], risk: "Tashqi kirish", severity: "high" }],
   segmentationIssues: ["DMZ ajratilmagan"],
   recommendations: ["Segmentatsiyani kuchaytiring"],

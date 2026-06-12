@@ -46,7 +46,9 @@ test.describe.serial("traffic analysis", () => {
     test.setTimeout(AI + 60_000);
     await login(page);
     await page.goto("/analysis/traffic");
-    await expect(page.getByRole("heading", { name: "Trafik tahlili" })).toBeVisible({ timeout: COMPILE });
+    await expect(page.getByRole("heading", { name: "Trafik tahlili" })).toBeVisible({
+      timeout: COMPILE,
+    });
 
     await page.locator('input[type="file"]').setInputFiles(SAMPLE);
     const dialog = page.getByRole("dialog");

@@ -112,7 +112,8 @@ export async function testOllama(): Promise<{ ok: boolean; model?: string; error
     return { ok: false, error: "forbidden" };
   const { url, model } = getOllamaConfig();
   try {
-    const resp = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
+    // OpenAI-compatible health check — works for both Ollama (/v1/models) and LM Studio
+    const resp = await fetch(`${url}/v1/models`, { signal: AbortSignal.timeout(5000) });
     if (!resp.ok) return { ok: false, error: "unreachable" };
     return { ok: true, model };
   } catch {

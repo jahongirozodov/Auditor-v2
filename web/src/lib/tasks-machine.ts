@@ -9,8 +9,8 @@ export type TaskAction =
   | "assign"
   | "start"
   | "submit"
-  | "complete"
   | "approve"
+  | "approve_head"
   | "return"
   | "restart"
   | "unblock";
@@ -43,23 +43,26 @@ export const TASK_TRANSITIONS: Record<TaskAction, Transition> = {
   submit: {
     from: ["in_progress"],
     to: "review",
+    needsComment: true,
     allow: (c) => c.isAssignee || isLead(c.role),
   },
-  complete: {
-    from: ["in_progress"],
-    to: "done",
-    allow: (c) => c.isAssignee || isLead(c.role),
-  },
+  // Stage 1: Guruh rahbari (audit leader) passes to head stage
   approve: {
     from: ["review"],
+    to: "review_head",
+    allow: (c) => !c.isAssignee && (c.isAuditLeader || c.isSuper),
+  },
+  // Stage 2: Bo'lim boshlig'i (head/super) gives final approval
+  approve_head: {
+    from: ["review_head"],
     to: "done",
-    allow: (c) => !c.isAssignee && canManageGroupTask(c),
+    allow: (c) => !c.isAssignee && (c.role === "head" || c.isSuper),
   },
   return: {
-    from: ["review"],
+    from: ["review", "review_head"],
     to: "returned",
     needsComment: true,
-    allow: (c) => !c.isAssignee && canManageGroupTask(c),
+    allow: (c) => !c.isAssignee && (c.isAuditLeader || c.role === "head" || c.isSuper),
   },
   restart: {
     from: ["returned"],
@@ -68,10 +71,6 @@ export const TASK_TRANSITIONS: Record<TaskAction, Transition> = {
   },
   unblock: { from: ["blocked"], to: "in_progress", allow: (c) => isLead(c.role) },
 };
-
-function canManageGroupTask(ctx: TaskActorCtx): boolean {
-  return ctx.isAuditLeader || ctx.isSuper;
-}
 
 export interface TaskGuardResult {
   ok: boolean;

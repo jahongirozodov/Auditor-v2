@@ -36,7 +36,13 @@ const mockPrisma = prisma as any;
 beforeEach(() => {
   vi.clearAllMocks();
   h.canView = true;
-  analyzeAuditAI.mockResolvedValue({ ok: true, analysis: ANALYSIS, raw: JSON.stringify(ANALYSIS), tokens: 10, latencyMs: 5 });
+  analyzeAuditAI.mockResolvedValue({
+    ok: true,
+    analysis: ANALYSIS,
+    raw: JSON.stringify(ANALYSIS),
+    tokens: 10,
+    latencyMs: 5,
+  });
 });
 
 describe("analyzeAudit", () => {
@@ -45,19 +51,36 @@ describe("analyzeAudit", () => {
     expect(res).toMatchObject({ ok: true });
     expect(res.analysis?.overallRisk).toBe("high");
     expect(mockPrisma.auditAiAnalysis.create).toHaveBeenCalledOnce();
-    const logActions = mockPrisma.auditLog.create.mock.calls.map((c: [{ data: { action: string } }]) => c[0].data.action);
+    const logActions = mockPrisma.auditLog.create.mock.calls.map(
+      (c: [{ data: { action: string } }]) => c[0].data.action,
+    );
     expect(logActions).toContain("audit.ai_analyze");
     expect(revalidatePath).toHaveBeenCalledWith("/audits/AUD-1");
   });
 
   it("returns ai_unavailable (persists nothing) when the analyzer fails", async () => {
-    analyzeAuditAI.mockResolvedValue({ ok: false, reason: "ai_unavailable", raw: "", tokens: 0, latencyMs: 0 });
-    expect(await analyzeAudit({ auditId: "AUD-1" })).toEqual({ ok: false, error: "ai_unavailable" });
+    analyzeAuditAI.mockResolvedValue({
+      ok: false,
+      reason: "ai_unavailable",
+      raw: "",
+      tokens: 0,
+      latencyMs: 0,
+    });
+    expect(await analyzeAudit({ auditId: "AUD-1" })).toEqual({
+      ok: false,
+      error: "ai_unavailable",
+    });
     expect(mockPrisma.auditAiAnalysis.create).not.toHaveBeenCalled();
   });
 
   it("surfaces no_data (persists nothing) for an empty audit", async () => {
-    analyzeAuditAI.mockResolvedValue({ ok: false, reason: "no_data", raw: "", tokens: 0, latencyMs: 0 });
+    analyzeAuditAI.mockResolvedValue({
+      ok: false,
+      reason: "no_data",
+      raw: "",
+      tokens: 0,
+      latencyMs: 0,
+    });
     expect(await analyzeAudit({ auditId: "AUD-1" })).toEqual({ ok: false, error: "no_data" });
     expect(mockPrisma.auditAiAnalysis.create).not.toHaveBeenCalled();
   });

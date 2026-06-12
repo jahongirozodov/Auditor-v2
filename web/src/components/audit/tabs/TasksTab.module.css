@@ -1,0 +1,50 @@
+/* =========================================================================
+   TasksTab — view toggle pill
+   ========================================================================= */
+
+.viewToggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.viewBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: none;
+}
+
+.viewBtn:first-child {
+  border-right: 1px solid var(--border-color);
+}
+
+.viewBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.viewBtnActive {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.viewBtnActive:hover {
+  background: var(--brand-soft-hover);
+  color: var(--brand);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .viewBtn {
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+}

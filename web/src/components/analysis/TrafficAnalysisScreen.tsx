@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Bug,
   Hash,
+  History,
   Network,
   PieChart,
   Plus,
@@ -22,6 +23,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Sev } from "@/components/ui/Sev";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import {
   analyzeTraffic,
@@ -37,7 +39,8 @@ import { uploadTrafficFile, createTrafficDrafts, reanalyzeTraffic } from "@/lib/
 import { TrafficAiResult } from "./TrafficAiResult";
 import { TrafficGraph } from "./TrafficGraph";
 import type { TrafficAiAnalysis } from "@/lib/ai/prompts";
-import type { Audit, Task, TrafficUploadView } from "@/lib/types/entities";
+import type { Audit, Task, TrafficUploadView, TrafficHistoryRowView } from "@/lib/types/entities";
+import { relTime } from "@/lib/utils/time";
 
 interface ActiveTraffic {
   uploadId: string;
@@ -133,7 +136,15 @@ function TrafficTimelineChart({
         {[0, 1, 2, 3].map((i) => {
           const gy = padTop + (i / 3) * (H - padTop - padBottom);
           return (
-            <line key={i} x1={0} y1={gy} x2={W} y2={gy} stroke="var(--border-color)" strokeWidth={1} />
+            <line
+              key={i}
+              x1={0}
+              y1={gy}
+              x2={W}
+              y2={gy}
+              stroke="var(--border-color)"
+              strokeWidth={1}
+            />
           );
         })}
         <path d={areaPath} fill="var(--brand)" fillOpacity={0.16} />
@@ -148,7 +159,12 @@ function TrafficTimelineChart({
           strokeWidth={1.2}
           strokeDasharray="3 3"
         />
-        <circle cx={x(peakIdx)} cy={y(timeline[peakIdx].packets)} r={3.2} fill="var(--status-danger-fg)" />
+        <circle
+          cx={x(peakIdx)}
+          cy={y(timeline[peakIdx].packets)}
+          r={3.2}
+          fill="var(--status-danger-fg)"
+        />
         <text
           x={Math.min(W - 4, Math.max(40, x(peakIdx)))}
           y={11}
@@ -179,7 +195,15 @@ function TrafficTimelineChart({
 }
 
 /** Top source IPs (talkers) as labelled volume bars. */
-function TopTalkers({ talkers, title, label }: { talkers: TrafficTalker[]; title: string; label: string }) {
+function TopTalkers({
+  talkers,
+  title,
+  label,
+}: {
+  talkers: TrafficTalker[];
+  title: string;
+  label: string;
+}) {
   const max = Math.max(...talkers.map((t) => t.packets), 1);
   return (
     <Panel title={title} icon={<Network size={15} />}>
@@ -193,7 +217,13 @@ function TopTalkers({ talkers, title, label }: { talkers: TrafficTalker[]; title
                 {t.ip}
               </span>
               <div
-                style={{ flex: 1, height: 6, background: "var(--bg-surface-3)", borderRadius: 3, overflow: "hidden" }}
+                style={{
+                  flex: 1,
+                  height: 6,
+                  background: "var(--bg-surface-3)",
+                  borderRadius: 3,
+                  overflow: "hidden",
+                }}
               >
                 <div
                   style={{
@@ -206,7 +236,12 @@ function TopTalkers({ talkers, title, label }: { talkers: TrafficTalker[]; title
               </div>
               <span
                 className="tabular"
-                style={{ fontSize: 11, color: "var(--text-tertiary)", width: 56, textAlign: "right" }}
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-tertiary)",
+                  width: 56,
+                  textAlign: "right",
+                }}
               >
                 {t.packets.toLocaleString()}
               </span>
@@ -231,10 +266,18 @@ function TopPorts({ ports, title, label }: { ports: TrafficPort[]; title: string
             <div key={p.port} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span className="font-mono" style={{ fontSize: 12, width: 120, flexShrink: 0 }}>
                 {p.port}
-                {p.service ? <span style={{ color: "var(--text-tertiary)" }}> · {p.service}</span> : null}
+                {p.service ? (
+                  <span style={{ color: "var(--text-tertiary)" }}> · {p.service}</span>
+                ) : null}
               </span>
               <div
-                style={{ flex: 1, height: 6, background: "var(--bg-surface-3)", borderRadius: 3, overflow: "hidden" }}
+                style={{
+                  flex: 1,
+                  height: 6,
+                  background: "var(--bg-surface-3)",
+                  borderRadius: 3,
+                  overflow: "hidden",
+                }}
               >
                 <div
                   style={{
@@ -247,7 +290,12 @@ function TopPorts({ ports, title, label }: { ports: TrafficPort[]; title: string
               </div>
               <span
                 className="tabular"
-                style={{ fontSize: 11, color: "var(--text-tertiary)", width: 56, textAlign: "right" }}
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-tertiary)",
+                  width: 56,
+                  textAlign: "right",
+                }}
               >
                 {p.packets.toLocaleString()}
               </span>
@@ -311,9 +359,16 @@ export interface TrafficAnalysisScreenProps {
   tasks: Task[];
   latest: TrafficUploadView | null;
   latestAi: TrafficAiAnalysis | null;
+  uploads: TrafficHistoryRowView[];
 }
 
-export function TrafficAnalysisScreen({ audits, tasks, latest, latestAi }: TrafficAnalysisScreenProps) {
+export function TrafficAnalysisScreen({
+  audits,
+  tasks,
+  latest,
+  latestAi,
+  uploads,
+}: TrafficAnalysisScreenProps) {
   const t = useTranslations("traffic");
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
@@ -431,7 +486,9 @@ export function TrafficAnalysisScreen({ audits, tasks, latest, latestAi }: Traff
   const talkers = active?.result.topTalkers ?? [];
   const ports = active?.result.topPorts ?? [];
   const conversations = active?.result.conversations ?? [];
-  const chartTitle = active?.filename ? `${active.filename} — ${t("chartWindow")}` : t("chartTitle");
+  const chartTitle = active?.filename
+    ? `${active.filename} — ${t("chartWindow")}`
+    : t("chartTitle");
 
   const note = active?.result.note;
   const noteMessage = !note
@@ -523,7 +580,10 @@ export function TrafficAnalysisScreen({ audits, tasks, latest, latestAi }: Traff
                 border: "1px solid var(--status-warning-fg)",
               }}
             >
-              <AlertTriangle size={16} style={{ color: "var(--status-warning-fg)", flexShrink: 0 }} />
+              <AlertTriangle
+                size={16}
+                style={{ color: "var(--status-warning-fg)", flexShrink: 0 }}
+              />
               <span style={{ fontSize: 13, color: "var(--text-primary)" }}>{noteMessage}</span>
             </div>
           ) : null}
@@ -591,6 +651,11 @@ export function TrafficAnalysisScreen({ audits, tasks, latest, latestAi }: Traff
               <TopTalkers talkers={talkers} title={t("topTalkers")} label={t("noData")} />
               <TopPorts ports={ports} title={t("topPorts")} label={t("noData")} />
             </div>
+          ) : null}
+
+          {/* Host communication graph */}
+          {active && conversations.length > 0 ? (
+            <TrafficGraph conversations={conversations} anomalies={anomalies} />
           ) : null}
         </div>
 
@@ -693,15 +758,56 @@ export function TrafficAnalysisScreen({ audits, tasks, latest, latestAi }: Traff
               )}
             </div>
           </div>
+
+          {/* Recent traffic uploads history */}
+          <Panel title={t("recentTitle")} icon={<History size={15} />} flush>
+            {uploads.length === 0 ? (
+              <p className="text-sm text-muted" style={{ padding: "14px 16px" }}>
+                {t("recentEmpty")}
+              </p>
+            ) : (
+              <div className="tbl-scroll">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Fayl</th>
+                      <th>Format</th>
+                      <th>Audit</th>
+                      <th>Paketlar</th>
+                      <th>Anomaliyalar</th>
+                      <th>Vaqt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploads.map((u) => (
+                      <tr key={u.id}>
+                        <td>
+                          <span className="font-mono" style={{ fontSize: 13 }}>
+                            {u.filename}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="tag tag--outline">{u.format.toUpperCase()}</span>
+                        </td>
+                        <td>{u.auditCode}</td>
+                        <td className="tabular">{u.totalPackets.toLocaleString()}</td>
+                        <td>
+                          {u.anomalyCount > 0 ? (
+                            <span className="sev sev--high">{u.anomalyCount}</span>
+                          ) : (
+                            <span className="tag tag--success">0</span>
+                          )}
+                        </td>
+                        <td className="cell-sub">{relTime(u.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
         </div>
       </div>
-
-      {/* Host communication graph (visual data-exchange map) */}
-      {active && conversations.length > 0 ? (
-        <div style={{ marginTop: 16 }}>
-          <TrafficGraph conversations={conversations} anomalies={anomalies} />
-        </div>
-      ) : null}
 
       {/* Upload target picker */}
       <Modal
@@ -735,33 +841,23 @@ export function TrafficAnalysisScreen({ audits, tasks, latest, latestAi }: Traff
         </p>
         <div style={{ display: "grid", gap: 14 }}>
           <Field label={t("targetAudit")} htmlFor="trf-audit">
-            <select
+            <Select
               id="trf-audit"
-              className="select"
               value={auditId}
-              onChange={(e) => changeAudit(e.target.value)}
-            >
-              {audits.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.code} — {a.title}
-                </option>
-              ))}
-            </select>
+              onChange={changeAudit}
+              options={audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` }))}
+            />
           </Field>
           <Field label={t("targetTask")} htmlFor="trf-task">
-            <select
+            <Select
               id="trf-task"
-              className="select"
               value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-            >
-              {auditTasks.length === 0 ? <option value="">{t("noTasks")}</option> : null}
-              {auditTasks.map((tk) => (
-                <option key={tk.id} value={tk.id}>
-                  {tk.id} — {tk.title}
-                </option>
-              ))}
-            </select>
+              onChange={setTaskId}
+              options={[
+                ...(auditTasks.length === 0 ? [{ value: "", label: t("noTasks") }] : []),
+                ...auditTasks.map((tk) => ({ value: tk.id, label: `${tk.id} — ${tk.title}` })),
+              ]}
+            />
           </Field>
         </div>
       </Modal>

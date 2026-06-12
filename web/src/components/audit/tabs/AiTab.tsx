@@ -2,15 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  AlertTriangle,
-  RefreshCw,
-  Send,
-  Sparkles,
-  Star,
-  Target,
-  Trophy,
-} from "lucide-react";
+import { AlertTriangle, RefreshCw, Send, Sparkles, Star, Target, Trophy } from "lucide-react";
 import { Sev } from "@/components/ui/Sev";
 import { Button } from "@/components/ui/Button";
 import { analyzeAudit } from "@/lib/actions/audit-ai";
@@ -130,7 +122,11 @@ function AuditAiResult({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span className="stat__label">{t("aiTopRisks")}</span>
           {analysis.topRisks.map((r, i) => (
-            <div key={i} className="card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+            <div
+              key={i}
+              className="card"
+              style={{ padding: 12, display: "flex", flexDirection: "column", gap: 6 }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Sev level={r.severity} />
                 <strong style={{ color: "var(--text-primary)" }}>{r.title}</strong>
@@ -162,7 +158,13 @@ function AuditAiResult({
           <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
             {analysis.remediationPlan.map((r, i) => (
               <li key={i} style={{ marginBottom: 4 }}>
-                <span style={{ textTransform: "capitalize", color: "var(--text-tertiary)", marginRight: 6 }}>
+                <span
+                  style={{
+                    textTransform: "capitalize",
+                    color: "var(--text-tertiary)",
+                    marginRight: 6,
+                  }}
+                >
                   [{r.priority}]
                 </span>
                 {r.action}
@@ -191,7 +193,15 @@ interface Msg {
   error?: boolean;
 }
 
-function AuditAiChat({ audit, userName, orgName }: { audit: Audit; userName: string; orgName: string }) {
+function AuditAiChat({
+  audit,
+  userName,
+  orgName,
+}: {
+  audit: Audit;
+  userName: string;
+  orgName: string;
+}) {
   const t = useTranslations("ai");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -267,7 +277,13 @@ function AuditAiChat({ audit, userName, orgName }: { audit: Audit; userName: str
       </div>
 
       <div
-        style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12, minHeight: 120 }}
+        style={{
+          padding: "14px 18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          minHeight: 120,
+        }}
       >
         {messages.length === 0 ? (
           <p className="text-sm text-muted">{t("greeting")}</p>
@@ -306,7 +322,13 @@ function AuditAiChat({ audit, userName, orgName }: { audit: Audit; userName: str
         )}
       </div>
 
-      <div style={{ padding: 12, borderTop: "1px solid var(--border-color)", background: "var(--bg-surface-2)" }}>
+      <div
+        style={{
+          padding: 12,
+          borderTop: "1px solid var(--border-color)",
+          background: "var(--bg-surface-2)",
+        }}
+      >
         <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
           {presets.map(({ k, Icon }) => (
             <Button

@@ -6,9 +6,8 @@ Guidance for any coding agent (Claude Code or otherwise) working in this repo. R
 ## What this is
 
 **Auditor** — a closed-network (air-gapped) cybersecurity-audit management platform, UI in
-**Uzbek (Latin)**. We are turning a Claude-designed HTML/CSS/JS prototype into a production
-**Next.js + TypeScript** app. The prototype and full spec are the design truth; we recreate them
-faithfully as clean code.
+**Uzbek (Latin)**. The production Next.js + TypeScript app has been built from a Claude-designed
+HTML/CSS/JS prototype. The prototype and full spec remain the design truth for any new screens.
 
 ## Repo map
 
@@ -16,6 +15,7 @@ faithfully as clean code.
 - `agent/` — the **.NET 8 WPF desktop agent** (TZ §16). The **one** exception to "code lives in `web/`":
   a native Windows app can't live in the Next.js tree. Its server contract still lives in `web/` under
   `src/app/api/v1/agent/**`. See [ADR-0002](docs/decisions/0002-desktop-agent-scope.md).
+  **Never commit `bin/`, `obj/`, or `publish/` directories** — they are excluded by `.gitignore`.
 - `docs/` — **curated English specification** (the build-facing reference). Start at
   [docs/README.md](docs/README.md): requirements split by domain (overview, RBAC, domain model,
   workflows, analysis/AI, reporting/KPI, audit-log/agent, security) + an ADR layer in
@@ -65,6 +65,19 @@ npm run test:e2e     # Playwright — E2E + visual regression
 npm run format       # Prettier
 ```
 
+## Development workflow
+
+All feature work follows this skill sequence in Claude Code:
+
+1. **`/grill-me`** — interview requirements until the design is fully understood
+2. **`superpowers:writing-plans`** — produce a task-by-task implementation plan saved to
+   `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
+3. **`superpowers:subagent-driven-development`** — execute the plan task-by-task; fresh subagent
+   per task + two-stage review (spec compliance → code quality) after each
+4. **`superpowers:finishing-a-development-branch`** — final review + push when all tasks complete
+
+The superpowers plugin must be installed (`claude plugin install superpowers`).
+
 ## Definition of Done (every feature)
 
 A feature is **not done** until all of these pass:
@@ -87,13 +100,21 @@ Tests live next to the code (`*.test.ts[x]`); E2E specs in `web/e2e/`.
 - **Role codes (canonical):** `super / head / chief / lead / t1`. Normalize the prototype's codes
   (`departament/bolim/bosh/yetakchi/toifa1`) on import; "tahlilchi"/analyst is a **permission**, not a
   role. [ADR-0006](docs/decisions/0006-role-codes.md).
+- **Database:** PostgreSQL — local server, database `auditor`. Credentials via `DATABASE_URL` /
+  `DIRECT_URL` env vars. See `deploy/.env.production.example`.
+- **Auth:** Auth.js (session-based, credentials provider). Secret in `AUTH_SECRET` env var.
+- **AI/Ollama:** Local Ollama at `http://127.0.0.1:11434`, model `qwen/qwen3-coder-30b` (configured
+  via `OLLAMA_URL` + `OLLAMA_MODEL`). Optional — the app degrades gracefully without it.
+- **Deployment:** Linux server, app at `/opt/auditor/web/`. See `deploy/` scripts and
+  `deploy/.env.production.example` for the full env var reference.
 
 ## Ask, don't assume
 
-Still **open** — see the ADRs in [docs/decisions/](docs/decisions/): desktop-agent/parser scope
-([ADR-0002](docs/decisions/0002-desktop-agent-scope.md)) and report-export library
-([ADR-0003](docs/decisions/0003-reporting-export.md)). Also unconfirmed: DB/LDAP/Ollama/SMTP/MinIO
-connection details, deployment target (air-gapped?), RLS scoping, and whether legacy .NET data must be
-migrated. Surface these rather than guessing.
+Still **open** — see the ADRs in [docs/decisions/](docs/decisions/):
+- Report-export library ([ADR-0003](docs/decisions/0003-reporting-export.md)) — DOCX/PDF library not finalised.
+- RLS scoping — row-level security per role not yet wired in Prisma.
+- Legacy .NET data migration — whether historical audit data must be imported is unconfirmed.
+
+Surface these rather than guessing.
 
 > Package manager is **npm** here (the handoff docs mention pnpm — ignore that; we use npm).

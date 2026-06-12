@@ -1,7 +1,11 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import type { AnalyzedDeviceView, ConfigUploadView } from "@/lib/types/entities";
+import type {
+  AnalyzedDeviceView,
+  ConfigUploadView,
+  ConfigHistoryRowView,
+} from "@/lib/types/entities";
 import { parseConfigAnalysis, type ConfigAiAnalysis } from "@/lib/ai/prompts";
 
 type Agg3 = { critical?: number; high?: number; medium?: number };
@@ -41,6 +45,31 @@ export const getAnalyzedDevices = cache(async (): Promise<AnalyzedDeviceView[]> 
       model: d.model,
       firmware: d.firmware,
       findings: { critical: f.critical ?? 0, high: f.high ?? 0, medium: f.medium ?? 0 },
+    };
+  });
+});
+
+/** Last 20 config uploads — drives the history panel. */
+export const getRecentConfigUploads = cache(async (): Promise<ConfigHistoryRowView[]> => {
+  const rows = await prisma.configUpload.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    include: { audit: { select: { code: true } } },
+  });
+  return rows.map((r) => {
+    const agg = (r.severityAgg as Agg3 | null) ?? {};
+    return {
+      id: r.id,
+      filename: r.filename,
+      vendor: r.vendor,
+      auditCode: r.audit.code,
+      gapCount: r.gapCount,
+      severityAgg: {
+        critical: agg.critical ?? 0,
+        high: agg.high ?? 0,
+        medium: agg.medium ?? 0,
+      },
+      createdAt: r.createdAt.toISOString(),
     };
   });
 });

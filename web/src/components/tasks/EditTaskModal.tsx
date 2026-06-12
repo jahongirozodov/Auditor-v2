@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Save } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -83,19 +84,13 @@ export function EditTaskModal({ open, onClose, task }: EditTaskModalProps) {
           />
         </Field>
         <Field label={t("priority")} htmlFor="edit-task-priority">
-          <select
+          <Select
             id="edit-task-priority"
-            className="select"
             value={priority}
-            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            onChange={(v) => setPriority(v as TaskPriority)}
+            options={PRIORITIES.map((p) => ({ value: p, label: p }))}
             disabled={pending}
-          >
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
+          />
         </Field>
         <Field label={t("due")} htmlFor="edit-task-due">
           <DatePicker

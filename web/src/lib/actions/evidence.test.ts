@@ -65,11 +65,15 @@ beforeEach(() => {
 
 describe("addAuditEvidence", () => {
   it("stores the file + evidence + audit log on success", async () => {
-    const res = await addAuditEvidence(fd({ auditId: "AUD-1", comment: "dalil", file: smallFile() }));
+    const res = await addAuditEvidence(
+      fd({ auditId: "AUD-1", comment: "dalil", file: smallFile() }),
+    );
     expect(res).toEqual({ ok: true });
     expect(prisma.fileStorage.create).toHaveBeenCalled();
     expect(prisma.auditEvidence.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ auditId: "AUD-1", comment: "dalil" }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ auditId: "AUD-1", comment: "dalil" }),
+      }),
     );
     expect(prisma.auditLog.create).toHaveBeenCalled();
   });
@@ -81,14 +85,18 @@ describe("addAuditEvidence", () => {
   });
 
   it("rejects a file over 5 MB", async () => {
-    const big = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.pcap", { type: "application/octet-stream" });
+    const big = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.pcap", {
+      type: "application/octet-stream",
+    });
     const res = await addAuditEvidence(fd({ auditId: "AUD-1", comment: "dalil", file: big }));
     expect(res).toEqual({ ok: false, error: "too_large" });
   });
 
   it("forbids non-members", async () => {
     h.canManageEvidence = false;
-    const res = await addAuditEvidence(fd({ auditId: "AUD-1", comment: "dalil", file: smallFile() }));
+    const res = await addAuditEvidence(
+      fd({ auditId: "AUD-1", comment: "dalil", file: smallFile() }),
+    );
     expect(res).toEqual({ ok: false, error: "forbidden" });
     expect(prisma.fileStorage.create).not.toHaveBeenCalled();
   });
@@ -108,7 +116,12 @@ describe("deleteAuditEvidence", () => {
   });
 
   it("forbids a non-uploader, non-leader, non-admin", async () => {
-    h.evidence = { auditId: "AUD-1", fileId: "f1", file: { uploadedById: "uX" }, audit: { leaderId: "uY" } };
+    h.evidence = {
+      auditId: "AUD-1",
+      fileId: "f1",
+      file: { uploadedById: "uX" },
+      audit: { leaderId: "uY" },
+    };
     const res = await deleteAuditEvidence("e1");
     expect(res).toEqual({ ok: false, error: "forbidden" });
     expect(prisma.auditEvidence.delete).not.toHaveBeenCalled();

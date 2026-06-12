@@ -126,7 +126,10 @@ describe("UserFormModal", () => {
     await userEvent.type(screen.getByLabelText("users.fieldName"), "Scanner User");
     await userEvent.type(screen.getByLabelText("users.fieldEmail"), "scanner@gov.uz");
     await userEvent.type(screen.getByLabelText("users.fieldPassword"), "secret");
-    await userEvent.selectOptions(screen.getByLabelText("users.fieldCustomRole"), "scanner_operator");
+    await userEvent.selectOptions(
+      screen.getByLabelText("users.fieldCustomRole"),
+      "scanner_operator",
+    );
     await userEvent.click(screen.getByRole("button", { name: "users.create" }));
 
     await waitFor(() =>

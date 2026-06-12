@@ -93,7 +93,10 @@ async function createFindingTx(
     },
   });
   if (["critical", "high"].includes(d.severity)) {
-    const audit = await tx.audit.findUnique({ where: { id: d.auditId }, select: { leaderId: true } });
+    const audit = await tx.audit.findUnique({
+      where: { id: d.auditId },
+      select: { leaderId: true },
+    });
     if (audit?.leaderId) {
       await emitNotification(tx, {
         type: "finding_critical",
@@ -369,7 +372,8 @@ export async function createFinding(
 
   // Any user with finding.create may file a finding; the reporter is the session user.
   const { userId } = await requireSession();
-  if (!(await requirePermission(userId, "finding.create"))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "finding.create")))
+    return { ok: false, error: "forbidden" };
 
   const audit = await prisma.audit.findUnique({ where: { id: auditId }, select: { id: true } });
   if (!audit) return { ok: false, error: "not_found" };

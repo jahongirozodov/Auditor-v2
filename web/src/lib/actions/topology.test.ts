@@ -10,7 +10,17 @@ const h = vi.hoisted(() => ({ canView: true }));
 
 const TOPO = {
   audit: "AUD-1",
-  nodes: [{ id: "fw", label: "FW", ip: "10.0.0.1", kind: "firewall", segment: "Perimetr", sev: "critical", findings: 1 }],
+  nodes: [
+    {
+      id: "fw",
+      label: "FW",
+      ip: "10.0.0.1",
+      kind: "firewall",
+      segment: "Perimetr",
+      sev: "critical",
+      findings: 1,
+    },
+  ],
   edges: [],
 };
 const ANALYSIS = {
@@ -47,7 +57,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.canView = true;
   buildTopology.mockResolvedValue(TOPO);
-  analyzeTopologyAI.mockResolvedValue({ ok: true, analysis: ANALYSIS, raw: JSON.stringify(ANALYSIS), tokens: 10, latencyMs: 5 });
+  analyzeTopologyAI.mockResolvedValue({
+    ok: true,
+    analysis: ANALYSIS,
+    raw: JSON.stringify(ANALYSIS),
+    tokens: 10,
+    latencyMs: 5,
+  });
 });
 
 describe("analyzeTopology", () => {
@@ -56,7 +72,9 @@ describe("analyzeTopology", () => {
     expect(res).toMatchObject({ ok: true });
     expect(res.analysis?.overallRisk).toBe("high");
     expect(mockPrisma.topologyAiAnalysis.create).toHaveBeenCalledOnce();
-    const logActions = mockPrisma.auditLog.create.mock.calls.map((c: [{ data: { action: string } }]) => c[0].data.action);
+    const logActions = mockPrisma.auditLog.create.mock.calls.map(
+      (c: [{ data: { action: string } }]) => c[0].data.action,
+    );
     expect(logActions).toContain("topology.analyze");
     expect(revalidatePath).toHaveBeenCalledWith("/analysis/topology");
   });
@@ -69,7 +87,10 @@ describe("analyzeTopology", () => {
 
   it("returns ai_unavailable (and persists nothing) when the model is down", async () => {
     analyzeTopologyAI.mockResolvedValue({ ok: false, raw: "", tokens: 0, latencyMs: 0 });
-    expect(await analyzeTopology({ auditId: "AUD-1" })).toEqual({ ok: false, error: "ai_unavailable" });
+    expect(await analyzeTopology({ auditId: "AUD-1" })).toEqual({
+      ok: false,
+      error: "ai_unavailable",
+    });
     expect(mockPrisma.topologyAiAnalysis.create).not.toHaveBeenCalled();
   });
 

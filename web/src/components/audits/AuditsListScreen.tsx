@@ -19,11 +19,13 @@ const GROUPS: Record<string, AuditStatus[]> = {
     "group_forming",
     "project_draft",
     "project_pending",
+    "head_approved",
+    "approved",
     "assigning",
     "in_progress",
   ],
   review: ["review", "returned"],
-  done: ["approved", "completed"],
+  done: ["completed"],
 };
 
 export interface AuditsListScreenProps {

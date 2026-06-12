@@ -51,10 +51,7 @@ export async function deleteReport(id: string) {
     select: { id: true, authorId: true, auditId: true },
   });
   if (!report) throw new Error("Topilmadi");
-  if (
-    report.authorId !== userId &&
-    !(await isAuditLeader(report.auditId, userId, role))
-  )
+  if (report.authorId !== userId && !(await isAuditLeader(report.auditId, userId, role)))
     throw new Error("Ruxsat yoʻq");
   await prisma.report.delete({ where: { id } });
   revalidatePath("/reports");

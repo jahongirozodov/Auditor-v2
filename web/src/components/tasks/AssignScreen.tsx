@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
 import { Tag, type TagTone } from "@/components/ui/Tag";
 import { Avatar } from "@/components/ui/Avatar";
 import { TASK_STATUS } from "@/lib/fixtures";
@@ -54,9 +55,7 @@ export function AssignScreen({
   // Assignee filter lists only people actually assigned to a visible task.
   const assigneeOptions = useMemo(() => {
     const ids = Array.from(new Set(tasks.map((tk) => tk.assignee)));
-    return ids
-      .map((id) => pick(id))
-      .sort((a, b) => a.name.localeCompare(b.name, "uz"));
+    return ids.map((id) => pick(id)).sort((a, b) => a.name.localeCompare(b.name, "uz"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks, usersById]);
 
@@ -114,48 +113,33 @@ export function AssignScreen({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select
-          className="select"
-          aria-label={t("filterAssignee")}
-          style={{ width: 200 }}
+        <Select
           value={assigneeFilter}
-          onChange={(e) => setAssigneeFilter(e.target.value)}
-        >
-          <option value="">{t("assigneeAll")}</option>
-          {assigneeOptions.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          aria-label={t("filterStatus")}
-          style={{ width: 180 }}
+          onChange={setAssigneeFilter}
+          style={{ width: 200 }}
+          options={[
+            { value: "", label: t("assigneeAll") },
+            ...assigneeOptions.map((u) => ({ value: u.id, label: u.name })),
+          ]}
+        />
+        <Select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">{t("statusAll")}</option>
-          {STATUS_KEYS.map((s) => (
-            <option key={s} value={s}>
-              {TASK_STATUS[s].label}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          aria-label={t("filterAudit")}
-          style={{ width: 280 }}
+          onChange={setStatusFilter}
+          style={{ width: 180 }}
+          options={[
+            { value: "", label: t("statusAll") },
+            ...STATUS_KEYS.map((s) => ({ value: s, label: TASK_STATUS[s].label })),
+          ]}
+        />
+        <Select
           value={auditFilter}
-          onChange={(e) => setAuditFilter(e.target.value)}
-        >
-          <option value="">{t("auditAll")}</option>
-          {audits.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.code} — {a.title}
-            </option>
-          ))}
-        </select>
+          onChange={setAuditFilter}
+          style={{ width: 280 }}
+          options={[
+            { value: "", label: t("auditAll") },
+            ...audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` })),
+          ]}
+        />
         <Tag tone="ghost">{t("taskCount", { n: filtered.length })}</Tag>
       </div>
 

@@ -97,7 +97,12 @@ describe("generateReport — membership gate", () => {
   });
   it("allows when user is audit member", async () => {
     h.isMember = true;
-    const r = await generateReport({ title: "T", auditId: "AUD-1", type: "pentest", formats: ["pdf"] });
+    const r = await generateReport({
+      title: "T",
+      auditId: "AUD-1",
+      type: "pentest",
+      formats: ["pdf"],
+    });
     expect(r.ok).toBe(true);
   });
 });

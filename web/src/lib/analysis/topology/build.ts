@@ -2,14 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { analyzeTraffic } from "@/lib/analysis/traffic";
 import type { Severity, Topology, TopologyEdge, TopologyNode } from "@/lib/types/entities";
-import {
-  assetToKind,
-  ipFromDstPort,
-  isIp,
-  nodeKey,
-  segmentForIp,
-  vendorToKind,
-} from "./infer";
+import { assetToKind, ipFromDstPort, isIp, nodeKey, segmentForIp, vendorToKind } from "./infer";
 
 const SEV_RANK: Record<Severity, number> = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
 const raise = (a: Severity, b: Severity): Severity => (SEV_RANK[b] > SEV_RANK[a] ? b : a);

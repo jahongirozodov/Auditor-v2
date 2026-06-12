@@ -1,5 +1,0 @@
-D:\auditor-v6\agent\publish\Auditor.Agent.Desktop.pdb
-D:\auditor-v6\agent\publish\appsettings.json
-D:\auditor-v6\agent\publish\Auditor.Agent.Core.pdb
-D:\auditor-v6\agent\publish\Auditor.Agent.Shared.pdb
-D:\auditor-v6\agent\publish\Auditor.Agent.Desktop.exe

@@ -22,7 +22,12 @@ export interface AuditReportData {
   ai: AuditAnalysis | null;
   topology: { summary: string; overallRisk: string } | null;
   evidence: { name: string; comment: string }[];
-  kpi: { taskCompletion: number; findingResolution: number; findingTotal: number; findingResolved: number };
+  kpi: {
+    taskCompletion: number;
+    findingResolution: number;
+    findingTotal: number;
+    findingResolved: number;
+  };
 }
 
 const APPROVED: ReadonlySet<string> = new Set(["approved", "fixing", "fixed", "retest", "closed"]);
@@ -77,7 +82,10 @@ export async function gatherAuditReportData(auditId: string): Promise<AuditRepor
   });
   const topoParsed = topoRow?.output ? safeJson(topoRow.output) : null;
   const topology = topoParsed
-    ? { summary: String(topoParsed.summary ?? ""), overallRisk: String(topoParsed.overallRisk ?? "") }
+    ? {
+        summary: String(topoParsed.summary ?? ""),
+        overallRisk: String(topoParsed.overallRisk ?? ""),
+      }
     : null;
 
   const evidenceRows = await prisma.auditEvidence.findMany({

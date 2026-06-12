@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { useToast } from "@/components/ui/Toast";
 import { createAudit } from "@/lib/actions/audits";
@@ -108,34 +109,21 @@ export function CreateAuditModal({ open, onClose, orgs, eligibleUsers }: CreateA
         </div>
 
         <Field label={t("fType")} htmlFor="ca-type">
-          <select
+          <Select
             id="ca-type"
-            className="select"
             value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            {TYPES.map((x) => (
-              <option key={x} value={x}>
-                {x}
-              </option>
-            ))}
-          </select>
+            onChange={setType}
+            options={TYPES.map((x) => ({ value: x, label: x }))}
+          />
         </Field>
 
         <Field label={t("fOrg")} htmlFor="ca-org">
-          <select
+          <Select
             id="ca-org"
-            className="select"
             value={orgId}
-            onChange={(e) => setOrgId(e.target.value)}
-          >
-            <option value="">—</option>
-            {orgs.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+            onChange={setOrgId}
+            options={[{ value: "", label: "—" }, ...orgs.map((o) => ({ value: o.id, label: o.name }))]}
+          />
         </Field>
 
         <Field label={t("fStart")} htmlFor="ca-start">
@@ -158,19 +146,15 @@ export function CreateAuditModal({ open, onClose, orgs, eligibleUsers }: CreateA
 
         <div style={{ gridColumn: "span 2" }}>
           <Field label={t("fLeader")} htmlFor="ca-leader">
-            <select
+            <Select
               id="ca-leader"
-              className="select"
               value={leaderId}
-              onChange={(e) => setLeaderId(e.target.value)}
-            >
-              <option value="">—</option>
-              {eligibleUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} · {u.title}
-                </option>
-              ))}
-            </select>
+              onChange={setLeaderId}
+              options={[
+                { value: "", label: "—" },
+                ...eligibleUsers.map((u) => ({ value: u.id, label: `${u.name} · ${u.title}` })),
+              ]}
+            />
           </Field>
         </div>
 

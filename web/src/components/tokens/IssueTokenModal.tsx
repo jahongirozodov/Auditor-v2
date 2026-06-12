@@ -7,6 +7,7 @@ import { KeyRound, Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { issueToken } from "@/lib/actions/tokens";
 import type { Audit, User } from "@/lib/types/entities";
@@ -32,9 +33,7 @@ export function IssueTokenModal({ open, onClose, audit, usersById }: IssueTokenM
   const [pending, startTransition] = useTransition();
 
   // Tokens are issued to auditors (chief/lead/t1); fall back to all members.
-  const candidates = audit.members
-    .map((id) => usersById[id])
-    .filter((u): u is User => Boolean(u));
+  const candidates = audit.members.map((id) => usersById[id]).filter((u): u is User => Boolean(u));
   const members = candidates.filter((u) => ISSUE_ROLES.has(u.role));
   const userOptions = members.length ? members : candidates;
 
@@ -88,18 +87,12 @@ export function IssueTokenModal({ open, onClose, audit, usersById }: IssueTokenM
     >
       <div className="form-grid">
         <Field className="span-2" label={t("fUser")} htmlFor="itk-user">
-          <select
+          <Select
             id="itk-user"
-            className="select"
             value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          >
-            {userOptions.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} — {u.title}
-              </option>
-            ))}
-          </select>
+            onChange={setUserId}
+            options={userOptions.map((u) => ({ value: u.id, label: `${u.name} — ${u.title}` }))}
+          />
         </Field>
         <Field label={t("fExpires")} htmlFor="itk-exp">
           <input

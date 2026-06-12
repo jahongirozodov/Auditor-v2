@@ -7,7 +7,9 @@ import { Tokens } from "./Tokens";
 import { AUDITS, TOKENS, USERS } from "@/lib/fixtures";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("@/lib/actions/tokens", () => ({ issueToken: vi.fn(async () => ({ ok: true, id: "tk_x" })) }));
+vi.mock("@/lib/actions/tokens", () => ({
+  issueToken: vi.fn(async () => ({ ok: true, id: "tk_x" })),
+}));
 
 const audit = AUDITS.find((a) => a.id === "AUD-2026-014")!;
 const tokens = TOKENS.filter((t) => t.audit === audit.id);

@@ -7,11 +7,23 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
-      // `server-only` throws outside RSC; stub it so server modules are testable.
-      "server-only": fileURLToPath(new URL("./src/test/server-only-stub.ts", import.meta.url)),
-    },
+    // Specific aliases must come before the bare `@` catch-all so Vite matches
+    // them first (first-match wins in object key order).
+    alias: [
+      {
+        find: "server-only",
+        replacement: fileURLToPath(new URL("./src/test/server-only-stub.ts", import.meta.url)),
+      },
+      {
+        // Stub @/auth so server actions that import it don't pull in next-auth.
+        find: "@/auth",
+        replacement: fileURLToPath(new URL("./src/test/auth-stub.ts", import.meta.url)),
+      },
+      {
+        find: "@",
+        replacement: fileURLToPath(new URL("./src", import.meta.url)),
+      },
+    ],
   },
   test: {
     environment: "jsdom",

@@ -12,7 +12,14 @@ export default async function TopologyPage({
   searchParams: Promise<{ audit?: string }>;
 }) {
   const { userId } = await requireSession();
-  if (!(await requireAnyPermission(userId, ["config.upload", "scanner.import", "traffic.upload", "ai.use"])))
+  if (
+    !(await requireAnyPermission(userId, [
+      "config.upload",
+      "scanner.import",
+      "traffic.upload",
+      "ai.use",
+    ]))
+  )
     redirect("/dashboard");
 
   const [audits, sp] = await Promise.all([getAudits(), searchParams]);

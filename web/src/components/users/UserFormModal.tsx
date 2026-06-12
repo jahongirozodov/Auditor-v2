@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { createUser, updateUser } from "@/lib/actions/users";
 import type { CustomRole } from "@/lib/settings-defaults";
@@ -98,33 +99,23 @@ export function UserFormModal({ open, onClose, user, customRoles = [] }: Props) 
         </Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label={t("fieldRole")} htmlFor="uf-role">
-            <select
+            <Select
               id="uf-role"
-              className="select"
               value={role}
-              onChange={(e) => setRole(e.target.value as RoleCode)}
-            >
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r.code} value={r.code}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setRole(v as RoleCode)}
+              options={ROLE_OPTIONS.map((r) => ({ value: r.code, label: r.label }))}
+            />
           </Field>
           <Field label={t("fieldCustomRole")} htmlFor="uf-custom-role">
-            <select
+            <Select
               id="uf-custom-role"
-              className="select"
               value={customRoleCode}
-              onChange={(e) => setCustomRoleCode(e.target.value)}
-            >
-              <option value="">{t("noCustomRole")}</option>
-              {customRoles.map((r) => (
-                <option key={r.code} value={r.code}>
-                  {r.name} ({r.code})
-                </option>
-              ))}
-            </select>
+              onChange={setCustomRoleCode}
+              options={[
+                { value: "", label: t("noCustomRole") },
+                ...customRoles.map((r) => ({ value: r.code, label: `${r.name} (${r.code})` })),
+              ]}
+            />
           </Field>
           <Field label={t("fieldDept")} htmlFor="uf-dept">
             <input

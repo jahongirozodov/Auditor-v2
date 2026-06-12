@@ -46,11 +46,14 @@ describe("isAiEnabled", () => {
 });
 
 describe("generateJson", () => {
-  it("posts format + options and returns the raw JSON on success", async () => {
+  it("posts messages and returns stripped JSON on success", async () => {
     const payload = JSON.stringify({ summary: "S", overallRisk: "low", items: [] });
     const fn = mockFetchOnce(() => ({
       ok: true,
-      json: async () => ({ response: payload, eval_count: 42 }),
+      json: async () => ({
+        choices: [{ message: { content: payload } }],
+        usage: { completion_tokens: 42 },
+      }),
     }));
 
     const reply = await generateJson("prompt", { type: "object" });
@@ -60,9 +63,42 @@ describe("generateJson", () => {
 
     const call = fn.mock.calls[0] as unknown as [string, { body: string }];
     const body = JSON.parse(call[1].body);
-    expect(body.format).toEqual({ type: "object" });
+    // Schema is embedded in the prompt; check it contains the original prompt text
+    expect(body.messages[0].role).toBe("user");
+    expect(body.messages[0].content).toContain("prompt");
+    expect(body.messages[0].content).toContain("JSON Schema");
     expect(body.stream).toBe(false);
-    expect(body.options).toMatchObject({ temperature: 0.2, num_predict: 2048 });
+    expect(body.response_format).toBeUndefined();
+    expect(body.temperature).toBe(0.2);
+    expect(body.max_tokens).toBe(2048);
+  });
+
+  it("strips <think> blocks from the response", async () => {
+    const payload = '{"ok":true}';
+    mockFetchOnce(() => ({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: `<think>reasoning here</think>\n${payload}` } }],
+        usage: { completion_tokens: 10 },
+      }),
+    }));
+    const reply = await generateJson("p", {});
+    expect(reply.ok).toBe(true);
+    expect(reply.raw).toBe(payload);
+  });
+
+  it("strips markdown json fences from the response", async () => {
+    const payload = '{"ok":true}';
+    mockFetchOnce(() => ({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: "```json\n" + payload + "\n```" } }],
+        usage: { completion_tokens: 10 },
+      }),
+    }));
+    const reply = await generateJson("p", {});
+    expect(reply.ok).toBe(true);
+    expect(reply.raw).toBe(payload);
   });
 
   it("degrades to ok:false on a non-2xx response", async () => {
@@ -72,7 +108,7 @@ describe("generateJson", () => {
     expect(reply.raw).toBe("");
   });
 
-  it("never throws — a network error resolves to ok:false", async () => {
+  it("never throws - a network error resolves to ok:false", async () => {
     mockFetchOnce(() => {
       throw new Error("ECONNREFUSED");
     });
@@ -85,7 +121,10 @@ describe("generate", () => {
   it("returns sanitized text on success", async () => {
     mockFetchOnce(() => ({
       ok: true,
-      json: async () => ({ response: "Salom dunyo", eval_count: 3 }),
+      json: async () => ({
+        choices: [{ message: { content: "Salom dunyo" } }],
+        usage: { completion_tokens: 3 },
+      }),
     }));
     const reply = await generate("hi");
     expect(reply.ok).toBe(true);

@@ -14,33 +14,45 @@ const PRIORITY_TONE: Record<TaskPriority, TagTone> = {
 export interface KanbanColumn {
   id: string;
   label: string;
+  accent?: string;
 }
 
-/**
- * Status-board over the `.kanban` classes (ported from chrome.jsx). Cards are
- * deep-links (read-first; drag-drop lands with the backend).
- */
 export function Kanban({
   columns,
   tasks,
   usersById,
   statusOf,
   href,
+  extraMeta,
 }: {
   columns: KanbanColumn[];
   tasks: Task[];
   usersById: Record<string, User>;
   statusOf: (t: Task) => string;
   href: (t: Task) => string;
+  extraMeta?: (t: Task) => React.ReactNode;
 }) {
   return (
     <div className="kanban">
       {columns.map((col) => {
         const items = tasks.filter((t) => statusOf(t) === col.id);
         return (
-          <div key={col.id} className="kanban__col">
+          <div
+            key={col.id}
+            className="kanban__col"
+            style={col.accent ? { borderTopColor: col.accent, borderTopWidth: 2 } : undefined}
+          >
             <div className="kanban__head">
-              <span className="kanban__title">{col.label}</span>
+              <span className="kanban__title">
+                {col.accent && (
+                  <span
+                    className="dot-status"
+                    style={{ background: col.accent }}
+                    aria-hidden="true"
+                  />
+                )}
+                {col.label}
+              </span>
               <span className="kanban__count">{items.length}</span>
             </div>
             <div className="kanban__list">
@@ -60,6 +72,7 @@ export function Kanban({
                       <Tag tone={PRIORITY_TONE[t.priority]}>{t.priority}</Tag>
                     </div>
                     <div className="k-card__title">{t.title}</div>
+                    {extraMeta && <div className="k-card__meta">{extraMeta(t)}</div>}
                     <div className="k-card__meta">
                       <span className="cell-sub tabular">{t.due}</span>
                       <Avatar initials={u.avatar} name={u.name} />

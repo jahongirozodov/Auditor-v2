@@ -13,7 +13,9 @@ import { addAuditEvidence, deleteAuditEvidence } from "@/lib/actions/evidence";
 import type { Audit, AuditEvidenceView } from "@/lib/types/entities";
 
 function fmtSize(b: number): string {
-  return b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
+  return b >= 1048576
+    ? `${(b / 1048576).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(b / 1024))} KB`;
 }
 
 const ERROR_KEY: Record<string, string> = {
@@ -86,7 +88,12 @@ export function Files({ a, evidence, canAdd, currentUserId }: Props) {
           </span>
         </div>
         {canAdd && (
-          <Button size="sm" variant="primary" icon={<Plus size={14} />} onClick={() => setOpen(true)}>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Plus size={14} />}
+            onClick={() => setOpen(true)}
+          >
             {t("evAdd")}
           </Button>
         )}
@@ -110,7 +117,10 @@ export function Files({ a, evidence, canAdd, currentUserId }: Props) {
                     <div className="tile__name font-mono">{ev.filename}</div>
                     <div className="tile__meta">{fmtSize(ev.sizeBytes)}</div>
                     {ev.comment && (
-                      <div className="cell-sub" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.4 }}>
+                      <div
+                        className="cell-sub"
+                        style={{ fontSize: 11, marginTop: 4, lineHeight: 1.4 }}
+                      >
                         {ev.comment}
                       </div>
                     )}

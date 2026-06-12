@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { Audit, AuditStatus, SeverityCounts, TaskCounts } from "@/lib/types/entities";
+import type { RoleCode } from "@/lib/types/roles";
 
 type Row = {
   id: string;
@@ -68,3 +69,17 @@ export const getAuditsByOrg = cache(
   async (orgId: string): Promise<Audit[]> =>
     (await prisma.audit.findMany({ where: { orgId }, include: { members: true } })).map(toAudit),
 );
+
+/** Audits visible to a user based on their role. Used for scoped UI data. */
+export const getScopedAudits = cache(async (userId: string, role: RoleCode): Promise<Audit[]> => {
+  if (role === "super") return getAudits();
+  const where =
+    role === "head" || role === "chief"
+      ? { members: { some: { userId } } }
+      : role === "lead"
+        ? { leaderId: userId }
+        : { members: { some: { userId } } };
+  return (
+    await prisma.audit.findMany({ where, include: { members: true }, orderBy: { code: "desc" } })
+  ).map(toAudit);
+});

@@ -44,7 +44,11 @@ describe("GET /agent/vulnerabilities/[id]/evidences", () => {
     const res = await get();
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.evidences[0]).toMatchObject({ filename: "s.png", kind: "screenshot", sizeBytes: 10 });
+    expect(body.evidences[0]).toMatchObject({
+      filename: "s.png",
+      kind: "screenshot",
+      sizeBytes: 10,
+    });
   });
 
   it("404s when the finding isn't in the token's audit", async () => {

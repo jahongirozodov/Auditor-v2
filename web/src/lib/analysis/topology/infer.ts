@@ -57,8 +57,7 @@ export function segmentForIp(ip: string): string {
   if (!m) return "Ichki tarmoq";
   const a = Number(m[1]);
   const b = Number(m[2]);
-  const isPrivate =
-    a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  const isPrivate = a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
   if (!isPrivate) return "Tashqi";
   if (a === 10 && b === 0) return "Perimetr";
   if (a === 10 && (b === 10 || b === 20)) return "DMZ";

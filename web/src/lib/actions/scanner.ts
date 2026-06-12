@@ -42,7 +42,8 @@ export async function uploadScannerFile(
   const { filename, content, auditId, taskId } = parsed.data;
 
   const { userId } = await requireSession();
-  if (!(await requirePermission(userId, "scanner.import"))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "scanner.import")))
+    return { ok: false, error: "forbidden" };
 
   const sizeBytes = Buffer.byteLength(content, "utf8");
   if (sizeBytes > MAX_BYTES) return { ok: false, error: "too_large" };
@@ -135,7 +136,8 @@ export async function reanalyzeScanner(input: {
   if (!uploadId.success) return { ok: false, error: "invalid" };
 
   const { userId } = await requireSession();
-  if (!(await requirePermission(userId, "scanner.import"))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "scanner.import")))
+    return { ok: false, error: "forbidden" };
 
   const upload = await prisma.scannerUpload.findUnique({ where: { id: uploadId.data } });
   if (!upload) return { ok: false, error: "not_found" };
@@ -182,7 +184,8 @@ export async function createScannerDrafts(
   const { uploadId, findingIndices } = parsed.data;
 
   const { userId } = await requireSession();
-  if (!(await requirePermission(userId, "scanner.import"))) return { ok: false, error: "forbidden" };
+  if (!(await requirePermission(userId, "scanner.import")))
+    return { ok: false, error: "forbidden" };
 
   const upload = await prisma.scannerUpload.findUnique({ where: { id: uploadId } });
   if (!upload) return { ok: false, error: "not_found" };

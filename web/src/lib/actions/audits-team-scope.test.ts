@@ -5,7 +5,10 @@ import type { RoleCode } from "@/lib/types/roles";
 const h = vi.hoisted(() => ({
   session: { userId: "actor1", role: "chief" as RoleCode },
   permission: true,
-  audit: { status: "planning", leaderId: "other-user" } as { status: string; leaderId: string } | null,
+  audit: { status: "planning", leaderId: "other-user" } as {
+    status: string;
+    leaderId: string;
+  } | null,
 }));
 
 vi.mock("@/lib/session", () => ({

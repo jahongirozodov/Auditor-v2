@@ -46,7 +46,9 @@ describe("fetchAuditLogs scope", () => {
   it("scopes non-admins to their own actions", async () => {
     h.role = "t1";
     await fetchAuditLogs({});
-    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ userId: "u1" }) }));
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ userId: "u1" }) }),
+    );
   });
 
   it("does not force userId for admins, honours actorId", async () => {

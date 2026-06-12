@@ -49,7 +49,9 @@ describe("POST /agent/evidences/upload", () => {
     expect(await res.json()).toMatchObject({ ok: true, id: "ev1" });
     expect(mock._tx.fileStorage.create).toHaveBeenCalledOnce();
     expect(mock._tx.findingEvidence.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ findingId: "F-2026-0001", kind: "screenshot" }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ findingId: "F-2026-0001", kind: "screenshot" }),
+      }),
     );
     expect(mock._tx.finding.update).toHaveBeenCalledWith({
       where: { id: "F-2026-0001" },

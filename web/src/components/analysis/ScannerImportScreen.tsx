@@ -5,14 +5,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Activity,
-  Boxes,
   Bug,
   Globe,
   History,
   Layers,
   Link,
   Network,
-  Plus,
   RefreshCw,
   Server,
   Sparkles,
@@ -25,15 +23,15 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { Modal } from "@/components/ui/Modal";
 import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { SCANNER_LABELS } from "@/lib/analysis/scanner";
 import type { ScannerNormalization } from "@/lib/analysis/scanner";
-import { uploadScannerFile, reanalyzeScanner, createScannerDrafts } from "@/lib/actions/scanner";
+import { uploadScannerFile, reanalyzeScanner } from "@/lib/actions/scanner";
 import { ScannerAiResult } from "./ScannerAiResult";
 import type { Audit, Task, ScanImportRowView, ScannerUploadView } from "@/lib/types/entities";
 
-const SCANNER_ORDER = ["nessus", "openvas", "nmap", "zap", "burp", "universal"] as const;
-type ScannerKey = (typeof SCANNER_ORDER)[number];
+type ScannerKey = "nessus" | "openvas" | "nmap" | "zap" | "burp" | "universal";
 
 const SCANNER_ICON: Record<ScannerKey, LucideIcon> = {
   nessus: Bug,
@@ -42,15 +40,6 @@ const SCANNER_ICON: Record<ScannerKey, LucideIcon> = {
   zap: Globe,
   burp: Globe,
   universal: Layers,
-};
-
-const SCANNER_COLOR: Record<ScannerKey, "warning" | "info" | "ghost"> = {
-  nessus: "warning",
-  openvas: "warning",
-  nmap: "info",
-  zap: "info",
-  burp: "info",
-  universal: "ghost",
 };
 
 const FORMAT_TAGS = ["Nessus", "OpenVAS", "Nmap", "OWASP ZAP", "Burp Suite", "Custom CSV"];
@@ -116,12 +105,6 @@ export function ScannerImportScreen({
   const [auditId, setAuditId] = useState(audits[0]?.id ?? "");
   const [taskId, setTaskId] = useState("");
   const auditTasks = tasks.filter((tk) => tk.auditId === auditId);
-
-  // Count imports per scanner type for badge display
-  const countByScanner: Record<string, number> = {};
-  for (const imp of imports) {
-    countByScanner[imp.scanner] = (countByScanner[imp.scanner] ?? 0) + 1;
-  }
 
   const tabs = [
     { id: "scanner", label: tNav("scanner"), icon: <Bug size={14} /> },
@@ -189,19 +172,6 @@ export function ScannerImportScreen({
       setAiPending(false);
       router.refresh();
     }
-  }
-
-  function createDrafts() {
-    if (!active) return;
-    startTransition(async () => {
-      const res = await createScannerDrafts({ uploadId: active.uploadId });
-      if (res.ok) {
-        toast(t("draftsCreated", { n: res.ids?.length ?? 0 }), "success");
-        router.refresh();
-      } else {
-        toast(t("failed"), "danger");
-      }
-    });
   }
 
   return (
@@ -327,10 +297,16 @@ export function ScannerImportScreen({
                           <td>
                             <span
                               className={
-                                imp.status === "done" ? "tag tag--success" : "tag tag--warning"
+                                imp.status === "analyzed" || imp.status === "imported"
+                                  ? "tag tag--success"
+                                  : "tag tag--warning"
                               }
                             >
-                              {imp.status === "done" ? "Bajarildi" : "Jarayonda"}
+                              {imp.status === "analyzed"
+                                ? "Bajarildi"
+                                : imp.status === "imported"
+                                  ? "Yaratildi"
+                                  : "Jarayonda"}
                             </span>
                           </td>
                           <td className="cell-sub">{relTime(imp.createdAt)}</td>
@@ -344,48 +320,9 @@ export function ScannerImportScreen({
           </Panel>
         </div>
 
-        {/* RIGHT — supported formats + AI card */}
+        {/* RIGHT — AI card */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <Panel title={t("formatsTitle")} icon={<Boxes size={15} />} flush>
-            {SCANNER_ORDER.map((key, i) => {
-              const Icon = SCANNER_ICON[key];
-              const color = SCANNER_COLOR[key];
-              const label = SCANNER_LABELS[key];
-              const count = countByScanner[key];
-              const iconStyle =
-                color === "warning"
-                  ? { color: "var(--status-warning-fg)" }
-                  : color === "info"
-                    ? { color: "var(--status-info-fg)" }
-                    : { color: "var(--text-muted)" };
-              return (
-                <div
-                  key={key}
-                  style={{
-                    padding: "10px 14px",
-                    borderBottom:
-                      i < SCANNER_ORDER.length - 1 ? "1px solid var(--border-color)" : "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  <div className="stat__icon" style={iconStyle}>
-                    <Icon size={14} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
-                      {label.name}
-                    </div>
-                    <div className="cell-sub font-mono">{label.desc}</div>
-                  </div>
-                  {count ? <span className="tag tag--ghost">{count}</span> : null}
-                </div>
-              );
-            })}
-          </Panel>
-
-          <div className="ai-card">
+          <div className="ai-card" style={{ flex: 1 }}>
             <div className="ai-card__inner">
               <div className="ai-card__head">
                 <div className="ai-card__icon">
@@ -398,15 +335,6 @@ export function ScannerImportScreen({
 
               {active ? (
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    icon={<Plus size={13} />}
-                    onClick={createDrafts}
-                    disabled={pending || aiPending}
-                  >
-                    {t("createDrafts", { n: ai?.findings.length ?? 0 })}
-                  </Button>
                   <Button
                     size="sm"
                     variant="soft"
@@ -455,33 +383,23 @@ export function ScannerImportScreen({
         </p>
         <div style={{ display: "grid", gap: 14 }}>
           <Field label={t("targetAudit")} htmlFor="scn-audit">
-            <select
+            <Select
               id="scn-audit"
-              className="select"
               value={auditId}
-              onChange={(e) => changeAudit(e.target.value)}
-            >
-              {audits.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.code} — {a.title}
-                </option>
-              ))}
-            </select>
+              onChange={changeAudit}
+              options={audits.map((a) => ({ value: a.id, label: `${a.code} — ${a.title}` }))}
+            />
           </Field>
           <Field label={t("targetTask")} htmlFor="scn-task">
-            <select
+            <Select
               id="scn-task"
-              className="select"
               value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-            >
-              {auditTasks.length === 0 ? <option value="">{t("noTasks")}</option> : null}
-              {auditTasks.map((tk) => (
-                <option key={tk.id} value={tk.id}>
-                  {tk.id} — {tk.title}
-                </option>
-              ))}
-            </select>
+              onChange={setTaskId}
+              options={[
+                ...(auditTasks.length === 0 ? [{ value: "", label: t("noTasks") }] : []),
+                ...auditTasks.map((tk) => ({ value: tk.id, label: `${tk.id} — ${tk.title}` })),
+              ]}
+            />
           </Field>
         </div>
       </Modal>

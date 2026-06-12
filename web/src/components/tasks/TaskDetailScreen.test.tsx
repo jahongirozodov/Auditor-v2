@@ -6,9 +6,13 @@ import { TaskDetailScreen } from "./TaskDetailScreen";
 import { AUDITS, FINDINGS, TASKS, USERS } from "@/lib/fixtures";
 import type { RoleCode } from "@/lib/types/roles";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/lib/actions/tasks", () => ({
   taskTransition: vi.fn(async () => ({ ok: true })),
   reassignTask: vi.fn(async () => ({ ok: true })),
+}));
+vi.mock("@/lib/actions/findings", () => ({
+  createFinding: vi.fn(async () => ({ ok: true, id: "F-test" })),
 }));
 
 const usersById = Object.fromEntries(USERS.map((u) => [u.id, u]));

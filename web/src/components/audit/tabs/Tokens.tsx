@@ -38,7 +38,12 @@ export function Tokens({ audit, tokens, usersById, canIssue }: TokensTabProps) {
     <div>
       {canIssue ? (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-          <Button size="sm" variant="primary" icon={<Plus size={14} />} onClick={() => setOpen(true)}>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Plus size={14} />}
+            onClick={() => setOpen(true)}
+          >
             {t("addToken")}
           </Button>
         </div>

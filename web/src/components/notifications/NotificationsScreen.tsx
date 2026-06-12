@@ -69,7 +69,10 @@ export function NotificationsScreen({ items: initial }: { items: NotifRow[] }) {
                   onClick={() => handleRead(item.id)}
                   style={{ color: "inherit", textDecoration: "none" }}
                 >
-                  {t(notifTitleKey(item.type as Parameters<typeof notifTitleKey>[0]), notifValues(item.params))}
+                  {t(
+                    notifTitleKey(item.type as Parameters<typeof notifTitleKey>[0]),
+                    notifValues(item.params),
+                  )}
                 </Link>
               </li>
             ))}

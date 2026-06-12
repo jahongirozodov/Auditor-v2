@@ -18,11 +18,21 @@ const DATA: AuditReportData = {
     tasks: { total: 26, done: 24, in_progress: 1, blocked: 0, new: 1 },
   },
   members: [{ name: "Dilshoda Rasulova", title: "Tahlilchi" }],
-  findings: [{ title: "SQL injection", severity: "critical", asset: "web-01", cwe: "CWE-89", status: "approved" }],
+  findings: [
+    {
+      title: "SQL injection",
+      severity: "critical",
+      asset: "web-01",
+      cwe: "CWE-89",
+      status: "approved",
+    },
+  ],
   ai: {
     executiveSummary: "Audit yuqori xavfli.",
     overallRisk: "high",
-    topRisks: [{ title: "SQLi", severity: "critical", why: "ochiq", recommendation: "parametrlash" }],
+    topRisks: [
+      { title: "SQLi", severity: "critical", why: "ochiq", recommendation: "parametrlash" },
+    ],
     remediationPlan: [{ priority: "high", action: "Patch qiling" }],
     kpiNote: "KPI yaxshi.",
   },

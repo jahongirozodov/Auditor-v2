@@ -12,15 +12,13 @@ const push = vi.fn();
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 
-const { uploadScannerFile, reanalyzeScanner, createScannerDrafts } = vi.hoisted(() => ({
+const { uploadScannerFile, reanalyzeScanner } = vi.hoisted(() => ({
   uploadScannerFile: vi.fn(),
   reanalyzeScanner: vi.fn(),
-  createScannerDrafts: vi.fn(),
 }));
 vi.mock("@/lib/actions/scanner", () => ({
   uploadScannerFile,
   reanalyzeScanner,
-  createScannerDrafts,
 }));
 
 const IMPORTS: ScanImportRowView[] = [
@@ -30,7 +28,7 @@ const IMPORTS: ScanImportRowView[] = [
     scanner: "nessus",
     auditCode: "AUD-2026-014",
     severityAgg: { critical: 3, high: 5, medium: 8, low: 2, info: 1 },
-    status: "done",
+    status: "analyzed",
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
 ];
@@ -96,7 +94,6 @@ beforeEach(() => {
     aiOk: true,
   });
   reanalyzeScanner.mockResolvedValue({ ok: true, normalization: NORM });
-  createScannerDrafts.mockResolvedValue({ ok: true, ids: ["F-2026-0001"] });
 });
 
 describe("ScannerImportScreen", () => {
@@ -120,6 +117,11 @@ describe("ScannerImportScreen", () => {
     expect(screen.getByText("AUD-2026-014")).toBeInTheDocument();
   });
 
+  it("shows 'Bajarildi' tag for analyzed imports", () => {
+    renderScreen(IMPORTS);
+    expect(screen.getByText("Bajarildi")).toBeInTheDocument();
+  });
+
   it("hydrates the AI normalization panel from latestAi (dedup win + cards)", () => {
     renderScreen([], LATEST, NORM);
     expect(screen.getByText("Takrorlanuvchilar birlashtirildi.")).toBeInTheDocument();
@@ -133,12 +135,6 @@ describe("ScannerImportScreen", () => {
     renderScreen([], LATEST, NORM);
     await userEvent.click(screen.getByRole("button", { name: /AI normalizatsiya/ }));
     await waitFor(() => expect(reanalyzeScanner).toHaveBeenCalledWith({ uploadId: "su-1" }));
-  });
-
-  it("creates drafts from the active upload", async () => {
-    renderScreen([], LATEST, NORM);
-    await userEvent.click(screen.getByRole("button", { name: /finding yaratish/ }));
-    expect(createScannerDrafts).toHaveBeenCalledWith({ uploadId: "su-1" });
   });
 
   it("rejects files larger than 10 MB with a toast", async () => {

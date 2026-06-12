@@ -234,7 +234,13 @@ describe("submitTaskForReview", () => {
   };
 
   beforeEach(() => {
-    h.task = { id: "T-1", status: "in_progress", assigneeId: "u1", auditId: "AUD-1", due: "2099-12-31" };
+    h.task = {
+      id: "T-1",
+      status: "in_progress",
+      assigneeId: "u1",
+      auditId: "AUD-1",
+      due: "2099-12-31",
+    };
     h.audit = { status: "in_progress", leaderId: "u3", members: [{ userId: "u1" }] };
   });
 

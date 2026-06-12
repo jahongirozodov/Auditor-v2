@@ -1,12 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  assetToKind,
-  ipFromDstPort,
-  isIp,
-  nodeKey,
-  segmentForIp,
-  vendorToKind,
-} from "./infer";
+import { assetToKind, ipFromDstPort, isIp, nodeKey, segmentForIp, vendorToKind } from "./infer";
 
 describe("isIp / nodeKey / ipFromDstPort", () => {
   it("validates IPv4 and normalizes keys", () => {

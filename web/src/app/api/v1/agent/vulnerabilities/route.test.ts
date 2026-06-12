@@ -12,7 +12,16 @@ vi.mock("@/lib/prisma", () => {
   const prisma = {
     finding: {
       findMany: vi.fn(async () => [
-        { id: "F-1", title: "x", severity: "high", status: "new", cvss: 8, asset: "a", taskId: "T-1", evidence: 1 },
+        {
+          id: "F-1",
+          title: "x",
+          severity: "high",
+          status: "new",
+          cvss: 8,
+          asset: "a",
+          taskId: "T-1",
+          evidence: 1,
+        },
       ]),
     },
     auditTokenUsageLog: { create: vi.fn(async () => ({})) },

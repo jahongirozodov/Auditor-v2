@@ -9,8 +9,24 @@ import type { Topology } from "@/lib/types/entities";
 const TOPO: Topology = {
   audit: "AUD-1",
   nodes: [
-    { id: "fw", label: "FW-CORE-01", ip: "10.0.0.1", kind: "firewall", segment: "Perimetr", sev: "critical", findings: 2 },
-    { id: "web", label: "web-01", ip: "10.10.0.5", kind: "web", segment: "DMZ", sev: "high", findings: 1 },
+    {
+      id: "fw",
+      label: "FW-CORE-01",
+      ip: "10.0.0.1",
+      kind: "firewall",
+      segment: "Perimetr",
+      sev: "critical",
+      findings: 2,
+    },
+    {
+      id: "web",
+      label: "web-01",
+      ip: "10.10.0.5",
+      kind: "web",
+      segment: "DMZ",
+      sev: "high",
+      findings: 1,
+    },
   ],
   edges: [{ s: "fw", t: "web", flag: true }],
 };
@@ -30,11 +46,18 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("analyzeTopologyAI", () => {
   it("returns the validated analysis on a well-formed reply", async () => {
-    generateJson.mockResolvedValue({ ok: true, raw: JSON.stringify(analysis()), tokens: 20, latencyMs: 8 });
+    generateJson.mockResolvedValue({
+      ok: true,
+      raw: JSON.stringify(analysis()),
+      tokens: 20,
+      latencyMs: 8,
+    });
     const r = await analyzeTopologyAI(TOPO);
     expect(r.ok).toBe(true);
     expect(r.analysis?.criticalNodes[0].nodeId).toBe("fw");
-    expect(generateJson).toHaveBeenCalledWith(expect.any(String), expect.anything(), { numPredict: 4096 });
+    expect(generateJson).toHaveBeenCalledWith(expect.any(String), expect.anything(), {
+      numPredict: 4096,
+    });
   });
 
   it("skips the model and reports ok:false for an empty graph", async () => {

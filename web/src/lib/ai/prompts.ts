@@ -17,9 +17,16 @@ import type { Topology } from "@/lib/types/entities";
  */
 
 export const BASE =
-  "Sen Auditor kiberxavfsizlik audit platformasining AI yordamchisisan — lokal Ollama, yopiq tarmoq.\nFaqat oʻzbek tilida (lotin yozuvi), rasmiy va aniq yoz. Hech qachon markdown belgilari ishlatma.\nSen \"Auditor AI\" deb atalasan. Qaysi model yoki texnologiyada ishlashing soʻralsa, aniq model nomini aytma — faqat \"Auditor platformasining lokal AI yordamchisi\" deb javob ber.";
+  'Sen Auditor kiberxavfsizlik audit platformasining AI yordamchisisan — lokal Ollama, yopiq tarmoq.\nFaqat oʻzbek tilida (lotin yozuvi), rasmiy va aniq yoz. Hech qachon markdown belgilari ishlatma.\nSen "Auditor AI" deb atalasan. Qaysi model yoki texnologiyada ishlashing soʻralsa, aniq model nomini aytma — faqat "Auditor platformasining lokal AI yordamchisi" deb javob ber.';
 
-export type AiScope = "config" | "scanner" | "topology" | "traffic" | "audit" | "chat";
+export type AiScope =
+  | "config"
+  | "scanner"
+  | "topology"
+  | "topology_enrich"
+  | "traffic"
+  | "audit"
+  | "chat";
 
 /** System prompt per scope. Config/scanner scopes demand strict JSON. */
 export const SYSTEM: Record<AiScope, string> = {
@@ -69,6 +76,27 @@ Faqat JSON obyekt qaytar. Tahlil qil:
 - attackPaths: ehtimoliy hujum yoʻllari — har biri {nodes (id roʻyxati), risk, severity}.
 - segmentationIssues: segmentatsiya/izolyatsiya muammolari (matn roʻyxati).
 - recommendations: umumiy tavsiyalar (matn roʻyxati).`,
+  topology_enrich: `${BASE}
+Sen tarmoq qurilmalarini klassifikatsiya qiluvchi xavfsizlik auditorisan.
+Senga tarmoq topologiyasining nodlari beriladi: har biri id, label (hostname yoki IP), ip, va hozirgi heuristik kind/segment (ular notoʻgʻri boʻlishi mumkin).
+Har bir nod uchun toʻgʻri klassifikatsiya qaytar.
+
+kind mumkin qiymatlari: cloud | firewall | ips | vpn | switch | server | web | db | wifi | endpoint
+segment mumkin qiymatlari: Perimetr | DMZ | Server farm | Ichki tarmoq | Endpoint | Tashqi
+
+Qoidalar:
+- Hostname "fw", "firewall", "asa", "fortigate", "pfsense" → firewall
+- Hostname "web", "http", "nginx", "apache", "www", "portal" → web
+- Hostname "db", "sql", "mysql", "postgres", "maria", "oracle" → db
+- Hostname "sw", "switch", "core-sw", "distribution" → switch
+- Hostname "vpn", "ra-vpn" → vpn
+- Hostname "ids", "ips", "snort", "suricata" → ips
+- IP 10.0.x.x → Perimetr; 10.10.x.x yoki 10.20.x.x → DMZ; 192.168.x.x → Endpoint; tashqi IP → Tashqi
+- aiLabel: qisqa koʻrsatuvchi nom (masalan "Core Firewall", "Web Server 1", "DB Cluster")
+- aiReason: nima sababdan bu klassifikatsiya (1 gap, oʻzbek tilida)
+
+Faqat JSON obyekt qaytar: {"nodes": [{id, kind, segment, aiLabel, aiReason}, ...]}
+Berilgan har bir nodga mos yozuv boʻlsin — hech biri tushib qolmasin.`,
   traffic: `${BASE}
 Sen tarmoq trafigi tahlilchisi xavfsizlik auditorisan. Senga parser natijasi JSON koʻrinishida
 beriladi: anomaliyalar, protokol statistikasi, eng faol manba IP (topTalkers), eng koʻp ishlatilgan
@@ -102,6 +130,36 @@ Tahlil qil:
   chat: `${BASE}
 Auditorlarga findinglar tahlili, remediation reja, executive summary, KPI va hisobot boʻlimlarini tayyorlashda yordam ber. Javobni qisqa va tuzilgan koʻrinishda ber.`,
 };
+
+/**
+ * Recursively lowercase known enum fields so model output like "High" or
+ * "SCAN" still validates against strict Zod enums. Only targets field names
+ * that map to enum types — leaves human-readable strings untouched.
+ */
+const ENUM_FIELDS = new Set([
+  "severity",
+  "overallRisk",
+  "vendor",
+  "attackType",
+  "confidence",
+  "priority",
+  "level",
+  "risk",
+  "flag",
+]);
+
+function normalizeEnumFields(obj: unknown): unknown {
+  if (Array.isArray(obj)) return obj.map(normalizeEnumFields);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
+        k,
+        ENUM_FIELDS.has(k) && typeof v === "string" ? v.toLowerCase() : normalizeEnumFields(v),
+      ]),
+    );
+  }
+  return obj;
+}
 
 const VENDOR_ENUM = z.enum([
   "cisco_ios",
@@ -156,7 +214,7 @@ export const CONFIG_JSON_SCHEMA = z.toJSONSchema(ConfigAnalysisSchema);
 export function parseConfigAnalysis(raw: string | null | undefined): ConfigAiAnalysis | null {
   if (!raw) return null;
   try {
-    const parsed = ConfigAnalysisSchema.safeParse(JSON.parse(raw));
+    const parsed = ConfigAnalysisSchema.safeParse(normalizeEnumFields(JSON.parse(raw)));
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -220,7 +278,7 @@ export function parseScannerNormalization(
 ): ScannerAiNormalization | null {
   if (!raw) return null;
   try {
-    const parsed = ScannerNormalizationSchema.safeParse(JSON.parse(raw));
+    const parsed = ScannerNormalizationSchema.safeParse(normalizeEnumFields(JSON.parse(raw)));
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -261,7 +319,13 @@ export const TopologyAnalysisSchema = z.object({
     )
     .default([]),
   attackPaths: z
-    .array(z.object({ nodes: z.array(z.string()).default([]), risk: z.string().default(""), severity: TOPO_RISK }))
+    .array(
+      z.object({
+        nodes: z.array(z.string()).default([]),
+        risk: z.string().default(""),
+        severity: TOPO_RISK,
+      }),
+    )
     .default([]),
   segmentationIssues: z.array(z.string()).default([]),
   recommendations: z.array(z.string()).default([]),
@@ -272,12 +336,10 @@ export type TopologyAiAnalysis = TopologyAnalysis;
 
 export const TOPOLOGY_JSON_SCHEMA = z.toJSONSchema(TopologyAnalysisSchema);
 
-export function parseTopologyAnalysis(
-  raw: string | null | undefined,
-): TopologyAiAnalysis | null {
+export function parseTopologyAnalysis(raw: string | null | undefined): TopologyAiAnalysis | null {
   if (!raw) return null;
   try {
-    const parsed = TopologyAnalysisSchema.safeParse(JSON.parse(raw));
+    const parsed = TopologyAnalysisSchema.safeParse(normalizeEnumFields(JSON.parse(raw)));
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -345,7 +407,7 @@ export const TRAFFIC_JSON_SCHEMA = z.toJSONSchema(TrafficAnalysisSchema);
 export function parseTrafficAnalysis(raw: string | null | undefined): TrafficAiAnalysis | null {
   if (!raw) return null;
   try {
-    const parsed = TrafficAnalysisSchema.safeParse(JSON.parse(raw));
+    const parsed = TrafficAnalysisSchema.safeParse(normalizeEnumFields(JSON.parse(raw)));
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -413,7 +475,7 @@ export const AUDIT_JSON_SCHEMA = z.toJSONSchema(AuditAnalysisSchema);
 export function parseAuditAnalysis(raw: string | null | undefined): AuditAiAnalysis | null {
   if (!raw) return null;
   try {
-    const parsed = AuditAnalysisSchema.safeParse(JSON.parse(raw));
+    const parsed = AuditAnalysisSchema.safeParse(normalizeEnumFields(JSON.parse(raw)));
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -423,4 +485,59 @@ export function parseAuditAnalysis(raw: string | null | undefined): AuditAiAnaly
 /** Build the analyzer prompt from a gathered audit context object. */
 export function buildAuditPrompt(context: unknown): string {
   return `Audit konteksti:\n${JSON.stringify(context)}`;
+}
+
+// ---------- Topology enrichment ----------
+
+const NODE_KIND_ENUM = z.enum([
+  "cloud",
+  "firewall",
+  "ips",
+  "vpn",
+  "switch",
+  "server",
+  "web",
+  "db",
+  "wifi",
+  "endpoint",
+]);
+
+const EnrichedNodePatchSchema = z.object({
+  id: z.string(),
+  kind: NODE_KIND_ENUM,
+  segment: z.string().default("Ichki tarmoq"),
+  aiLabel: z.string().default(""),
+  aiReason: z.string().default(""),
+});
+
+const TopologyEnrichmentOutputSchema = z.object({
+  nodes: z.array(EnrichedNodePatchSchema).default([]),
+});
+
+export type EnrichedNodePatchAi = z.infer<typeof EnrichedNodePatchSchema>;
+
+export const TOPOLOGY_ENRICH_JSON_SCHEMA = z.toJSONSchema(TopologyEnrichmentOutputSchema);
+
+export function parseTopologyEnrichment(
+  raw: string | null | undefined,
+): EnrichedNodePatchAi[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = TopologyEnrichmentOutputSchema.safeParse(normalizeEnumFields(JSON.parse(raw)));
+    return parsed.success ? parsed.data.nodes : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Compact node list for the enrichment prompt. */
+export function buildEnrichmentPrompt(topology: Topology): string {
+  const nodes = topology.nodes.map((n) => ({
+    id: n.id,
+    label: n.label,
+    ip: n.ip || undefined,
+    currentKind: n.kind,
+    currentSegment: n.segment,
+  }));
+  return `Tarmoq nodlari (${nodes.length}):\n${JSON.stringify(nodes)}`;
 }

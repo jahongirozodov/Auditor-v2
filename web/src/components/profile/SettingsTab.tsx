@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, Globe2, LogOut, Settings } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { Tag } from "@/components/ui/Tag";
@@ -67,13 +68,11 @@ export function SettingsTab({ user }: { user: ProfileUser }) {
           >
             <label className="field">
               <span className="field__label">{t("fieldLang")}</span>
-              <select className="select" defaultValue="langUz" disabled>
-                {LANGS.map((key) => (
-                  <option key={key} value={key}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
+              <Select
+                value="langUz"
+                disabled
+                options={LANGS.map((key) => ({ value: key, label: t(key) }))}
+              />
             </label>
           </div>
         </section>

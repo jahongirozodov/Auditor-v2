@@ -20,7 +20,9 @@ const ANOMALIES: TrafficAnomaly[] = [
 
 describe("TrafficGraph", () => {
   it("renders one node per host with IP labels and the legend", () => {
-    const { container } = render(<TrafficGraph conversations={CONVERSATIONS} anomalies={ANOMALIES} />);
+    const { container } = render(
+      <TrafficGraph conversations={CONVERSATIONS} anomalies={ANOMALIES} />,
+    );
     const graph = container.querySelector('svg[role="img"]') as SVGElement;
     // 4 unique hosts → 4 node circles (scoped to the graph, not the panel icon).
     expect(graph.querySelectorAll("circle").length).toBe(4);

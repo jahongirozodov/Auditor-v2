@@ -10,8 +10,17 @@ import { FindingsScreen } from "@/components/findings/FindingsScreen";
 
 export default async function FindingsPage() {
   const { userId, role } = await requireSession();
-  const [findings, usersById, approvals, remediations, audits, tasks, evidenceByFindingId, orgs, canCreate] =
-    await Promise.all([
+  const [
+    findings,
+    usersById,
+    approvals,
+    remediations,
+    audits,
+    tasks,
+    evidenceByFindingId,
+    orgs,
+    canCreate,
+  ] = await Promise.all([
     getScopedFindings(userId, role),
     getUsersById(),
     getFindingApprovals(),

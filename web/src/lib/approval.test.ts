@@ -49,6 +49,7 @@ describe("projectCurrentOf", () => {
     expect(projectCurrentOf("project_draft", null)).toBe("new");
     expect(projectCurrentOf("project_pending", null)).toBe("head"); // first approver after submit
     expect(projectCurrentOf("project_pending", "dept")).toBe("dept");
+    expect(projectCurrentOf("head_approved", null)).toBe("dept"); // head done, dept pending
     expect(projectCurrentOf("returned", null)).toBe("returned");
     expect(projectCurrentOf("assigning", null)).toBeNull();
     expect(projectCurrentOf("in_progress", null)).toBeNull();
