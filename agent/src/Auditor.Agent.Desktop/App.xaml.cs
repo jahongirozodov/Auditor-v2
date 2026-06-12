@@ -2,25 +2,25 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using Auditor.Agent.Core;
-using Auditor.Agent.Desktop.ViewModels;
+using Auditor.Agent.Desktop.LocalApi;
 
 namespace Auditor.Agent.Desktop;
 
 public partial class App : Application
 {
     private AgentService? _service;
+    private LocalApiHost? _api;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-
         var settings = LoadSettings();
         _service = new AgentService(settings);
-        var shell = new ShellViewModel(_service);
-        new MainWindow { DataContext = shell }.Show();
+        _api = new LocalApiHost(_service);
+        await _api.StartAsync();
+        new MainWindow(_api.Port).Show();
     }
 
-    /// <summary>appsettings.json next to the EXE overrides defaults (e.g. BaseUrl).</summary>
     private static AgentSettings LoadSettings()
     {
         try
@@ -33,13 +33,15 @@ public partial class App : Application
                 if (loaded is not null) return loaded;
             }
         }
-        catch { /* fall back to defaults */ }
+        catch { }
         return new AgentSettings();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _service?.Dispose();
+        try { _api?.StopAsync().GetAwaiter().GetResult(); } catch { }
+        try { _service?.Dispose(); } catch { }
         base.OnExit(e);
+        Environment.Exit(0);
     }
 }

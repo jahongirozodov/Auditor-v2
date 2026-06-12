@@ -8,6 +8,13 @@
         WindowStartupLocation="CenterScreen"
         Background="#080e1a">
 
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="0"
+                      ResizeBorderThickness="4"
+                      CaptionHeight="32"
+                      CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+
     <Window.Resources>
         <!-- Standard title-bar button -->
         <Style x:Key="TitleBarBtn" TargetType="Button">
@@ -80,8 +87,7 @@
         <Border Grid.Row="0"
                 Background="#080e1a"
                 BorderBrush="#1a2540"
-                BorderThickness="0,0,0,1"
-                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                BorderThickness="0,0,0,1">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
                     <Path Data="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
@@ -102,6 +108,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Style="{StaticResource TitleBarBtn}"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
                             Click="Minimize_Click"
                             ToolTip="Kichraytirish">
                         <Path Data="M4 12 H20" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
@@ -109,6 +116,7 @@
                               Width="12" Height="12" Stretch="Uniform"/>
                     </Button>
                     <Button Style="{StaticResource TitleBarBtn}"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
                             Click="Maximize_Click"
                             ToolTip="Kattalashtirish">
                         <Path Data="M4 4 H20 V20 H4 Z" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
@@ -117,6 +125,7 @@
                               Width="12" Height="12" Stretch="Uniform"/>
                     </Button>
                     <Button Style="{StaticResource TitleBarCloseBtn}"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
                             Click="Close_Click"
                             ToolTip="Yopish">
                         <Path Data="M6 6 L18 18 M18 6 L6 18"
