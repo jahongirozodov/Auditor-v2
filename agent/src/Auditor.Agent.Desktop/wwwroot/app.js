@@ -29,7 +29,11 @@ function esc(s) {
 
 // ── Open in browser ────────────────────────────────────────────────────
 async function openInBrowser() {
-  await api.post('/api/open-browser', {});
+  const r = await api.post('/api/open-browser', {});
+  if (r.ok !== false) {
+    $('l-browser')?.remove();
+    $('browser-btn')?.remove();
+  }
 }
 
 // ── API ────────────────────────────────────────────────────────────────
