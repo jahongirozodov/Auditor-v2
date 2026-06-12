@@ -45,6 +45,28 @@ export const getTaskById = cache(async (id: string): Promise<Task | undefined> =
   return t ? toTask(t) : undefined;
 });
 
+/** Returns the task only if userId has access per their role. Returns undefined → 404. */
+export const getTaskByIdScoped = cache(
+  async (id: string, userId: string, role: RoleCode): Promise<Task | undefined> => {
+    const t = await prisma.task.findUnique({
+      where: { id },
+      include: { audit: { select: { leaderId: true, members: { select: { userId: true } } } } },
+    });
+    if (!t) return undefined;
+    if (role === "super" || role === "head") return toTask(t);
+    const memberIds = t.audit.members.map((m) => m.userId);
+    if (role === "chief") {
+      if (!memberIds.includes(userId)) return undefined;
+    } else if (role === "lead") {
+      if (t.audit.leaderId !== userId) return undefined;
+    } else {
+      // t1 — only own tasks
+      if (t.assigneeId !== userId) return undefined;
+    }
+    return toTask(t);
+  },
+);
+
 export const getTasksByAudit = cache(
   async (auditId: string): Promise<Task[]> =>
     (await prisma.task.findMany({ where: { auditId }, orderBy: { id: "asc" } })).map(toTask),
@@ -60,13 +82,10 @@ export const getMyTasks = cache(
 // Tasks visible on the assignment board, scoped server-side:
 // super/head see every task; everyone else only tasks in audits they lead
 // (mirrors getCreatableTaskAudits — "audit-group leader distributes tasks").
-export const getAssignableTasks = cache(
-  async (userId: string, role: RoleCode): Promise<Task[]> => {
-    const where =
-      role === "super" || role === "head" ? {} : { audit: { leaderId: userId } };
-    return (await prisma.task.findMany({ where, orderBy: { id: "asc" } })).map(toTask);
-  },
-);
+export const getAssignableTasks = cache(async (userId: string, role: RoleCode): Promise<Task[]> => {
+  const where = role === "super" || role === "head" ? {} : { audit: { leaderId: userId } };
+  return (await prisma.task.findMany({ where, orderBy: { id: "asc" } })).map(toTask);
+});
 
 export const getCreatableTaskAudits = cache(
   async (userId: string, role: RoleCode): Promise<Audit[]> => {
@@ -105,16 +124,31 @@ export const getCreatableTaskAudits = cache(
   },
 );
 
+export interface TaskHistoryFile {
+  id: string;
+  filename: string;
+  sizeBytes: number;
+  mimeType: string;
+}
+
 export interface TaskHistoryEntry {
   who: string;
   action: string;
   time: string;
   comment?: string;
+  files?: TaskHistoryFile[];
 }
 
 export const getTaskStatusHistory = cache(async (taskId: string): Promise<TaskHistoryEntry[]> => {
   const rows = await prisma.taskStatusHistory.findMany({
     where: { taskId },
+    include: {
+      submissionFiles: {
+        include: {
+          file: { select: { id: true, filename: true, sizeBytes: true, mimeType: true } },
+        },
+      },
+    },
     orderBy: { createdAt: "asc" },
   });
   return rows.map((r) => ({
@@ -122,5 +156,13 @@ export const getTaskStatusHistory = cache(async (taskId: string): Promise<TaskHi
     action: `${r.fromStatus} → ${r.toStatus}`,
     time: r.createdAt.toISOString().slice(0, 16).replace("T", " "),
     comment: r.comment ?? undefined,
+    files: r.submissionFiles.length
+      ? r.submissionFiles.map((sf) => ({
+          id: sf.file.id,
+          filename: sf.file.filename,
+          sizeBytes: sf.file.sizeBytes,
+          mimeType: sf.file.mimeType,
+        }))
+      : undefined,
   }));
 });

@@ -54,7 +54,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/rbac.server", () => ({ userHasPermission: vi.fn(async () => h.canAssign) }));
 
 import { prisma } from "@/lib/prisma";
-import { getCreatableTaskAudits, getMyTasks } from "./tasks";
+import { getCreatableTaskAudits, getMyTasks, getTaskStatusHistory } from "./tasks";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockPrisma = prisma as any;
@@ -98,5 +98,61 @@ describe("tasks data access", () => {
         where: { status: { in: ["assigning", "in_progress"] } },
       }),
     );
+  });
+});
+
+describe("getTaskStatusHistory", () => {
+  it("returns empty array when no history", async () => {
+    mockPrisma.taskStatusHistory.findMany.mockResolvedValueOnce([]);
+    expect(await getTaskStatusHistory("T-1")).toEqual([]);
+  });
+
+  it("maps history row without files", async () => {
+    mockPrisma.taskStatusHistory.findMany.mockResolvedValueOnce([
+      {
+        id: "h-1",
+        fromStatus: "in_progress",
+        toStatus: "review",
+        changedBy: "u6",
+        comment: "Bajarildi",
+        createdAt: new Date("2026-06-10T10:00:00Z"),
+        submissionFiles: [],
+      },
+    ]);
+    const result = await getTaskStatusHistory("T-1");
+    expect(result[0].comment).toBe("Bajarildi");
+    expect(result[0].files).toBeUndefined();
+  });
+
+  it("maps submission files onto the history entry", async () => {
+    mockPrisma.taskStatusHistory.findMany.mockResolvedValueOnce([
+      {
+        id: "h-1",
+        fromStatus: "in_progress",
+        toStatus: "review",
+        changedBy: "u6",
+        comment: "Bajarildi",
+        createdAt: new Date("2026-06-10T10:00:00Z"),
+        submissionFiles: [
+          { file: { id: "fs-1", filename: "scan.png", sizeBytes: 1024, mimeType: "image/png" } },
+        ],
+      },
+    ]);
+    const result = await getTaskStatusHistory("T-1");
+    expect(result[0].files).toEqual([
+      { id: "fs-1", filename: "scan.png", sizeBytes: 1024, mimeType: "image/png" },
+    ]);
+  });
+});
+
+describe("getCreatableTaskAudits status filter", () => {
+  it("queries only assigning and in_progress — not approved", async () => {
+    const findMany = mockPrisma.audit.findMany;
+    findMany.mockResolvedValueOnce([]);
+    await getCreatableTaskAudits("u1", "super");
+    const calledWith = findMany.mock.calls[findMany.mock.calls.length - 1][0];
+    expect(calledWith.where.status.in).not.toContain("approved");
+    expect(calledWith.where.status.in).toContain("assigning");
+    expect(calledWith.where.status.in).toContain("in_progress");
   });
 });
