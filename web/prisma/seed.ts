@@ -110,6 +110,21 @@ async function main() {
     });
   }
 
+  // Sectors
+  const SEED_SECTORS = [
+    "Davlat",
+    "Moliya va bank",
+    "Energetika",
+    "Telekommunikatsiya",
+    "Sogʻliqni saqlash",
+    "Taʼlim",
+    "Transport",
+    "Sanoat",
+  ];
+  for (const name of SEED_SECTORS) {
+    await prisma.sector.upsert({ where: { name }, update: {}, create: { name } });
+  }
+
   // Audits (+ members)
   for (const a of AUDITS) {
     const base = {
