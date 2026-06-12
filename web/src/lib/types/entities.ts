@@ -215,6 +215,35 @@ export interface FindingEvidenceView {
   createdAt: string;
 }
 
+// ---------- Appeals (Murojaatlar) ----------
+export type AppealType = "taklif" | "kamchilik";
+export type AppealStatus = "new" | "reviewing" | "accepted" | "rejected";
+export type AppealPriority = "past" | "orta" | "yuqori";
+
+export interface AppealFileItem {
+  id: string;
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface Appeal {
+  id: string;
+  type: AppealType;
+  title: string;
+  description: string;
+  priority: AppealPriority | null;
+  status: AppealStatus;
+  reviewComment: string | null;
+  submittedById: string;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  files: AppealFileItem[];
+}
+
 // ---------- Configuration analysis ----------
 /** A device whose config was parsed (drives the "analyzed devices" panel). */
 export interface AnalyzedDeviceView {

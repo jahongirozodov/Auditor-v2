@@ -65,6 +65,7 @@ const MODULE_PERMISSION_MATCH: Record<ModuleId, string[]> = {
   report: ["report."],
   log: ["system.audit_log"],
   settings: ["system.settings", "role.manage"],
+  appeal: ["appeal."],
 };
 
 const FULL_HINTS = [

@@ -107,6 +107,9 @@ model User {
   fileUploads      FileStorage[]   @relation("FileUploader")
   evidenceUploads  FindingEvidence[] @relation("FindingEvidenceUploader")
   notifications    Notification[]
+  appealSubmissions Appeal[]       @relation("AppealSubmitter")
+  appealReviews    Appeal[]        @relation("AppealReviewer")
+  appealFileUploads AppealFile[]   @relation("AppealFileUploader")
 
   @@index([email])
 }
@@ -321,6 +324,7 @@ model FileStorage {
   findingEvidences FindingEvidence[]
   auditEvidences   AuditEvidence[]
   taskSubmissions  TaskSubmissionFile[]
+  appealFiles      AppealFile[]        @relation("AppealFileStorage")
 
   @@index([uploadedById])
   @@index([sha256])
@@ -761,4 +765,42 @@ model AiMessage {
   createdAt      DateTime       @default(now())
 
   @@index([conversationId])
+}
+
+
+// ---------- Murojaatlar (Appeals) ----------
+model Appeal {
+  id            String       @id @default(cuid())
+  type          String       // "taklif" | "kamchilik"
+  title         String
+  description   String       @db.Text
+  priority      String?      // "past" | "orta" | "yuqori" — kamchilik only
+  status        String       @default("new") // "new" | "reviewing" | "accepted" | "rejected"
+  reviewComment String?      @db.Text
+  submittedBy   User         @relation("AppealSubmitter", fields: [submittedById], references: [id])
+  submittedById String
+  reviewedBy    User?        @relation("AppealReviewer", fields: [reviewedById], references: [id])
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  files         AppealFile[]
+
+  @@index([submittedById])
+  @@index([status])
+  @@index([type])
+}
+
+model AppealFile {
+  id           String      @id @default(cuid())
+  appeal       Appeal      @relation(fields: [appealId], references: [id], onDelete: Cascade)
+  appealId     String
+  file         FileStorage @relation("AppealFileStorage", fields: [fileId], references: [id], onDelete: Cascade)
+  fileId       String
+  uploadedBy   User        @relation("AppealFileUploader", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime    @default(now())
+
+  @@index([appealId])
+  @@index([fileId])
 }

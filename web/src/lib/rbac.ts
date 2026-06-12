@@ -17,8 +17,8 @@ const ACCESS: Record<ModuleId, Record<RoleCode, AccessLevel>> = {
   users: { super: "full", head: "read", chief: "no", lead: "no", t1: "no" },
   org: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
   audit: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
-  group: { super: "read", head: "full", chief: "no", lead: "no", t1: "no" },
-  leader: { super: "read", head: "full", chief: "no", lead: "no", t1: "no" },
+  group: { super: "full", head: "full", chief: "no", lead: "no", t1: "no" },
+  leader: { super: "full", head: "full", chief: "no", lead: "no", t1: "no" },
   project: { super: "read", head: "full", chief: "own", lead: "own", t1: "own" },
   assign: { super: "read", head: "read", chief: "own", lead: "own", t1: "own" },
   mytasks: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
@@ -33,6 +33,7 @@ const ACCESS: Record<ModuleId, Record<RoleCode, AccessLevel>> = {
   log: { super: "full", head: "read", chief: "own", lead: "own", t1: "own" },
   // System settings — admin only (mirrors the nav allowlist super/head).
   settings: { super: "full", head: "full", chief: "no", lead: "no", t1: "no" },
+  appeal: { super: "full", head: "own", chief: "own", lead: "own", t1: "own" },
 };
 
 /** Access level a role has on a module ("no" if the module is unknown). */

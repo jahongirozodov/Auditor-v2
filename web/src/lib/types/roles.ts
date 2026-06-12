@@ -61,6 +61,7 @@ export const MODULES = [
   { id: "report", name: "Hisobotlar" },
   { id: "log", name: "Audit log" },
   { id: "settings", name: "Sozlamalar" },
+  { id: "appeal", name: "Murojaatlar" },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -110,6 +111,8 @@ export const PERMISSIONS = [
   "system.audit_log",
   "agent.token",
   "agent.revoke",
+  "appeal.create",
+  "appeal.manage",
 ] as const;
 
 export type PermissionId = (typeof PERMISSIONS)[number];

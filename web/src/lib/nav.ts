@@ -11,6 +11,7 @@ import {
   Inbox,
   KeyRound,
   LayoutDashboard,
+  MessageSquareMore,
   Monitor,
   Network,
   Server,
@@ -69,6 +70,7 @@ export const NAV: NavGroup[] = [
         icon: AlertTriangle,
         countKey: "findings",
       },
+      { id: "appeals", href: "/appeals", labelKey: "appeals", icon: MessageSquareMore },
     ],
   },
   {

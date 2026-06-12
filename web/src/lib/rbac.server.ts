@@ -40,6 +40,7 @@ const SYSTEM_ROLE_ACCESS: Record<ModuleId, Record<RoleCode, AccessLevel>> = {
   report: { super: "full", head: "full", chief: "own", lead: "own", t1: "own" },
   log: { super: "full", head: "read", chief: "own", lead: "own", t1: "own" },
   settings: { super: "full", head: "full", chief: "no", lead: "no", t1: "no" },
+  appeal: { super: "full", head: "own", chief: "own", lead: "own", t1: "own" },
 };
 
 export const MODULE_PERMISSION_GROUPS: Record<
@@ -138,6 +139,11 @@ export const MODULE_PERMISSION_GROUPS: Record<
     own: [],
     full: ["system.settings", "role.manage"],
   },
+  appeal: {
+    read: [],
+    own: ["appeal.create"],
+    full: ["appeal.create", "appeal.manage"],
+  },
 };
 
 export const SYSTEM_ROLE_DEFAULT_PERMISSIONS: Record<RoleCode, EffectivePermissions> = {
@@ -154,7 +160,13 @@ function permissionsFromAccessMatrix(role: RoleCode): PermissionId[] {
     const level = SYSTEM_ROLE_ACCESS[m.id][role];
     const group = MODULE_PERMISSION_GROUPS[m.id];
     const permissions =
-      level === "full" ? group.full : level === "own" ? group.own : level === "read" ? group.read : [];
+      level === "full"
+        ? group.full
+        : level === "own"
+          ? group.own
+          : level === "read"
+            ? group.read
+            : [];
     for (const p of permissions) out.add(p);
   }
   return [...out];
@@ -214,7 +226,10 @@ export function hasAnyPermission(
   return requiredList.some((p) => granted.includes(p));
 }
 
-export function deriveAccessForModule(permissions: EffectivePermissions, moduleId: ModuleId): AccessLevel {
+export function deriveAccessForModule(
+  permissions: EffectivePermissions,
+  moduleId: ModuleId,
+): AccessLevel {
   if (isWildcard(permissions)) return "full";
   const granted = permissions as readonly PermissionId[];
   const group = MODULE_PERMISSION_GROUPS[moduleId];
@@ -253,7 +268,9 @@ export async function getPermissionMatrixSnapshot(): Promise<RolePermissionSnaps
   });
 }
 
-export async function getEffectivePermissionsForUser(userId: string): Promise<EffectivePermissions> {
+export async function getEffectivePermissionsForUser(
+  userId: string,
+): Promise<EffectivePermissions> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { role: true, customRoleCode: true },
