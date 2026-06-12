@@ -55,7 +55,7 @@ public record SyncCompleteRequest(string SessionId, int FindingCount, string Sta
 public record OkResponse(bool Ok, string? Error);
 
 // --- task status (two-way) ---
-public record TaskStatusRequest(string ToStatus);
+public record TaskStatusRequest(string ToStatus, string? Comment = null);
 public record TaskStatusResponse(bool Ok, string? Status, string? Error);
 
 // --- evidence upload (multipart) ---

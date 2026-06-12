@@ -31,4 +31,4 @@ public sealed class QueuedEvidence
 }
 
 /// <summary>A queued task-status change (two-way sync).</summary>
-public record TaskStatusChange(string TaskId, string ToStatus, SyncState State);
+public record TaskStatusChange(string TaskId, string ToStatus, SyncState State, string? Comment = null);

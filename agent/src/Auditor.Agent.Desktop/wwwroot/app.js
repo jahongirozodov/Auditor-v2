@@ -981,20 +981,124 @@ async function openTaskDrawer(task) {
       nav('new-finding', { taskId: task.id, taskTitle: task.title });
     });
 
+    function applyStatusChange(newStatus) {
+      task = { ...task, status: newStatus };
+      const updSt = statusOf(newStatus);
+      const badge = document.getElementById('drawer-status-badge');
+      if (badge) { badge.className = `tag tag-${updSt.kind}`; badge.textContent = updSt.label; }
+      const idx = cachedTasks.findIndex(t => t.id === task.id);
+      if (idx !== -1) cachedTasks[idx] = { ...cachedTasks[idx], status: newStatus };
+      renderTaskList();
+    }
+
+    function showReviewForm() {
+      const btn = document.getElementById('drawer-status-btn');
+      if (!btn) return;
+      btn.style.display = 'none';
+
+      let selectedFiles = [];
+
+      const formEl = document.createElement('div');
+      formEl.id = 'drawer-review-form';
+      formEl.innerHTML = `
+        <div class="drawer-review-form">
+          <div>
+            <label class="field-label">IZOH (MAJBURIY, MIN. 10 BELGI)</label>
+            <textarea id="drf-comment" class="input" rows="3"
+              placeholder="Bajarilgan ishlar haqida qisqacha..."></textarea>
+            <div id="drf-err" class="error-msg hidden" style="margin-top:4px"></div>
+          </div>
+          <div>
+            <label class="field-label">FAYLLAR (IXTIYORIY, MAX 5 TA)</label>
+            <label class="drawer-review-file-btn">
+              ${icon('upload')} Fayl biriktirish
+              <input id="drf-file" type="file" multiple style="display:none">
+            </label>
+            <div id="drf-files" class="drawer-review-file-list"></div>
+          </div>
+          <div class="drawer-review-actions">
+            <button class="btn btn-soft" id="drf-submit" style="flex:1">Tekshiruvga yuborish</button>
+            <button class="btn btn-ghost" id="drf-cancel">Bekor</button>
+          </div>
+        </div>
+      `;
+      actionsEl.appendChild(formEl);
+
+      function renderFileList() {
+        const el = document.getElementById('drf-files');
+        if (!el) return;
+        el.innerHTML = selectedFiles.map((f, i) => `
+          <div class="drawer-review-file-row">
+            <span class="fname">${esc(f.name)}</span>
+            <span class="fsize">${(f.size/1024).toFixed(0)} KB</span>
+            <button class="fremove" data-ridx="${i}" title="O'chirish">×</button>
+          </div>
+        `).join('');
+        el.querySelectorAll('.fremove').forEach(b => {
+          b.addEventListener('click', () => {
+            selectedFiles.splice(Number(b.dataset.ridx), 1);
+            renderFileList();
+          });
+        });
+      }
+
+      document.getElementById('drf-file').addEventListener('change', e => {
+        selectedFiles = [...selectedFiles, ...Array.from(e.target.files || [])].slice(0, 5);
+        e.target.value = '';
+        renderFileList();
+      });
+
+      document.getElementById('drf-cancel').addEventListener('click', () => {
+        formEl.remove();
+        btn.style.display = '';
+      });
+
+      document.getElementById('drf-submit').addEventListener('click', async () => {
+        const comment = document.getElementById('drf-comment')?.value.trim() || '';
+        const errEl = document.getElementById('drf-err');
+        if (comment.length < 10) {
+          errEl.textContent = "Izoh kamida 10 belgi bo'lishi kerak";
+          errEl.classList.remove('hidden');
+          return;
+        }
+        errEl.classList.add('hidden');
+        if (!S.online) { toast("Oflayn rejimda holat o'zgartirib bo'lmaydi"); return; }
+        const submitBtn = document.getElementById('drf-submit');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Yuklanmoqda…'; }
+
+        for (const file of selectedFiles) {
+          const fd = new FormData();
+          fd.append('file', file);
+          await fetch('/api/evidence', { method: 'POST', body: fd }).catch(() => {});
+        }
+
+        const r = await api.post(`/api/tasks/${task.id}/status`, { toStatus: 'review', comment });
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Tekshiruvga yuborish'; }
+        if (r.ok) {
+          formEl.remove();
+          btn.remove();
+          applyStatusChange('review');
+          toast('Vazifa tekshiruvga yuborildi');
+        } else {
+          const msgs = { comment_required: "Izoh kamida 10 belgi bo'lishi kerak", offline: "Oflayn" };
+          errEl.textContent = msgs[r.error] || "Holat yangilanmadi";
+          errEl.classList.remove('hidden');
+        }
+      });
+    }
+
     function wireStatusBtn() {
       const btn = document.getElementById('drawer-status-btn');
       if (!btn) return;
       btn.addEventListener('click', async () => {
+        if (btn.dataset.snext === 'review') { showReviewForm(); return; }
         if (!S.online) { toast("Oflayn rejimda holat o'zgartirib bo'lmaydi"); return; }
         btn.disabled = true;
         const r = await api.post(`/api/tasks/${task.id}/status`, { toStatus: btn.dataset.snext });
         btn.disabled = false;
         if (r.ok) {
-          task = { ...task, status: btn.dataset.snext };
-          const updSt = statusOf(task.status);
-          const badge = document.getElementById('drawer-status-badge');
-          if (badge) { badge.className = `tag tag-${updSt.kind}`; badge.textContent = updSt.label; }
           btn.remove();
+          applyStatusChange(btn.dataset.snext);
           const newNext = STATUS_NEXT[task.status];
           if (newNext) {
             const nb = document.createElement('button');
@@ -1006,10 +1110,7 @@ async function openTaskDrawer(task) {
             actionsEl.appendChild(nb);
             wireStatusBtn();
           }
-          const idx = cachedTasks.findIndex(t => t.id === task.id);
-          if (idx !== -1) cachedTasks[idx] = { ...cachedTasks[idx], status: task.status };
           toast('Vazifa holati yangilandi');
-          renderTaskList();
         } else {
           toast("Holat yangilanmadi");
         }

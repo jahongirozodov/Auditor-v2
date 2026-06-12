@@ -980,3 +980,73 @@ textarea.input { resize: vertical; min-height: 84px; }
   flex-shrink: 0;
   background: var(--bg-surface);
 }
+
+/* ── Drawer review-submit form ──────────────────────────────────── */
+.drawer-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.drawer-review-form textarea.input {
+  min-height: 72px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+.drawer-review-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+.drawer-review-file-btn:hover { border-color: var(--brand); color: var(--brand); }
+.drawer-review-file-btn .icon svg { width: 13px; height: 13px; }
+.drawer-review-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.drawer-review-file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.drawer-review-file-row .fname {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+.drawer-review-file-row .fsize { color: var(--text-muted); font-size: 11px; }
+.drawer-review-file-row .fremove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 14px;
+  line-height: 1;
+  transition: color .1s;
+}
+.drawer-review-file-row .fremove:hover { color: var(--danger); }
+.drawer-review-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}

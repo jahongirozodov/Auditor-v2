@@ -50,6 +50,8 @@ public sealed class LocalStore : IDisposable
                 task_id TEXT PRIMARY KEY, to_status TEXT NOT NULL, state TEXT NOT NULL,
                 created_at TEXT NOT NULL);
             """);
+        // Migration: add comment column if it doesn't exist yet
+        try { Exec("ALTER TABLE task_status_queue ADD COLUMN comment TEXT"); } catch { }
     }
 
     private byte[] LoadOrCreateKey()
@@ -285,16 +287,17 @@ public sealed class LocalStore : IDisposable
     }
 
     // --- task-status change queue (two-way; pushed in P2) ---
-    public void EnqueueTaskStatus(string taskId, string toStatus)
+    public void EnqueueTaskStatus(string taskId, string toStatus, string? comment = null)
     {
         using var cmd = _db.CreateCommand();
         cmd.CommandText = """
-            INSERT OR REPLACE INTO task_status_queue(task_id,to_status,state,created_at)
-            VALUES($id,$to,'Pending',$created)
+            INSERT OR REPLACE INTO task_status_queue(task_id,to_status,state,created_at,comment)
+            VALUES($id,$to,'Pending',$created,$comment)
             """;
         cmd.Parameters.AddWithValue("$id", taskId);
         cmd.Parameters.AddWithValue("$to", toStatus);
         cmd.Parameters.AddWithValue("$created", DateTime.UtcNow.ToString("u"));
+        cmd.Parameters.AddWithValue("$comment", (object?)comment ?? DBNull.Value);
         cmd.ExecuteNonQuery();
     }
 
@@ -302,12 +305,15 @@ public sealed class LocalStore : IDisposable
     {
         var list = new List<TaskStatusChange>();
         using var cmd = _db.CreateCommand();
-        cmd.CommandText = "SELECT task_id,to_status,state FROM task_status_queue"
+        cmd.CommandText = "SELECT task_id,to_status,state,comment FROM task_status_queue"
             + (state is null ? "" : " WHERE state=$state");
         if (state is not null) cmd.Parameters.AddWithValue("$state", state.ToString());
         using var r = cmd.ExecuteReader();
         while (r.Read())
-            list.Add(new TaskStatusChange(r.GetString(0), r.GetString(1), Enum.Parse<SyncState>(r.GetString(2))));
+        {
+            var comment = r.IsDBNull(3) ? null : r.GetString(3);
+            list.Add(new TaskStatusChange(r.GetString(0), r.GetString(1), Enum.Parse<SyncState>(r.GetString(2)), comment));
+        }
         return list;
     }
 

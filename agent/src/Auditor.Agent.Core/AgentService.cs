@@ -16,9 +16,9 @@ namespace Auditor.Agent.Core;
 public sealed class AgentService : IDisposable
 {
     private readonly AgentSettings _settings;
-    private readonly AgentApiClient _api;
+    private AgentApiClient _api;
     private readonly LocalStore _store;
-    private readonly SyncEngine _sync;
+    private SyncEngine _sync;
 
     public AuditContext? Context { get; private set; }
     public bool IsAudited => Context is not null;
@@ -162,9 +162,9 @@ public sealed class AgentService : IDisposable
     public List<QueuedEvidence> AllEvidence() => _store.GetEvidence();
 
     // --- task status (two-way; pushed in P2) ---
-    public void ToggleTaskStatus(string taskId, string toStatus)
+    public void ToggleTaskStatus(string taskId, string toStatus, string? comment = null)
     {
-        _store.EnqueueTaskStatus(taskId, toStatus);
+        _store.EnqueueTaskStatus(taskId, toStatus, comment);
         _store.AppendLog("INFO", $"Task {taskId} status changed → {toStatus}");
     }
 
@@ -246,9 +246,14 @@ public sealed class AgentService : IDisposable
     // --- config (Settings screen) ---
     public void SetServerUrl(string url)
     {
-        _settings.BaseUrl = url.Trim();
+        _settings.BaseUrl = url.TrimEnd('/').Trim();
         _store.SetConfig("base_url", _settings.BaseUrl);
-        _store.AppendLog("INFO", $"Server address set to {_settings.BaseUrl} (restart to apply)");
+        // Reconnect immediately — recreate client and sync engine with new base URL.
+        _api = AgentApiClient.Create(_settings.BaseUrl);
+        _sync = new SyncEngine(_api, _store);
+        var saved = _store.GetSessionToken();
+        if (saved is not null) _api.SetToken(saved);
+        _store.AppendLog("INFO", $"Server address changed to {_settings.BaseUrl}");
     }
 
     public void SetSyncInterval(int minutes)

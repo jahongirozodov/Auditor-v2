@@ -110,7 +110,7 @@ public sealed class SyncEngine
         foreach (var ts in tasks)
         {
             progress?.Report(new SyncProgress(ts.TaskId, 50, "uploading"));
-            var res = await SafeAsync(() => _api.UpdateTaskStatusAsync(ts.TaskId, ts.ToStatus, ct));
+            var res = await SafeAsync(() => _api.UpdateTaskStatusAsync(ts.TaskId, ts.ToStatus, ts.Comment, ct));
             if (res is { Ok: true })
             {
                 _store.SetTaskStatusState(ts.TaskId, SyncState.Synced);

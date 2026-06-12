@@ -52,9 +52,9 @@ public sealed class AgentApiClient
     public Task<OkResponse?> SyncCompleteAsync(SyncCompleteRequest req, CancellationToken ct = default) =>
         PostAsync<SyncCompleteRequest, OkResponse>("/api/v1/agent/sync/complete", req, auth: true, ct);
 
-    public Task<TaskStatusResponse?> UpdateTaskStatusAsync(string taskId, string toStatus, CancellationToken ct = default) =>
+    public Task<TaskStatusResponse?> UpdateTaskStatusAsync(string taskId, string toStatus, string? comment = null, CancellationToken ct = default) =>
         PostAsync<TaskStatusRequest, TaskStatusResponse>(
-            $"/api/v1/agent/tasks/{Uri.EscapeDataString(taskId)}/status", new TaskStatusRequest(toStatus), auth: true, ct);
+            $"/api/v1/agent/tasks/{Uri.EscapeDataString(taskId)}/status", new TaskStatusRequest(toStatus, comment), auth: true, ct);
 
     public Task<OkResponse?> RevokeTokenAsync(CancellationToken ct = default) =>
         PostAsync<object, OkResponse>("/api/v1/agent/token/revoke", new { }, auth: true, ct);

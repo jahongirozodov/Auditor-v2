@@ -8,7 +8,7 @@ import type { TaskStatus } from "@/lib/types/entities";
 import { json, clientIp } from "@/lib/agent/util";
 
 const J = (v: unknown) => JSON.parse(JSON.stringify(v));
-const Body = z.object({ toStatus: z.enum(["in_progress", "done"]) });
+const Body = z.object({ toStatus: z.enum(["in_progress", "review"]), comment: z.string().optional() });
 
 // Recompute the denormalized Audit.tasksAgg (mirrors actions/tasks.ts).
 async function recountTasksAgg(tx: Prisma.TransactionClient, auditId: string) {
@@ -59,12 +59,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ taskId: string
   if (!action) return json({ ok: false, error: "illegal_transition" }, 409);
 
   // The agent acts as the task assignee. Role is irrelevant for assignee-allowed actions.
-  const guard = canDoTask(action, from, {
-    role: "t1" as RoleCode,
-    isAssignee: task.assigneeId === userId,
-    isAuditLeader: false,
-    isSuper: false,
-  });
+  // For the `submit` action the machine requires a comment; agent submissions are
+  // automated so supply a fixed placeholder to satisfy the guard.
+  const agentComment = parsed.data.comment?.trim() || (action === "submit" ? "Agent task submission" : undefined);
+  const guard = canDoTask(
+    action,
+    from,
+    {
+      role: "t1" as RoleCode,
+      isAssignee: task.assigneeId === userId,
+      isAuditLeader: false,
+      isSuper: false,
+    },
+    agentComment,
+  );
   if (!guard.ok) return json({ ok: false, error: guard.reason }, 403);
 
   await prisma.$transaction(async (tx) => {

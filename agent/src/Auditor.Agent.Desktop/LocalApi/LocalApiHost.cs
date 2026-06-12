@@ -160,9 +160,11 @@ public sealed class LocalApiHost
             var b = await ctx.Request.ReadFromJsonAsync<TaskStatusBody>(Json);
             if (b is null || string.IsNullOrWhiteSpace(b.ToStatus)) return Results.BadRequest();
             if (!_allowedTaskStatuses.Contains(b.ToStatus)) return Results.BadRequest();
+            if (b.ToStatus == "review" && (b.Comment == null || b.Comment.Trim().Length < 10))
+                return Results.Json(new { ok = false, error = "comment_required" }, Json);
             var online = await _svc.PingAsync();
             if (!online) return Results.Json(new { ok = false, error = "offline" }, Json);
-            _svc.ToggleTaskStatus(id, b.ToStatus);
+            _svc.ToggleTaskStatus(id, b.ToStatus, b.Comment?.Trim());
             await _svc.SyncAsync();
             return Results.Json(new { ok = true }, Json);
         });
@@ -330,5 +332,5 @@ public sealed class LocalApiHost
     private record FindingBody(string TaskId, string Title, string Severity, double Cvss,
         string Cwe, string Asset, string Description);
     private record SettingsBody(string? ServerUrl, int SyncInterval);
-    private record TaskStatusBody(string ToStatus);
+    private record TaskStatusBody(string ToStatus, string? Comment = null);
 }
